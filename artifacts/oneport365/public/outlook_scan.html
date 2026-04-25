@@ -335,8 +335,6 @@ tr.trow.sel td{background:#eef6e6}
 
     <!-- SCREEN 2: TRACKER -->
     <div class="screen" id="s2">
-<!-- SCREEN 2: TRACKER -->
-        <div class="screen" id="s2">
           <div class="tracker-wrap">
 
             <div>
@@ -475,7 +473,6 @@ tr.trow.sel td{background:#eef6e6}
           </div>
         </div>
 
-      </div>
     </div>
 
   </div>
@@ -492,7 +489,7 @@ function showScreen(n) {
   });
   const target = document.getElementById(`s${n}`);
   if(target) {
-    target.style.display = n===1 ? 'grid' : 'block';
+    target.style.display = 'flex';
     target.classList.add('active');
   }
   const tab = document.getElementById(`st${n}`);
