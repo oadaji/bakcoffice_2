@@ -1,0 +1,1069 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>OnePort 365 — RFQ Pipeline</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;1,400&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0d0d0d; --surface: #111; --surface2: #161616; --surface3: #1c1c1c;
+  --border: #222; --border2: #2e2e2e; --border3: #3a3a3a;
+  --text: #e2e2e2; --text2: #777; --text3: #444;
+  --accent: #c8f076; --accent2: #9dc957;
+  --danger: #f87171; --warn: #fbbf24; --info: #60a5fa;
+  --mono: 'IBM Plex Mono', monospace; --sans: 'IBM Plex Sans', sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13px;overflow:hidden}
+
+/* COVER */
+#cover{position:fixed;inset:0;background:var(--bg);z-index:100;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;padding:0 10vw;transition:opacity .4s ease,transform .4s ease}
+#cover.hidden{opacity:0;transform:translateY(-14px);pointer-events:none}
+.cover-prompt{font-family:var(--mono);font-size:11px;color:var(--text3);margin-bottom:28px;letter-spacing:.08em}
+.cover-title{font-family:var(--mono);font-size:clamp(32px,4.5vw,52px);font-weight:500;color:var(--text);line-height:1.05;margin-bottom:20px}
+.cover-title span{color:var(--accent)}
+.cover-desc{font-family:var(--mono);font-size:12px;color:var(--text2);margin-bottom:44px;line-height:1.9;max-width:480px}
+.cover-desc b{color:var(--text);font-weight:400}
+.cover-pipeline{display:flex;align-items:stretch;margin-bottom:52px;font-family:var(--mono);font-size:10px;letter-spacing:.04em;text-transform:uppercase}
+.cp-step{padding:9px 14px;border:1px solid var(--border2);color:var(--text3);position:relative;margin-left:-1px}
+.cp-step:first-child{margin-left:0}
+.cp-step.hi{border-color:rgba(200,240,118,.5);color:var(--accent);background:rgba(200,240,118,.04);z-index:1}
+.cp-num{font-size:8px;color:var(--text3);display:block;margin-bottom:2px}
+.cp-step.hi .cp-num{color:var(--accent2)}
+.blink{animation:blink 1.1s step-end infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+.cover-meta{font-family:var(--mono);font-size:9px;color:var(--text3);line-height:2.2;border-top:1px solid var(--border);padding-top:18px;width:440px;margin-top:40px}
+.cover-meta span{color:var(--text2)}
+
+/* APP */
+#app{height:100vh;display:grid;grid-template-rows:40px 1fr;opacity:0;transition:opacity .3s .1s;position:relative}
+#app.visible{opacity:1}
+
+/* TOPBAR */
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:14px;flex-shrink:0}
+.t-logo{font-family:var(--mono);font-size:12px;font-weight:500;color:var(--accent);letter-spacing:.06em}
+.t-logo em{color:var(--text3);font-style:normal}
+.t-sep{width:1px;height:16px;background:var(--border2)}
+.t-tag{font-family:var(--mono);font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em}
+.t-steps{display:flex;align-items:center;margin-left:8px}
+.t-step{display:flex;align-items:center;gap:6px;padding:0 13px;height:40px;font-family:var(--mono);font-size:10px;letter-spacing:.04em;text-transform:uppercase;color:var(--text3);cursor:pointer;border-left:1px solid var(--border);transition:color .15s;white-space:nowrap}
+.t-step:hover{color:var(--text2)}
+.t-step.active{color:var(--accent)}
+.t-step.done{color:var(--text2)}
+.t-num{width:15px;height:15px;border-radius:50%;border:1px solid currentColor;display:flex;align-items:center;justify-content:center;font-size:8px;flex-shrink:0;transition:all .15s}
+.t-step.active .t-num{background:var(--accent);color:#000;border-color:var(--accent)}
+.t-step.done .t-num{background:var(--border2);border-color:var(--border2);color:var(--text3)}
+.t-restart{margin-left:auto;font-family:var(--mono);font-size:9px;color:var(--text3);cursor:pointer;letter-spacing:.05em;text-transform:uppercase;background:none;border:1px solid var(--border);padding:4px 9px;border-radius:2px}
+.t-restart:hover{color:var(--text2);border-color:var(--border2)}
+
+/* 3-COL WORKSPACE */
+.workspace{display:grid;grid-template-columns:200px 1fr 1fr;height:100%;overflow:hidden}
+
+/* SIDEBAR */
+.sidebar{border-right:1px solid var(--border);display:flex;flex-direction:column;background:var(--surface);overflow:hidden}
+.sb-hd{padding:12px 14px 8px;border-bottom:1px solid var(--border);flex-shrink:0}
+.sb-lbl{font-family:var(--mono);font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em}
+.sb-body{flex:1;overflow-y:auto;padding:6px 0}
+.sb-step{display:flex;align-items:flex-start;gap:9px;padding:9px 14px;cursor:pointer;border-left:2px solid transparent;transition:all .15s}
+.sb-step:hover{background:var(--surface2)}
+.sb-step.active{border-left-color:var(--accent);background:var(--surface2)}
+.sb-n{font-family:var(--mono);font-size:9px;color:var(--text3);min-width:14px;padding-top:1px;flex-shrink:0}
+.sb-step.active .sb-n{color:var(--accent)}
+.sb-step.done .sb-n{color:var(--text2)}
+.sb-nm{font-family:var(--mono);font-size:10px;color:var(--text2);margin-bottom:2px}
+.sb-step.active .sb-nm{color:var(--text)}
+.sb-dc{font-size:10px;color:var(--text3);line-height:1.45}
+.sb-st{display:flex;align-items:center;gap:4px;margin-top:4px}
+.sb-dot{width:5px;height:5px;border-radius:50%;background:var(--border2);flex-shrink:0}
+.sb-dot.ok{background:var(--accent)}
+.sb-dot.pulse{background:var(--accent);animation:pulse 1.4s ease infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.sb-stxt{font-family:var(--mono);font-size:9px;color:var(--text3)}
+.sb-stxt.ok{color:var(--accent2)}
+.sb-ft{padding:10px 14px;border-top:1px solid var(--border);font-family:var(--mono);font-size:9px;color:var(--text3);line-height:2}
+.sb-ft span{color:var(--text2)}
+.sb-rfq{margin-top:6px;padding-top:6px;border-top:1px solid var(--border)}
+
+/* PANES */
+.pane{display:flex;flex-direction:column;overflow:hidden}
+.pane-l{border-right:1px solid var(--border)}
+.ph{padding:9px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;min-height:36px}
+.ph-lbl{font-family:var(--mono);font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em}
+.ph-badge{font-family:var(--mono);font-size:9px;padding:2px 7px;border-radius:2px;border:1px solid var(--border2);color:var(--text3)}
+.pb{flex:1;overflow-y:auto;padding:14px}
+.pb::-webkit-scrollbar{width:3px}
+.pb::-webkit-scrollbar-thumb{background:var(--border2)}
+
+/* INPUT/OUTPUT PANELS */
+.ip{display:none;flex-direction:column;gap:10px}
+.ip.active{display:flex}
+
+/* FORM */
+.fl{display:flex;flex-direction:column;gap:3px}
+.fl label{font-family:var(--mono);font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em}
+textarea,input,select{background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:11px;padding:7px 9px;border-radius:2px;width:100%;outline:none;transition:border-color .15s;line-height:1.6}
+textarea:focus,input:focus,select:focus{border-color:var(--border3)}
+select option{background:var(--surface2)}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px}
+
+/* BUTTONS */
+.btn{padding:6px 12px;font-size:10px;font-family:var(--mono);font-weight:500;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;border-radius:2px;border:1px solid var(--border2);background:transparent;color:var(--text2);transition:all .15s;white-space:nowrap}
+.btn:hover{border-color:var(--border3);color:var(--text)}
+.btn:disabled{opacity:.2;cursor:not-allowed}
+.btn-a{background:var(--accent);color:#000;border-color:var(--accent)}
+.btn-a:hover{background:var(--accent2);border-color:var(--accent2)}
+.btn-g{border-color:transparent;color:var(--text3)}
+.btn-g:hover{border-color:var(--border);color:var(--text2)}
+.row{display:flex;gap:5px;align-items:center;flex-wrap:wrap}
+
+/* MISC */
+.dv{height:1px;background:var(--border);margin:2px 0}
+.slbl{font-family:var(--mono);font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px}
+.pill{font-size:10px;font-family:var(--mono);padding:2px 7px;border:1px solid var(--border2);border-radius:2px;color:var(--text2);display:inline-block;margin:2px}
+.pill b{color:var(--accent);font-weight:500}
+.warn-ln{font-size:10px;color:var(--warn);font-family:var(--mono);padding:5px 8px;background:rgba(251,191,36,.06);border-radius:2px;border:1px solid rgba(251,191,36,.14)}
+.email-box{background:var(--surface);border:1px solid var(--border);border-radius:2px;padding:10px 12px;font-family:var(--mono);font-size:10px;line-height:1.85;color:var(--text);white-space:pre-wrap}
+.spinner{display:inline-block;width:11px;height:11px;border:1.5px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:5px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.lln{font-size:10px;color:var(--text3);font-family:var(--mono);display:flex;align-items:center;padding:6px 0}
+.idle{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:10px;color:var(--text3);font-family:var(--mono);font-size:10px;text-align:center;letter-spacing:.04em;line-height:1.8}
+.idle .arr{font-size:18px;color:var(--border2)}
+.tag{display:inline-flex;align-items:center;padding:1px 5px;border-radius:2px;font-size:9px;font-family:var(--mono)}
+.tok{background:rgba(200,240,118,.08);color:var(--accent);border:1px solid rgba(200,240,118,.16)}
+.twarn{background:rgba(251,191,36,.08);color:var(--warn);border:1px solid rgba(251,191,36,.16)}
+
+/* RATES TABLE */
+.rtbl{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:10px}
+.rtbl th{text-align:left;color:var(--text3);font-weight:500;padding:4px 6px;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.05em}
+.rtbl td{padding:6px;border-bottom:1px solid var(--border);color:var(--text2);vertical-align:middle}
+.rtbl tr:last-child td{border-bottom:none}
+.rtbl .hi{color:var(--text)}
+.rtbl .ac{color:var(--accent)}
+.sinp{width:64px;padding:3px 5px;font-size:10px}
+
+/* QUOTE */
+.qw{background:var(--surface2);border:1px solid var(--border);border-radius:2px;overflow:hidden}
+.qhdr{padding:11px 13px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:flex-start}
+.qlogo{font-family:var(--mono);font-size:12px;font-weight:500;color:var(--accent)}
+.qmeta{font-size:9px;color:var(--text3);font-family:var(--mono);text-align:right;line-height:1.9}
+.qfields{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;padding:9px 13px;border-bottom:1px solid var(--border)}
+.qfl{font-size:9px;color:var(--text3);font-family:var(--mono);text-transform:uppercase;margin-bottom:2px}
+.qfv{font-size:10px;color:var(--text);font-family:var(--mono)}
+.qbody{padding:10px 13px}
+.rbadge{display:inline-block;font-size:8px;font-family:var(--mono);padding:1px 5px;background:rgba(200,240,118,.1);color:var(--accent);border:1px solid rgba(200,240,118,.22);border-radius:2px;margin-left:4px;text-transform:uppercase;letter-spacing:.04em;vertical-align:middle}
+.qtot{display:flex;justify-content:flex-end;align-items:center;gap:9px;padding:6px 0;border-top:1px solid var(--border2);margin-top:4px}
+.qtlbl{font-size:9px;color:var(--text3);font-family:var(--mono);text-transform:uppercase}
+.qtval{font-size:14px;font-weight:500;color:var(--accent);font-family:var(--mono)}
+.nbox{font-size:9px;color:var(--text3);font-family:var(--mono);line-height:1.7;padding:6px 9px;background:var(--surface);border-radius:2px;margin-top:5px;border:1px solid var(--border)}
+
+/* SOURCE TABS */
+.src-tab{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.04em;padding:6px 12px;background:none;border:none;border-bottom:2px solid transparent;color:var(--text3);cursor:pointer;margin-bottom:-1px;transition:all .15s}
+.src-tab:hover{color:var(--text2)}
+.src-tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+
+/* DROP ZONE */
+#drop-zone{border:1px dashed var(--border2);border-radius:3px;padding:28px 20px;text-align:center;cursor:pointer;transition:all .15s;background:var(--surface2)}
+#drop-zone:hover,#drop-zone.drag{border-color:var(--accent);background:rgba(200,240,118,.04)}
+#drop-zone.drag #dz-icon{color:var(--accent)}
+#drop-zone.has-file{border-style:solid;border-color:rgba(200,240,118,.35);background:rgba(200,240,118,.04)}
+#s3-drop-zone{border:1px dashed var(--border2);border-radius:3px;padding:28px 20px;text-align:center;cursor:pointer;transition:all .15s;background:var(--surface2)}
+#s3-drop-zone:hover,#s3-drop-zone.drag{border-color:var(--accent);background:rgba(200,240,118,.04)}
+#s3-drop-zone.drag #s3-dz-icon{color:var(--accent)}
+#s3-drop-zone.has-file{border-style:solid;border-color:rgba(200,240,118,.35);background:rgba(200,240,118,.04)}
+/* DASHBOARD OVERLAY */
+#rfq-dashboard{position:absolute;inset:0;background:var(--bg);z-index:50;display:none;flex-direction:column;overflow:hidden}
+#rfq-dashboard.open{display:flex}
+.dash-head{padding:14px 20px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.dash-title{font-family:var(--mono);font-size:13px;font-weight:500;color:var(--text)}
+.dash-body{flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:10px}
+.dash-body::-webkit-scrollbar{width:3px}
+.dash-body::-webkit-scrollbar-thumb{background:var(--border2)}
+.rfq-row{background:var(--surface);border:1px solid var(--border);border-radius:2px;display:grid;grid-template-columns:110px 1fr 1fr 100px 100px 90px 110px;align-items:center;padding:10px 14px;gap:10px;cursor:default;transition:border-color .12s}
+.rfq-row:hover{border-color:var(--border2)}
+.rfq-row-head{background:var(--surface2);border:1px solid var(--border);border-radius:2px;display:grid;grid-template-columns:110px 1fr 1fr 100px 100px 90px 110px;padding:6px 14px;gap:10px}
+.rfq-num{font-family:var(--mono);font-size:11px;font-weight:500;color:var(--accent)}
+.rfq-cell{font-family:var(--mono);font-size:10px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rfq-cell.pri{color:var(--text)}
+.rfq-hdr{font-family:var(--mono);font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em}
+.st-badge{font-family:var(--mono);font-size:9px;padding:2px 6px;border-radius:2px;text-transform:uppercase;letter-spacing:.03em;white-space:nowrap}
+.st-1{background:rgba(96,165,250,.08);color:var(--info)}
+.st-2{background:rgba(251,191,36,.08);color:var(--warn)}
+.st-3{background:rgba(167,139,250,.08);color:#a78bfa}
+.st-4{background:rgba(200,240,118,.08);color:var(--accent2)}
+.dash-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;gap:10px;font-family:var(--mono);font-size:11px;color:var(--text3);text-align:center;line-height:1.8}
+</style>
+</head>
+<body>
+
+<!-- COVER -->
+<div id="cover">
+  <div class="cover-prompt">~/oneport365/commercial/rfq-pipeline <span class="blink">█</span></div>
+  <div class="cover-title">RFQ to Quote<br><span>Pipeline</span></div>
+  <div class="cover-desc">
+    <b>Commercial automation tool — OnePort 365</b><br>
+    Turns unstructured freight emails into<br>
+    structured, priced quotes in four steps.
+  </div>
+  <div class="cover-pipeline">
+    <div class="cp-step hi"><span class="cp-num">01</span>Read RFQ</div>
+    <div class="cp-step"><span class="cp-num">02</span>Rate Request</div>
+    <div class="cp-step"><span class="cp-num">03</span>Vendor Response</div>
+    <div class="cp-step"><span class="cp-num">04</span>Generate Quote</div>
+  </div>
+  <button class="btn btn-a" onclick="document.getElementById('cover').classList.add('hidden');document.getElementById('app').classList.add('visible')" style="font-size:11px;padding:9px 22px;letter-spacing:.06em">Launch pipeline →</button>
+  <div class="cover-meta">
+    <div>version &nbsp;<span>0.1.0 — proof of concept</span></div>
+    <div>model &nbsp;&nbsp;<span>claude-sonnet-4-20250514</span></div>
+    <div>inbox &nbsp;&nbsp;<span>outlook · microsoft graph api (future)</span></div>
+    <div>status &nbsp;<span style="color:var(--accent)">● ready</span></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+
+  <!-- RFQ DASHBOARD OVERLAY -->
+  <div id="rfq-dashboard">
+    <div class="dash-head">
+      <div>
+        <div class="dash-title">RFQs</div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--text3);margin-top:2px">Saved sessions — resume any RFQ to continue the workflow</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn btn-a btn-sm" onclick="newRFQ()">+ New RFQ</button>
+        <button class="btn btn-sm" onclick="hideDashboard()">← Back to pipeline</button>
+      </div>
+    </div>
+    <div class="dash-body" id="dash-body">
+      <div class="rfq-row-head">
+        <span class="rfq-hdr">RFQ no.</span>
+        <span class="rfq-hdr">Customer</span>
+        <span class="rfq-hdr">Route</span>
+        <span class="rfq-hdr">Commodity</span>
+        <span class="rfq-hdr">Status</span>
+        <span class="rfq-hdr">Saved</span>
+        <span class="rfq-hdr"></span>
+      </div>
+      <div id="rfq-list"></div>
+    </div>
+  </div>
+  <div class="topbar">
+    <div class="t-logo">OnePort <em>365</em></div>
+    <div class="t-sep"></div>
+    <div class="t-tag">RFQ Pipeline</div>
+    <div class="t-steps">
+      <div class="t-step active" id="tn1" onclick="goStep(1)"><div class="t-num">1</div>Read RFQ</div>
+      <div class="t-step" id="tn2" onclick="goStep(2)"><div class="t-num">2</div>Rate Request</div>
+      <div class="t-step" id="tn3" onclick="goStep(3)"><div class="t-num">3</div>Vendor Response</div>
+      <div class="t-step" id="tn4" onclick="goStep(4)"><div class="t-num">4</div>Generate Quote</div>
+    </div>
+    <div style="margin-left:auto;display:flex;gap:0;align-items:stretch">
+      <button id="save-rfq-btn" onclick="saveRFQ()" style="display:none;align-items:center;height:40px;padding:0 16px;background:rgba(200,240,118,.08);border:none;border-left:1px solid var(--border);font-family:var(--mono);font-size:10px;font-weight:500;color:var(--accent);cursor:pointer;letter-spacing:.04em;text-transform:uppercase;gap:6px">
+        <span>Save RFQ</span>
+      </button>
+      <button onclick="showDashboard()" style="height:40px;padding:0 18px;background:none;border:none;border-left:1px solid var(--border);font-family:var(--mono);font-size:10px;font-weight:500;color:var(--text2);cursor:pointer;letter-spacing:.04em;text-transform:uppercase;display:flex;align-items:center;gap:8px;transition:color .15s" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--text2)'">
+        <span id="dash-count" style="display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;border-radius:2px;background:var(--surface3);border:1px solid var(--border2);font-size:9px;color:var(--text2)">0</span>
+        RFQs
+      </button>
+      <button class="t-restart" onclick="restartToCover()" style="border-left:1px solid var(--border);border-radius:0">↩ cover</button>
+    </div>
+  </div>
+
+  <div class="workspace">
+
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+      <div class="sb-hd"><div class="sb-lbl">Pipeline status</div></div>
+      <div class="sb-body">
+        <div class="sb-step active" id="sb1" onclick="goStep(1)">
+          <div class="sb-n">01</div>
+          <div>
+            <div class="sb-nm">Read RFQ</div>
+            <div class="sb-dc">Parse customer email, extract shipment fields</div>
+            <div class="sb-st"><div class="sb-dot pulse" id="sd1"></div><span class="sb-stxt" id="ss1">awaiting input</span></div>
+          </div>
+        </div>
+        <div class="sb-step" id="sb2" onclick="goStep(2)">
+          <div class="sb-n">02</div>
+          <div>
+            <div class="sb-nm">Rate Request</div>
+            <div class="sb-dc">Draft email to freight vendor</div>
+            <div class="sb-st"><div class="sb-dot" id="sd2"></div><span class="sb-stxt" id="ss2">pending</span></div>
+          </div>
+        </div>
+        <div class="sb-step" id="sb3" onclick="goStep(3)">
+          <div class="sb-n">03</div>
+          <div>
+            <div class="sb-nm">Vendor Response</div>
+            <div class="sb-dc">Receive and parse rate reply</div>
+            <div class="sb-st"><div class="sb-dot" id="sd3"></div><span class="sb-stxt" id="ss3">pending</span></div>
+          </div>
+        </div>
+        <div class="sb-step" id="sb4" onclick="goStep(4)">
+          <div class="sb-n">04</div>
+          <div>
+            <div class="sb-nm">Generate Quote</div>
+            <div class="sb-dc">Set margins, build formatted quote</div>
+            <div class="sb-st"><div class="sb-dot" id="sd4"></div><span class="sb-stxt" id="ss4">pending</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="sb-ft">
+        <div>model &nbsp;<span>sonnet-4</span></div>
+        <div>session <span id="sid">—</span></div>
+        <div id="sb-rfq" style="display:none" class="sb-rfq">
+          <div id="sb-comm" style="color:var(--text2);font-size:9px"></div>
+          <div id="sb-route" style="color:var(--text3);font-size:9px"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- INPUT PANE -->
+    <div class="pane pane-l">
+      <div class="ph">
+        <span class="ph-lbl" id="ititle">Input</span>
+        <span class="ph-badge" id="ibadge">step 1 / 4</span>
+      </div>
+      <div class="pb">
+
+        <div class="ip active" id="i1">
+          <!-- source tabs -->
+          <div style="display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:10px">
+            <button class="src-tab active" id="tab-paste" onclick="switchSrc('paste')">Paste text</button>
+            <button class="src-tab" id="tab-pdf" onclick="switchSrc('pdf')">Upload PDF</button>
+          </div>
+
+          <!-- PASTE -->
+          <div id="src-paste">
+            <div class="fl">
+              <label>Customer RFQ email</label>
+              <textarea id="rfq-raw" rows="13" placeholder="Paste the raw RFQ email here…&#10;&#10;AI will extract: customer, commodity,&#10;POL, POD, container, incoterm,&#10;cargo class, and flag missing fields."></textarea>
+            </div>
+            <div class="row" style="margin-top:8px">
+              <button class="btn btn-a" onclick="extractRFQ()" id="btn-ex">Extract with AI</button>
+              <button class="btn btn-g" onclick="loadSample()">load sample</button>
+            </div>
+          </div>
+
+          <!-- PDF UPLOAD -->
+          <div id="src-pdf" style="display:none;flex-direction:column;gap:8px">
+            <div id="drop-zone" onclick="document.getElementById('pdf-input').click()" ondragover="dzDrag(event)" ondragleave="dzLeave(event)" ondrop="dzDrop(event)">
+              <div id="dz-icon" style="font-size:22px;color:var(--border3);margin-bottom:8px">↑</div>
+              <div id="dz-main" style="font-family:var(--mono);font-size:11px;color:var(--text2)">Click or drag a PDF here</div>
+              <div style="font-family:var(--mono);font-size:9px;color:var(--text3);margin-top:4px">RFQ email export, quote request, freight brief</div>
+            </div>
+            <input type="file" id="pdf-input" accept=".pdf,application/pdf" style="display:none" onchange="handlePDF(this.files[0])"/>
+            <div id="pdf-status" style="display:none;font-family:var(--mono);font-size:10px;color:var(--text2);padding:6px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:2px"></div>
+            <div class="row">
+              <button class="btn btn-a" onclick="extractFromPDF()" id="btn-ex-pdf" disabled>Extract with AI</button>
+              <button class="btn btn-g" onclick="clearPDF()">clear</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="ip" id="i2">
+          <div class="g2">
+            <div class="fl"><label>Vendor / agent name</label><input id="v-name" placeholder="e.g. May Zhao – OceanFavor"/></div>
+            <div class="fl"><label>Vendor email</label><input id="v-email" placeholder="e.g. overseas@oceanfavor.com"/></div>
+          </div>
+          <div class="dv"></div>
+          <div class="slbl">RFQ context (auto-filled from step 1)</div>
+          <div class="g2">
+            <div class="fl"><label>Commodity</label><input id="e-commodity"/></div>
+            <div class="fl"><label>Container</label><input id="e-container"/></div>
+            <div class="fl"><label>POL</label><input id="e-pol"/></div>
+            <div class="fl"><label>POD(s)</label><input id="e-pod"/></div>
+            <div class="fl"><label>Incoterm</label><input id="e-incoterm" placeholder="FOB"/></div>
+            <div class="fl"><label>Cargo type</label>
+              <select id="e-cargo"><option>General Cargo (GC)</option><option>Dangerous Goods (DG)</option><option>Reefer</option></select>
+            </div>
+          </div>
+          <div class="fl"><label>Service type</label>
+            <select id="e-service">
+              <option>Import Ocean Freight | FCL</option>
+              <option>Export Ocean Freight | FCL</option>
+              <option>Door to Door</option>
+              <option>DDP</option>
+            </select>
+          </div>
+          <div class="row">
+            <button class="btn btn-a" onclick="genEmail()" id="btn-ge">Generate email</button>
+            <button class="btn btn-g" onclick="goStep(1)">← back</button>
+          </div>
+        </div>
+
+        <div class="ip" id="i3">
+          <div style="display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:10px">
+            <button class="src-tab active" id="s3-tab-paste" onclick="switchS3('paste')">Paste email</button>
+            <button class="src-tab" id="s3-tab-pdf" onclick="switchS3('pdf')">Upload PDF</button>
+          </div>
+
+          <div id="s3-paste">
+            <div class="fl">
+              <label>Vendor rate response</label>
+              <textarea id="v-resp" rows="12" placeholder="Paste vendor reply here…&#10;&#10;— or —&#10;&#10;Click 'Generate dummy' to simulate&#10;a realistic vendor reply from the RFQ."></textarea>
+            </div>
+            <div class="row" style="margin-top:8px">
+              <button class="btn btn-a" onclick="parseRates()" id="btn-pr">Parse rates</button>
+              <button class="btn" onclick="genDummy()" id="btn-dm">Generate dummy</button>
+              <button class="btn btn-g" onclick="goStep(2)">← back</button>
+            </div>
+            <div class="lln" id="dm-load" style="display:none"><span class="spinner"></span>Simulating vendor reply…</div>
+          </div>
+
+          <div id="s3-pdf" style="display:none;flex-direction:column;gap:8px">
+            <div id="s3-drop-zone" onclick="document.getElementById('s3-pdf-input').click()" ondragover="s3DzDrag(event)" ondragleave="s3DzLeave(event)" ondrop="s3DzDrop(event)">
+              <div id="s3-dz-icon" style="font-size:22px;color:var(--border3);margin-bottom:8px">↑</div>
+              <div id="s3-dz-main" style="font-family:var(--mono);font-size:11px;color:var(--text2)">Click or drag vendor rate PDF here</div>
+              <div style="font-family:var(--mono);font-size:9px;color:var(--text3);margin-top:4px">Quote sheets, rate confirmations, freight schedules</div>
+            </div>
+            <input type="file" id="s3-pdf-input" accept=".pdf,application/pdf" style="display:none" onchange="handleS3PDF(this.files[0])"/>
+            <div id="s3-pdf-status" style="display:none;font-family:var(--mono);font-size:10px;color:var(--text2);padding:6px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:2px"></div>
+            <div class="row">
+              <button class="btn btn-a" onclick="parseRatesFromPDF()" id="btn-pr-pdf" disabled>Parse rates from PDF</button>
+              <button class="btn btn-g" onclick="clearS3PDF()">clear</button>
+              <button class="btn btn-g" onclick="goStep(2)">← back</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="ip" id="i4">
+          <div class="slbl">Adjust sell prices</div>
+          <div id="mtbl"></div>
+          <div class="dv"></div>
+          <div class="g2">
+            <div class="fl"><label>Prepared by</label><input id="q-by" value="Daniel Willoughby"/></div>
+            <div class="fl"><label>Valid until</label><input id="q-valid" type="date"/></div>
+          </div>
+          <div class="fl"><label>Additional notes</label><textarea id="q-notes" rows="3" placeholder="e.g. Rate subject to space confirmation…"></textarea></div>
+          <div class="row">
+            <button class="btn btn-a" onclick="buildQuote()">Generate quote</button>
+            <button class="btn btn-g" onclick="goStep(3)">← back</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- OUTPUT PANE -->
+    <div class="pane">
+      <div class="ph">
+        <span class="ph-lbl" id="otitle">Output</span>
+        <span class="ph-badge" id="obadge">—</span>
+      </div>
+      <div class="pb" id="ob">
+        <div class="idle"><div class="arr">⟶</div><div>Paste an RFQ and click<br>Extract to begin</div></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const API='/api/claude', MODEL='claude-sonnet-4-6';
+const HEADERS = {'Content-Type': 'application/json'};
+
+let S={step:1,max:1,rfq:{},rates:[],rfqNum:null};
+document.getElementById('sid').textContent=Math.random().toString(36).slice(2,8).toUpperCase();
+
+function launchApp(){
+  const cover=document.getElementById('cover');
+  const app=document.getElementById('app');
+  cover.classList.add('hidden');
+  app.classList.add('visible');
+}
+function restartToCover(){
+  const cover=document.getElementById('cover');
+  const app=document.getElementById('app');
+  cover.classList.remove('hidden');
+  app.classList.remove('visible');
+  document.getElementById('rfq-dashboard').classList.remove('open');
+}
+
+async function ai(prompt,tok=900){
+  const r=await fetch(API,{method:'POST',headers:HEADERS,
+    body:JSON.stringify({model:MODEL,max_tokens:tok,messages:[{role:'user',content:prompt}]})});
+  const d=await r.json();
+  if(d.error){throw new Error(d.error.message||'API error')}
+  return d.content[0].text;
+}
+
+function out(html){document.getElementById('ob').innerHTML=html}
+
+const iT=['RFQ Email Input','Vendor Rate Request','Vendor Response','Quote Builder'];
+const iB=['step 1 / 4','step 2 / 4','step 3 / 4','step 4 / 4'];
+const oT=['Extracted Fields','Email Draft','Parsed Rates','Final Quote'];
+
+function goStep(n){
+  if(n>S.max)return;
+  S.step=n;
+  for(let i=1;i<=4;i++){
+    document.getElementById(`tn${i}`).className='t-step'+(i===n?' active':i<n?' done':'');
+    document.getElementById(`sb${i}`).className='sb-step'+(i===n?' active':i<n?' done':'');
+    document.getElementById(`i${i}`).classList.toggle('active',i===n);
+  }
+  document.getElementById('ititle').textContent=iT[n-1];
+  document.getElementById('ibadge').textContent=iB[n-1];
+  document.getElementById('otitle').textContent=oT[n-1];
+  document.getElementById('obadge').textContent='—';
+  if(n===1)out(`<div class="idle"><div class="arr">⟶</div><div>Extract fields from RFQ<br>to see them here</div></div>`);
+  if(n===2)renderS2out();
+  if(n===3)out(`<div class="idle"><div class="arr">⟶</div><div>Paste vendor response or<br>generate a dummy reply</div></div>`);
+  if(n===4)setupS4();
+}
+
+function sbStatus(s,txt,ok){
+  const d=document.getElementById(`sd${s}`),t=document.getElementById(`ss${s}`);
+  d.className='sb-dot'+(ok?' ok':s===S.step?' pulse':'');
+  t.className='sb-stxt'+(ok?' ok':'');
+  t.textContent=txt;
+}
+
+function unlock(n){
+  S.max=Math.max(S.max,n);
+  if(n>=2) document.getElementById('save-rfq-btn').style.display='flex';
+}
+
+const SAMPLE=`From: Grace Benson <grace.benson@bioscapeafrica.com>
+To: Daniel WILLOUGHBY <danielw@oneport365.com>
+Subject: FREIGHT RATE - AARHUS / CATANIA / MILAZZO
+
+Dear Daniel,
+
+Kindly share freight rate to the below destinations.
+
+Product: PKC (Palm Kernel Cake)
+40FT containers
+
+POL: LAGOS
+
+POD:
+- CATANIA, ITALY
+- MILAZZO, ITALY
+- AARHUS, DENMARK
+
+Regards,
+Grace Benson Edet
+Bioscape Commodities Africa Limited`;
+
+// ── SOURCE TABS ──
+let pdfBase64 = null;
+
+function switchSrc(mode) {
+  document.getElementById('tab-paste').classList.toggle('active', mode==='paste');
+  document.getElementById('tab-pdf').classList.toggle('active', mode==='pdf');
+  document.getElementById('src-paste').style.display = mode==='paste' ? 'block' : 'none';
+  document.getElementById('src-pdf').style.display = mode==='pdf' ? 'flex' : 'none';
+}
+
+function dzDrag(e) { e.preventDefault(); document.getElementById('drop-zone').classList.add('drag'); }
+function dzLeave(e) { document.getElementById('drop-zone').classList.remove('drag'); }
+function dzDrop(e) {
+  e.preventDefault();
+  document.getElementById('drop-zone').classList.remove('drag');
+  const file = e.dataTransfer.files[0];
+  if (file && file.type === 'application/pdf') handlePDF(file);
+}
+
+function handlePDF(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    pdfBase64 = e.target.result.split(',')[1];
+    const dz = document.getElementById('drop-zone');
+    dz.classList.add('has-file');
+    document.getElementById('dz-icon').textContent = '✓';
+    document.getElementById('dz-icon').style.color = 'var(--accent)';
+    document.getElementById('dz-main').textContent = file.name;
+    document.getElementById('dz-main').style.color = 'var(--accent)';
+    const kb = Math.round(file.size / 1024);
+    document.getElementById('pdf-status').style.display = 'block';
+    document.getElementById('pdf-status').innerHTML = `<span style="color:var(--text3)">size</span> <span style="color:var(--text2)">${kb} KB</span> &nbsp; <span style="color:var(--text3)">type</span> <span style="color:var(--text2)">application/pdf</span> &nbsp; <span style="color:var(--text3)">ready to extract</span>`;
+    document.getElementById('btn-ex-pdf').disabled = false;
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearPDF() {
+  pdfBase64 = null;
+  document.getElementById('pdf-input').value = '';
+  const dz = document.getElementById('drop-zone');
+  dz.classList.remove('has-file','drag');
+  document.getElementById('dz-icon').textContent = '↑';
+  document.getElementById('dz-icon').style.color = 'var(--border3)';
+  document.getElementById('dz-main').textContent = 'Click or drag a PDF here';
+  document.getElementById('dz-main').style.color = 'var(--text2)';
+  document.getElementById('pdf-status').style.display = 'none';
+  document.getElementById('btn-ex-pdf').disabled = true;
+}
+
+async function extractFromPDF() {
+  if (!pdfBase64) return;
+  const btn = document.getElementById('btn-ex-pdf');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Reading PDF…';
+  sbStatus(1,'reading pdf…',false);
+  out(`<div class="lln"><span class="spinner"></span>Sending PDF to Claude…</div>`);
+  try {
+    const res = await fetch(API, {
+      method: 'POST', headers: HEADERS,
+      body: JSON.stringify({
+        model: MODEL, max_tokens: 900,
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: pdfBase64 } },
+            { type: 'text', text: `Extract freight RFQ fields from this PDF. Return ONLY valid JSON no markdown:
+{"customer_name":string|null,"company":string|null,"commodity":string|null,"pol":string|null,"pods":string|null,"container_types":string|null,"cargo_type":"GC"|"DG"|"Reefer"|"Mixed"|null,"incoterm":string|null,"service_type":string|null,"missing":[string]}` }
+          ]
+        }]
+      })
+    });
+    const d = await res.json();
+    S.rfq = JSON.parse(d.content[0].text.replace(/```json|```/g,'').trim());
+    const r = S.rfq;
+    const fm = { commodity:'e-commodity', pol:'e-pol', pods:'e-pod', container_types:'e-container', incoterm:'e-incoterm' };
+    Object.entries(fm).forEach(([k,id]) => { const el=document.getElementById(id); if(el) el.value=r[k]||''; });
+    if (r.commodity) {
+      document.getElementById('sb-rfq').style.display='block';
+      document.getElementById('sb-comm').textContent = r.commodity;
+      document.getElementById('sb-route').textContent = `${r.pol||'?'} → ${r.pods||'?'}`;
+    }
+    renderExtracted(r);
+    sbStatus(1,'extracted ✓',true); unlock(2);
+  } catch(e) {
+    out(`<div style="color:var(--danger);font-family:var(--mono);font-size:10px">Error: ${e.message}</div>`);
+    sbStatus(1,'error',false);
+  }
+  btn.disabled = false; btn.textContent = 'Extract with AI';
+}
+
+function loadSample(){document.getElementById('rfq-raw').value=SAMPLE}
+
+// ── STEP 3 SOURCE TABS ──
+let s3PdfBase64 = null;
+
+function switchS3(mode) {
+  document.getElementById('s3-tab-paste').classList.toggle('active', mode==='paste');
+  document.getElementById('s3-tab-pdf').classList.toggle('active', mode==='pdf');
+  document.getElementById('s3-paste').style.display = mode==='paste' ? 'block' : 'none';
+  document.getElementById('s3-pdf').style.display = mode==='pdf' ? 'flex' : 'none';
+}
+
+function s3DzDrag(e) { e.preventDefault(); document.getElementById('s3-drop-zone').classList.add('drag'); }
+function s3DzLeave(e) { document.getElementById('s3-drop-zone').classList.remove('drag'); }
+function s3DzDrop(e) {
+  e.preventDefault();
+  document.getElementById('s3-drop-zone').classList.remove('drag');
+  const file = e.dataTransfer.files[0];
+  if (file && file.type === 'application/pdf') handleS3PDF(file);
+}
+
+function handleS3PDF(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    s3PdfBase64 = e.target.result.split(',')[1];
+    const dz = document.getElementById('s3-drop-zone');
+    dz.classList.add('has-file');
+    document.getElementById('s3-dz-icon').textContent = '✓';
+    document.getElementById('s3-dz-icon').style.color = 'var(--accent)';
+    document.getElementById('s3-dz-main').textContent = file.name;
+    document.getElementById('s3-dz-main').style.color = 'var(--accent)';
+    const kb = Math.round(file.size / 1024);
+    document.getElementById('s3-pdf-status').style.display = 'block';
+    document.getElementById('s3-pdf-status').innerHTML = `<span style="color:var(--text3)">size</span> <span style="color:var(--text2)">${kb} KB</span> &nbsp; <span style="color:var(--text3)">type</span> <span style="color:var(--text2)">application/pdf</span> &nbsp; <span style="color:var(--text3)">ready to parse</span>`;
+    document.getElementById('btn-pr-pdf').disabled = false;
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearS3PDF() {
+  s3PdfBase64 = null;
+  document.getElementById('s3-pdf-input').value = '';
+  const dz = document.getElementById('s3-drop-zone');
+  dz.classList.remove('has-file','drag');
+  document.getElementById('s3-dz-icon').textContent = '↑';
+  document.getElementById('s3-dz-icon').style.color = 'var(--border3)';
+  document.getElementById('s3-dz-main').textContent = 'Click or drag vendor rate PDF here';
+  document.getElementById('s3-dz-main').style.color = 'var(--text2)';
+  document.getElementById('s3-pdf-status').style.display = 'none';
+  document.getElementById('btn-pr-pdf').disabled = true;
+}
+
+async function parseRatesFromPDF() {
+  if (!s3PdfBase64) return;
+  const btn = document.getElementById('btn-pr-pdf');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Reading PDF…';
+  sbStatus(3,'reading pdf…',false);
+  out(`<div class="lln"><span class="spinner"></span>Sending PDF to Claude…</div>`);
+  try {
+    const res = await fetch(API, {
+      method:'POST', headers:HEADERS,
+      body: JSON.stringify({
+        model: MODEL, max_tokens: 900,
+        messages:[{
+          role:'user',
+          content:[
+            { type:'document', source:{ type:'base64', media_type:'application/pdf', data: s3PdfBase64 } },
+            { type:'text', text:`Extract all freight rates from this PDF. Return ONLY a JSON array, no markdown:
+[{"carrier":string,"route":string,"container":string,"cost_usd":number,"free_days":number|null,"transit_days":number|null,"validity":string|null,"notes":string|null}]` }
+          ]
+        }]
+      })
+    });
+    const d = await res.json();
+    S.rates = JSON.parse(d.content[0].text.replace(/\`\`\`json|\`\`\`/g,'').trim());
+    S.rates = S.rates.map(r=>({...r, sell_usd: Math.round(r.cost_usd*1.13)}));
+    renderParsedRates(S.rates);
+    sbStatus(3,`${S.rates.length} rates ✓`,true); unlock(4);
+  } catch(e) {
+    out(`<div style="color:var(--danger);font-size:10px;font-family:var(--mono)">Error: ${e.message}</div>`);
+    sbStatus(3,'error',false);
+  }
+  btn.disabled = false; btn.textContent = 'Parse rates from PDF';
+}
+
+async function extractRFQ(){
+  const raw=document.getElementById('rfq-raw').value.trim();
+  if(!raw)return;
+  const btn=document.getElementById('btn-ex');
+  btn.disabled=true;btn.innerHTML='<span class="spinner"></span>Extracting…';
+  sbStatus(1,'extracting…',false);
+  out(`<div class="lln"><span class="spinner"></span>Parsing RFQ fields…</div>`);
+  try{
+    const txt=await ai(`Extract freight RFQ fields. Return ONLY valid JSON no markdown:
+{"customer_name":string|null,"company":string|null,"commodity":string|null,"pol":string|null,"pods":string|null,"container_types":string|null,"cargo_type":"GC"|"DG"|"Reefer"|"Mixed"|null,"incoterm":string|null,"service_type":string|null,"missing":[string]}
+Email:\n${raw}`);
+    S.rfq=JSON.parse(txt.replace(/\`\`\`json|\`\`\`/g,'').trim());
+    const r=S.rfq;
+    const fm={commodity:'e-commodity',pol:'e-pol',pods:'e-pod',container_types:'e-container',incoterm:'e-incoterm'};
+    Object.entries(fm).forEach(([k,id])=>{const el=document.getElementById(id);if(el)el.value=r[k]||''});
+    if(r.commodity){document.getElementById('sb-rfq').style.display='block';document.getElementById('sb-comm').textContent=r.commodity;document.getElementById('sb-route').textContent=`${r.pol||'?'} → ${r.pods||'?'}`}
+    renderExtracted(r);
+    sbStatus(1,'extracted ✓',true);unlock(2);
+  }catch(e){out(`<div style="color:var(--danger);font-family:var(--mono);font-size:10px">Error: ${e.message}</div>`);sbStatus(1,'error',false)}
+  btn.disabled=false;btn.textContent='Extract with AI';
+}
+
+function renderExtracted(r){
+  const flds=[['Customer',r.customer_name],['Company',r.company],['Commodity',r.commodity],['POL',r.pol],['POD(s)',r.pods],['Container',r.container_types],['Cargo',r.cargo_type],['Incoterm',r.incoterm],['Service',r.service_type]];
+  const pills=flds.filter(f=>f[1]).map(f=>`<span class="pill"><b>${f[0]}</b> ${f[1]}</span>`).join('');
+  const miss=r.missing?.length?`<div class="warn-ln" style="margin-top:6px">Missing: ${r.missing.join(', ')}</div>`:'';
+  document.getElementById('obadge').textContent=`${flds.filter(f=>f[1]).length} fields`;
+  out(`<div>
+    <div class="slbl" style="margin-bottom:6px">Fields extracted</div>
+    <div style="line-height:2.2">${pills}</div>
+    ${miss}
+    <div class="dv" style="margin-top:10px"></div>
+    <div class="row" style="margin-top:8px">
+      <button class="btn btn-a" onclick="goStep(2)">Next: build rate request →</button>
+    </div>
+  </div>`);
+}
+
+function renderS2out(){
+  const r=S.rfq;
+  const rows=[['commodity',r.commodity],['pol',r.pol],['pod(s)',r.pods],['container',r.container_types],['cargo type',r.cargo_type],['incoterm',r.incoterm]].filter(f=>f[1])
+    .map(f=>`<div style="display:flex;gap:8px;padding:4px 0;border-bottom:1px solid var(--border);font-family:var(--mono);font-size:10px"><span style="color:var(--text3);min-width:76px">${f[0]}</span><span style="color:var(--text)">${f[1]}</span></div>`).join('');
+  out(`<div><div class="slbl" style="margin-bottom:6px">RFQ context</div>${rows}<div style="margin-top:10px;font-size:10px;color:var(--text3);font-family:var(--mono);line-height:1.8">Enter vendor details on the left<br>and click Generate.</div></div>`);
+}
+
+async function genEmail(){
+  const vn=document.getElementById('v-name').value||'Partner';
+  const btn=document.getElementById('btn-ge');
+  btn.disabled=true;btn.innerHTML='<span class="spinner"></span>Generating…';
+  sbStatus(2,'drafting…',false);
+  out(`<div class="lln"><span class="spinner"></span>Drafting rate request…</div>`);
+  const rfq=getRFQ();
+  try{
+    const txt=await ai(`Write a short professional freight rate request email from Daniel Willoughby (Commercial & Pricing Coordinator, OnePort 365) to ${vn}.
+Request best rates for: Commodity: ${rfq.commodity||'general cargo'}, POL: ${rfq.pol||'TBD'}, POD(s): ${rfq.pod||'TBD'}, Container: ${rfq.container||'40FT'}, Cargo: ${rfq.cargo||'GC'}, Incoterm: ${rfq.incoterm||'FOB'}, Service: ${rfq.service}.
+Do NOT mention the end customer or company name. Ask for rate/container, free days, transit, carrier, validity. Concise, professional. Plain text only.`);
+    document.getElementById('obadge').textContent='draft ready';
+    out(`<div style="display:flex;flex-direction:column;gap:8px">
+      <div class="slbl">Email draft — copy or edit before sending</div>
+      <textarea style="min-height:240px;font-size:10px" id="edraft">${txt}</textarea>
+      <div class="row">
+        <button class="btn btn-a" onclick="goStep(3)">Next: paste vendor response →</button>
+        <button class="btn btn-g" onclick="navigator.clipboard.writeText(document.getElementById('edraft').value)">copy</button>
+      </div>
+    </div>`);
+    sbStatus(2,'draft ready ✓',true);unlock(3);
+  }catch(e){out(`<div style="color:var(--danger);font-size:10px;font-family:var(--mono)">${e.message}</div>`)}
+  btn.disabled=false;btn.textContent='Generate email';
+}
+
+async function genDummy(){
+  const rfq=getRFQ();const vn=document.getElementById('v-name').value||'freight agent';
+  const btn=document.getElementById('btn-dm'),ld=document.getElementById('dm-load');
+  btn.disabled=true;btn.innerHTML='<span class="spinner"></span>Generating…';ld.style.display='flex';
+  sbStatus(3,'simulating…',false);
+  try{
+    const txt=await ai(`You are a freight vendor (${vn}) replying to a rate request from OnePort 365.
+Generate a realistic vendor rate reply with 2-4 rate options.
+Context: commodity=${rfq.commodity||'general cargo'}, POL=${rfq.pol||'Lagos'}, POD(s)=${rfq.pod||'destination'}, container=${rfq.container||'40FT'}
+Rules: use real carrier names (MSC, Maersk, CMA CGM, OOCL, Hapag-Lloyd, ZIM), realistic USD rates for this trade lane, transit days, free days 7-21, validity date 2-4 weeks from now, BL fee if realistic. Short professional email, plain text only.`);
+    document.getElementById('v-resp').value=txt;
+    out(`<div><div class="slbl" style="margin-bottom:6px">Simulated vendor reply</div><div class="email-box">${txt}</div><div style="margin-top:7px;font-size:9px;color:var(--text3);font-family:var(--mono)">Dummy based on RFQ. Click Parse rates →</div></div>`);
+    sbStatus(3,'dummy ready',false);
+  }catch(e){alert(e.message)}
+  ld.style.display='none';btn.disabled=false;btn.textContent='Generate dummy';
+}
+
+async function parseRates(){
+  const raw=document.getElementById('v-resp').value.trim();if(!raw)return;
+  const btn=document.getElementById('btn-pr');
+  btn.disabled=true;btn.innerHTML='<span class="spinner"></span>Parsing…';
+  sbStatus(3,'parsing…',false);
+  out(`<div class="lln"><span class="spinner"></span>Extracting rates…</div>`);
+  try{
+    const txt=await ai(`Extract all freight rates from this email. Return ONLY a JSON array no markdown:
+[{"carrier":string,"route":string,"container":string,"cost_usd":number,"free_days":number|null,"transit_days":number|null,"validity":string|null,"notes":string|null}]
+Email:\n${raw}`);
+    S.rates=JSON.parse(txt.replace(/\`\`\`json|\`\`\`/g,'').trim());
+    S.rates=S.rates.map(r=>({...r,sell_usd:Math.round(r.cost_usd*1.13)}));
+    renderRates(S.rates);
+    sbStatus(3,`${S.rates.length} rates ✓`,true);unlock(4);
+  }catch(e){out(`<div style="color:var(--danger);font-size:10px;font-family:var(--mono)">${e.message}</div>`)}
+  btn.disabled=false;btn.textContent='Parse rates';
+}
+
+function renderRates(rates){
+  const rows=rates.map((r,i)=>{const m=r.sell_usd>0?Math.round(((r.sell_usd-r.cost_usd)/r.sell_usd)*100):0;
+    return`<tr><td class="hi">${r.carrier||'—'}</td><td>${r.route}</td><td>${r.container||'40FT'}</td><td>$${r.cost_usd.toLocaleString()}</td><td class="ac">$${r.sell_usd.toLocaleString()}</td><td><span class="tag tok">${m}%</span></td><td>${r.free_days||'—'}d</td><td>${r.transit_days?r.transit_days+'d':'—'}</td></tr>`;
+  }).join('');
+  document.getElementById('obadge').textContent=`${rates.length} rates`;
+  out(`<div>
+    <div class="slbl" style="margin-bottom:7px">${rates.length} rate(s) extracted</div>
+    <div style="overflow-x:auto"><table class="rtbl"><thead><tr><th>Carrier</th><th>Route</th><th>Size</th><th>Cost</th><th>Sell</th><th>Margin</th><th>Free</th><th>Transit</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <div style="margin-top:7px;font-size:9px;color:var(--text3);font-family:var(--mono)">Sell prices at 13% margin. Adjust in step 4.</div>
+    <div class="row" style="margin-top:9px"><button class="btn btn-a" onclick="goStep(4)">Next: set margins & generate quote →</button></div>
+  </div>`);
+}
+
+function setupS4(){
+  const rows=S.rates.map((r,i)=>`
+    <div style="display:grid;grid-template-columns:1fr 60px 60px;gap:6px;align-items:center;padding:5px 0;border-bottom:1px solid var(--border)">
+      <div style="font-family:var(--mono);font-size:10px;color:var(--text2)">${r.carrier} · ${r.route}</div>
+      <div style="font-family:var(--mono);font-size:10px;color:var(--text3)">$${r.cost_usd.toLocaleString()}</div>
+      <input class="sinp" type="number" id="sell-${i}" value="${r.sell_usd}"/>
+    </div>`).join('');
+  document.getElementById('mtbl').innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 60px 60px;gap:6px;padding-bottom:4px">
+      <span style="font-size:9px;color:var(--text3);font-family:var(--mono);text-transform:uppercase">Route</span>
+      <span style="font-size:9px;color:var(--text3);font-family:var(--mono);text-transform:uppercase">Cost</span>
+      <span style="font-size:9px;color:var(--text3);font-family:var(--mono);text-transform:uppercase">Sell</span>
+    </div>${rows}`;
+  const d=new Date();d.setDate(d.getDate()+2);
+  document.getElementById('q-valid').value=d.toISOString().split('T')[0];
+  sbStatus(4,'ready to build',false);
+  out(`<div class="idle"><div class="arr">⟶</div><div>Adjust sell prices on the left<br>then click Generate quote</div></div>`);
+}
+
+function buildQuote(){
+  const rfq=getRFQ();
+  const rates=S.rates.map((r,i)=>{const el=document.getElementById(`sell-${i}`);return{...r,sell_usd:el?parseFloat(el.value)||r.sell_usd:r.sell_usd}});
+  const today=new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+  const vEl=document.getElementById('q-valid');
+  const valid=vEl?.value?new Date(vEl.value).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}):'—';
+  const by=document.getElementById('q-by')?.value||'Daniel Willoughby';
+  const notes=document.getElementById('q-notes')?.value||'';
+  const low=rates.reduce((a,b)=>b.sell_usd<a.sell_usd?b:a,rates[0]||{sell_usd:0});
+  const trows=rates.map(r=>{
+    const m=r.sell_usd>0?Math.round(((r.sell_usd-r.cost_usd)/r.sell_usd)*100):0;
+    const rec=r===low&&rates.length>1;
+    return`<tr><td class="hi">${r.carrier||'—'}</td><td>${r.route}${rec?'<span class="rbadge">best</span>':''}</td><td>${r.container||'40FT'}</td><td>${r.transit_days?r.transit_days+'d':'—'}</td><td>${r.free_days||'—'}</td><td style="text-align:right" class="ac">$${r.sell_usd.toLocaleString()}</td><td style="text-align:right;color:var(--text3)">${m}%</td></tr>`;
+  }).join('');
+  const qf=(l,v)=>`<div class="qf"><div class="qfl">${l}</div><div class="qfv">${v||'—'}</div></div>`;
+  document.getElementById('obadge').textContent='quote ready';
+  sbStatus(4,'quote ready ✓',true);
+  out(`<div class="qw">
+    <div class="qhdr">
+      <div><div class="qlogo">OnePort 365</div><div style="font-size:9px;color:var(--text3);font-family:var(--mono);margin-top:3px">Meydan Grandstand, 6th floor · Dubai, UAE</div></div>
+      <div class="qmeta">Freight Quote<br>Issued: ${today}<br>Valid: ${valid}<br>By: ${by}</div>
+    </div>
+    <div class="qfields">
+      ${qf('Customer',rfq.customer||rfq.company)}${qf('Commodity',rfq.commodity)}${qf('Service',rfq.service)}
+      ${qf('POL',rfq.pol)}${qf('POD',rfq.pod)}${qf('Container',rfq.container)}
+    </div>
+    <div class="qbody">
+      <div class="slbl" style="margin-bottom:7px">Rate options</div>
+      <table class="rtbl" style="table-layout:fixed;width:100%">
+        <colgroup><col style="width:55px"><col><col style="width:48px"><col style="width:52px"><col style="width:38px"><col style="width:72px"><col style="width:44px"></colgroup>
+        <thead><tr><th>Carrier</th><th>Route</th><th>Size</th><th>Transit</th><th>Free</th><th style="text-align:right">Price</th><th style="text-align:right">Margin</th></tr></thead>
+        <tbody>${trows}</tbody>
+      </table>
+      ${rates.length?`<div class="qtot"><span class="qtlbl">Lowest option</span><span class="qtval">$${low.sell_usd.toLocaleString()}</span></div>`:''}
+      ${notes?`<div class="nbox">${notes}</div>`:''}
+      <div class="nbox">Duty and tax subject to verification. 7.5% VAT at invoicing. Offer valid 48hrs. Storage / detention / demurrage as receipted.</div>
+    </div>
+  </div>
+  <div class="row" style="margin-top:9px">
+    <button class="btn btn-a" onclick="sendPrompt('Draft the outbound quote email to send to the customer based on this freight quote')">Draft send email ↗</button>
+    <button class="btn" onclick="sendPrompt('Are these margins competitive for this trade lane and commodity?')">Check margins ↗</button>
+  </div>`);
+}
+
+function getRFQ(){
+  return{
+    customer:S.rfq.customer_name||'',company:S.rfq.company||'',
+    commodity:document.getElementById('e-commodity')?.value||S.rfq.commodity||'',
+    pol:document.getElementById('e-pol')?.value||S.rfq.pol||'',
+    pod:document.getElementById('e-pod')?.value||S.rfq.pods||'',
+    container:document.getElementById('e-container')?.value||S.rfq.container_types||'',
+    incoterm:document.getElementById('e-incoterm')?.value||S.rfq.incoterm||'',
+    service:document.getElementById('e-service')?.value||'Import Ocean Freight | FCL',
+    cargo:document.getElementById('e-cargo')?.value||'GC',
+  };
+}
+window.sendPrompt=window.sendPrompt||function(t){alert('Would send:\n'+t)};
+
+// ── RFQ DASHBOARD ──
+const STORE_KEY = 'oneport_rfqs';
+
+function genRFQNum() {
+  const d = new Date();
+  const yy = String(d.getFullYear()).slice(2);
+  const mm = String(d.getMonth()+1).padStart(2,'0');
+  const rand = String(Math.floor(Math.random()*9000)+1000);
+  return `RFQ-${yy}${mm}-${rand}`;
+}
+
+function loadRFQs() {
+  try { return JSON.parse(localStorage.getItem(STORE_KEY)||'[]'); } catch { return []; }
+}
+
+function saveRFQs(list) {
+  localStorage.setItem(STORE_KEY, JSON.stringify(list));
+  updateDashCount();
+}
+
+function updateDashCount() {
+  const list = loadRFQs();
+  document.getElementById('dash-count').textContent = list.length;
+}
+
+function stepLabel(n) {
+  return ['','RFQ received','Rate requested','Rates received','Quote ready'][n] || 'In progress';
+}
+function stepClass(n) {
+  return ['','st-1','st-2','st-3','st-4'][n] || 'st-1';
+}
+
+function saveRFQ() {
+  const rfq = getRFQ();
+  const list = loadRFQs();
+  const existing = S.rfqNum ? list.findIndex(r => r.rfqNum === S.rfqNum) : -1;
+  const record = {
+    rfqNum: S.rfqNum || genRFQNum(),
+    savedAt: new Date().toISOString(),
+    step: S.step,
+    rfqData: S.rfq,
+    rates: S.rates,
+    customer: rfq.customer || rfq.company || S.rfq.customer_name || S.rfq.company || '—',
+    commodity: rfq.commodity || '—',
+    pol: rfq.pol || '—',
+    pod: rfq.pod || '—',
+    vendor: document.getElementById('v-name')?.value || '—',
+  };
+  S.rfqNum = record.rfqNum;
+  if (existing >= 0) { list[existing] = record; }
+  else { list.unshift(record); }
+  saveRFQs(list);
+  const btn = document.getElementById('save-rfq-btn');
+  btn.textContent = '✓ Saved';
+  setTimeout(() => { btn.textContent = 'Save RFQ'; }, 1500);
+  updateDashCount();
+}
+
+function showDashboard() {
+  renderDashboard();
+  document.getElementById('rfq-dashboard').classList.add('open');
+}
+
+function hideDashboard() {
+  document.getElementById('rfq-dashboard').classList.remove('open');
+}
+
+function newRFQ() {
+  S = { step:1, max:1, rfq:{}, rates:[], rfqNum:null };
+  hideDashboard();
+  goStep(1);
+  document.getElementById('rfq-raw').value = '';
+  document.getElementById('v-resp').value = '';
+  document.getElementById('v-name').value = '';
+  out(`<div class="idle"><div class="arr">⟶</div><div>Extract fields from RFQ<br>to see them here</div></div>`);
+  for(let i=1;i<=4;i++) sbStatus(i, i===1?'awaiting input':'pending', false);
+  document.getElementById('save-rfq-btn').style.display = 'none';}
+
+function resumeRFQ(rfqNum) {
+  const list = loadRFQs();
+  const record = list.find(r => r.rfqNum === rfqNum);
+  if (!record) return;
+  S.rfqNum = record.rfqNum;
+  S.rfq = record.rfqData || {};
+  S.rates = record.rates || [];
+  S.step = record.step || 1;
+  S.max = record.step || 1;
+
+  const r = S.rfq;
+  const fm = { commodity:'e-commodity', pol:'e-pol', pods:'e-pod', container_types:'e-container', incoterm:'e-incoterm' };
+  Object.entries(fm).forEach(([k,id]) => { const el=document.getElementById(id); if(el) el.value=r[k]||''; });
+  if (record.vendor && document.getElementById('v-name')) document.getElementById('v-name').value = record.vendor;
+  if (r.commodity) {
+    document.getElementById('sb-rfq').style.display='block';
+    document.getElementById('sb-comm').textContent = r.commodity;
+    document.getElementById('sb-route').textContent = `${r.pol||'?'} → ${r.pods||'?'}`;
+  }
+
+  hideDashboard();
+  goStep(record.step || 1);
+  document.getElementById('save-rfq-btn').style.display = 'flex';
+  if (record.step >= 1 && r.customer_name) { renderExtracted(r); sbStatus(1,'extracted ✓',true); }
+  if (record.step >= 3 && S.rates.length) { renderRates(S.rates); sbStatus(3,`${S.rates.length} rates ✓`,true); }
+  if (record.step >= 4) { setupS4(); sbStatus(4,'ready to build',false); }
+}
+
+function deleteRFQ(rfqNum) {
+  const list = loadRFQs().filter(r => r.rfqNum !== rfqNum);
+  saveRFQs(list);
+  renderDashboard();
+}
+
+function renderDashboard() {
+  const list = loadRFQs();
+  const container = document.getElementById('rfq-list');
+  if (!list.length) {
+    container.innerHTML = `<div class="dash-empty">
+      <div style="font-size:24px;color:var(--border2)">—</div>
+      <div>No RFQs saved yet.<br>Start a new one and hit Save RFQ to track it here.</div>
+    </div>`;
+    return;
+  }
+  container.innerHTML = list.map(r => {
+    const d = new Date(r.savedAt);
+    const dateStr = d.toLocaleDateString('en-GB',{day:'2-digit',month:'short'}) + ' ' + d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+    return `<div class="rfq-row">
+      <div class="rfq-num">${r.rfqNum}</div>
+      <div class="rfq-cell pri">${r.customer||'—'}</div>
+      <div class="rfq-cell">${r.pol||'—'} → ${r.pod||'—'}</div>
+      <div class="rfq-cell">${r.commodity||'—'}</div>
+      <div><span class="st-badge ${stepClass(r.step)}">${stepLabel(r.step)}</span></div>
+      <div class="rfq-cell">${dateStr}</div>
+      <div style="display:flex;gap:5px">
+        <button class="btn btn-a btn-sm" onclick="resumeRFQ('${r.rfqNum}')">Resume →</button>
+        <button class="btn btn-sm" onclick="deleteRFQ('${r.rfqNum}')" style="color:var(--text3);padding:4px 7px">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+
+// Init
+updateDashCount();
+</script>
+</body>
+</html>

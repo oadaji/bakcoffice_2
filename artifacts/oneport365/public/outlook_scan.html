@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>OnePort 365 — RFQ Intake</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:#f0f4f0;color:#1a1a1a;font-family:'Inter',sans-serif;font-size:13px;overflow:hidden}
+:root{
+  --accent:#7AB648;--accent-dark:#5a9132;--accent-light:#eef6e6;
+  --bg:#f0f4f0;--surface:#ffffff;--border:#e4e8e4;--border2:#d0d8d0;
+  --text:#1a2e1a;--text2:#4a5e4a;--text3:#8a9e8a;
+  --danger:#dc2626;--warn:#d97706;--info:#2563eb;
+  --sidebar-bg:#1C3829;--sidebar-text:#c8d9c8;--sidebar-text-active:#ffffff;
+}
+
+/* LAYOUT */
+.app{display:flex;flex-direction:column;height:100vh;overflow:hidden}
+
+/* TOPNAV */
+.topnav{background:var(--sidebar-bg);display:flex;align-items:center;padding:0 20px;gap:0;flex-shrink:0;height:52px}
+.logo-box{display:flex;align-items:center;gap:9px;padding-right:20px;border-right:1px solid rgba(255,255,255,.1);margin-right:6px;flex-shrink:0}
+.logo-icon{width:30px;height:30px;background:var(--accent);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:14px;color:#fff;font-weight:700;flex-shrink:0}
+.logo-text{font-size:14px;font-weight:700;color:#fff;white-space:nowrap}
+.logo-text span{color:var(--accent)}
+.nav-item{display:flex;align-items:center;gap:7px;padding:0 14px;height:52px;cursor:pointer;color:var(--sidebar-text);font-size:12px;font-weight:400;transition:all .15s;border-bottom:2px solid transparent;white-space:nowrap}
+.nav-item:hover{color:var(--sidebar-text-active);background:rgba(255,255,255,.05)}
+.nav-item.active{color:var(--sidebar-text-active);border-bottom-color:var(--accent);font-weight:500}
+.nav-badge{font-size:10px;padding:1px 6px;border-radius:10px;background:rgba(255,255,255,.15);color:#fff;font-weight:600;margin-left:4px}
+.nav-item.active .nav-badge{background:var(--accent);color:#fff}
+.nav-right{margin-left:auto;display:flex;align-items:center;gap:12px}
+.t-status{display:flex;align-items:center;gap:6px;font-size:11px;color:rgba(255,255,255,.5)}
+.t-status-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:pulse 2s ease infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.user-chip{display:flex;align-items:center;gap:8px;padding:4px 12px;border-radius:20px;border:1px solid rgba(255,255,255,.15);cursor:pointer}
+.user-avatar{width:26px;height:26px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:#fff;flex-shrink:0}
+
+/* BODY — fills remaining height */
+.body{flex:1;overflow:hidden;display:flex;flex-direction:column;min-height:0}
+
+/* SCREENS — the two views */
+.screen{display:none;flex:1;min-height:0;overflow:hidden}
+.screen.active{display:flex}
+
+/* SCREEN 1 — three columns */
+#s1{flex-direction:row}
+.col-inbox{width:280px;flex-shrink:0;border-right:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column;overflow:hidden}
+.col-email{flex:1;min-width:0;background:var(--surface);display:flex;flex-direction:column;overflow:hidden;border-right:1px solid var(--border)}
+.col-extract{width:290px;flex-shrink:0;background:#fafbfa;display:flex;flex-direction:column;overflow:hidden}
+
+/* INBOX */
+.inbox-hd{padding:11px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.inbox-hd-title{font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em}
+.monitoring-pill{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--accent-dark);background:var(--accent-light);padding:2px 8px;border-radius:20px;font-weight:500}
+.inbox-scroll{flex:1;overflow-y:auto;min-height:0}
+.inbox-scroll::-webkit-scrollbar{width:3px}
+.inbox-scroll::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+.inbox-section-lbl{padding:7px 14px 4px;font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;background:var(--bg);border-top:1px solid var(--border)}
+.inbox-section-lbl:first-child{border-top:none}
+.email-item{padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s;border-left:3px solid transparent;display:flex;flex-direction:column;gap:3px}
+.email-item:hover{background:#f8faf8}
+.email-item.sel{background:#eef6e6;border-left-color:var(--accent)}
+.email-item.unread .ei-from{color:var(--text);font-weight:600}
+.ei-top{display:flex;align-items:center;justify-content:space-between;gap:6px}
+.ei-from{font-size:12px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
+.ei-time{font-size:10px;color:var(--text3);flex-shrink:0}
+.ei-subj{font-size:11px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ei-foot{display:flex;align-items:center;gap:6px;margin-top:2px}
+.rfq-chip{font-size:10px;padding:1px 7px;border-radius:10px;background:#e8f5e0;color:var(--accent-dark);font-weight:500;flex-shrink:0}
+.ei-status{font-size:10px;color:var(--text3)}
+.spinner{display:inline-block;width:9px;height:9px;border:1.5px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:3px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* EMAIL DETAIL */
+.detail-hd{padding:14px 18px 12px;border-bottom:1px solid var(--border);flex-shrink:0}
+.detail-subj{font-size:15px;font-weight:600;color:var(--text);margin-bottom:6px;line-height:1.3}
+.detail-meta{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.detail-meta-from{font-size:11px;color:var(--text3)}
+.detail-meta-time{font-size:11px;color:var(--text3);margin-left:auto}
+.processing-bar{margin:10px 18px 0;padding:8px 12px;background:#eef6e6;border:1px solid #c8e6a0;border-radius:8px;display:flex;align-items:center;gap:8px;flex-shrink:0}
+.processing-bar-text{font-size:11px;color:var(--accent-dark);flex:1}
+.processing-badge{font-size:10px;padding:2px 8px;border-radius:4px;background:var(--accent);color:#fff;font-weight:500;white-space:nowrap;flex-shrink:0}
+.detail-body{padding:14px 18px;flex:1;overflow-y:auto;font-size:13px;color:var(--text2);line-height:1.8;min-height:0}
+.detail-body::-webkit-scrollbar{width:3px}
+.detail-body::-webkit-scrollbar-thumb{background:var(--border2)}
+.detail-actions{padding:10px 18px;border-top:1px solid var(--border);display:flex;gap:7px;flex-shrink:0}
+
+/* EXTRACTION PANEL */
+.ep-hd{padding:10px 14px;border-bottom:1px solid var(--border);background:var(--surface);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.ep-title{font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em}
+.ep-rfqnum{font-size:11px;color:var(--accent-dark);font-weight:600;background:var(--accent-light);padding:2px 8px;border-radius:4px}
+.ep-body{flex:1;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:0;min-height:0}
+.ep-body::-webkit-scrollbar{width:3px}
+.ep-body::-webkit-scrollbar-thumb{background:var(--border2)}
+.ep-field{display:flex;justify-content:space-between;align-items:flex-start;padding:6px 0;border-bottom:1px solid var(--border);gap:8px}
+.ep-field:last-child{border-bottom:none}
+.ep-key{font-size:10px;color:var(--text3);font-weight:500;min-width:80px;flex-shrink:0;padding-top:1px}
+.ep-val{font-size:11px;color:var(--text);text-align:right;flex:1;line-height:1.4}
+.ep-val.miss{color:var(--danger);font-style:italic;font-size:10px}
+.ep-ok{color:var(--accent-dark);margin-right:3px;font-size:10px}
+.ep-section-lbl{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin:10px 0 6px;display:block}
+.missing-lbl{color:var(--danger)!important}
+.ep-missing-item{font-size:11px;color:#92400e;padding:5px 8px;background:#fffbeb;border-left:3px solid var(--warn);margin-bottom:4px;border-radius:0 4px 4px 0;line-height:1.5}
+.ep-followup{background:#fff;border:1px solid var(--border);border-radius:8px;padding:10px;margin-top:8px}
+.ep-draft{font-size:10px;color:var(--text2);line-height:1.7;white-space:pre-wrap;font-family:monospace}
+.ep-timer{font-size:10px;color:var(--warn);background:#fffbeb;padding:2px 7px;border-radius:4px;font-weight:500}
+.ep-timer.sent{color:#166534;background:#dcfce7}
+
+/* SCREEN 2 — TRACKER */
+#s2{flex-direction:column;overflow-y:auto}
+
+/* TRACKER internals — copied from original */
+.tracker-wrap{padding:16px 20px;display:flex;flex-direction:column;gap:12px;min-height:100%}
+.page-title{font-size:18px;font-weight:600;color:var(--text)}
+.page-sub{font-size:12px;color:var(--text3)}
+.stats-row{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;flex-shrink:0}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px}
+.stat-val{font-size:22px;font-weight:700;color:var(--text);margin-bottom:2px}
+.stat-lbl{font-size:11px;color:var(--text3)}
+.stat-note{font-size:10px;margin-top:4px;font-weight:500}
+.up{color:var(--accent-dark)}.warn{color:var(--warn)}.danger{color:var(--danger)}
+.tracker-main{display:grid;grid-template-columns:1fr 320px;gap:10px;flex:1;overflow:hidden;min-height:400px}
+.tracker-table-col{overflow:hidden;display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--border);border-radius:10px}
+.table-hd{padding:10px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.table-hd-title{font-size:12px;font-weight:600;color:var(--text)}
+.live-dot{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--accent-dark);font-weight:500}
+.live-dot::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--accent);display:inline-block;animation:pulse 2s ease infinite}
+.tbl-scroll{flex:1;overflow-y:auto}
+.tbl-scroll::-webkit-scrollbar{width:3px}
+.tbl-scroll::-webkit-scrollbar-thumb{background:var(--border2)}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:left;padding:8px 14px;color:var(--text3);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border);background:#f8faf8;white-space:nowrap;position:sticky;top:0}
+td{padding:9px 14px;border-bottom:1px solid var(--border);color:var(--text2);vertical-align:middle}
+tr.trow:last-child td{border-bottom:none}
+tr.trow:hover td{background:#f8faf8;cursor:pointer}
+tr.trow.sel td{background:#eef6e6}
+.tc{color:var(--text);font-weight:500}
+.badge{font-size:10px;padding:2px 8px;border-radius:10px;font-weight:500;white-space:nowrap}
+.b-miss{background:#fee2e2;color:#991b1b}
+.b-wait{background:#fef3c7;color:#92400e}
+.b-rate{background:#dbeafe;color:#1e40af}
+.b-ok{background:#dcfce7;color:#166534}
+.b-purple{background:#ede9fe;color:#6d28d9}
+.b-gray{background:#f3f4f6;color:#4b5563}
+.tracker-detail-col{background:var(--surface);border:1px solid var(--border);border-radius:10px;display:flex;flex-direction:column;overflow:hidden}
+.dp-hd{padding:12px 14px;border-bottom:1px solid var(--border);background:#f8faf8;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.dp-num{font-size:13px;font-weight:700;color:var(--accent-dark)}
+.dp-body{flex:1;overflow-y:auto;padding:12px 14px}
+.dp-section-lbl{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin:10px 0 6px}
+.dp-field{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);gap:8px}
+.dp-field:last-child{border-bottom:none}
+.dp-key{font-size:10px;color:var(--text3);min-width:85px;flex-shrink:0}
+.dp-val{font-size:11px;color:var(--text);text-align:right;flex:1}
+.dp-val.miss{color:var(--danger);font-style:italic}
+.dp-miss-item{font-size:11px;color:#92400e;padding:4px 8px;background:#fffbeb;border-left:3px solid var(--warn);margin-bottom:4px;border-radius:0 4px 4px 0}
+.dp-tl-item{display:flex;gap:8px;padding:5px 0;font-size:11px;color:var(--text2);border-bottom:1px solid var(--border)}
+.dp-tl-item:last-child{border-bottom:none}
+.dp-tl-time{font-size:10px;color:var(--text3);min-width:80px;flex-shrink:0}
+.dp-actions{padding:0 14px 14px;flex-shrink:0;display:flex;flex-direction:column;gap:6px}
+
+/* BUTTONS */
+.btn{padding:7px 14px;font-size:12px;font-weight:500;cursor:pointer;border-radius:7px;border:1px solid var(--border2);background:var(--surface);color:var(--text2);transition:all .12s;white-space:nowrap;font-family:'Inter',sans-serif}
+.btn:hover{background:#f8faf8;color:var(--text)}
+.btn-primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn-primary:hover{background:var(--accent-dark)}
+.btn-sm{padding:5px 10px;font-size:11px;border-radius:6px}
+.btn-danger{border-color:#fecaca;color:var(--danger)}
+.btn[disabled]{opacity:.4;cursor:not-allowed}
+.row{display:flex;gap:7px;align-items:center}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- TOPNAV -->
+  <div class="topnav">
+    <div class="logo-box">
+      <div class="logo-icon">⬡</div>
+      <div class="logo-text">OnePort <span>365</span></div>
+    </div>
+    <div class="nav-item active" id="st1" onclick="showScreen(1)">✉ New RFQs <span class="nav-badge" id="new-count">3</span></div>
+    <div class="nav-item" id="st2" onclick="showScreen(2)">◈ RFQ Tracker <span class="nav-badge">12</span></div>
+    <div class="nav-right">
+      <div class="t-status"><div class="t-status-dot"></div>monitoring sales@oneport365.com</div>
+      <div class="user-chip">
+        <div class="user-avatar">OA</div>
+        <span style="font-size:11px;color:rgba(255,255,255,.85)">Okpanachi Adaji</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- BODY -->
+  <div class="body">
+
+    <!-- SCREEN 1: INBOX -->
+    <div class="screen active" id="s1">
+
+      <!-- COL 1: INBOX LIST -->
+      <div class="col-inbox">
+        <div class="inbox-hd">
+          <span class="inbox-hd-title">New RFQ Requests</span>
+          <div class="monitoring-pill"><div style="width:6px;height:6px;border-radius:50%;background:var(--accent);animation:pulse 2s ease infinite"></div>Live</div>
+        </div>
+        <div class="inbox-scroll">
+
+          <div class="inbox-section-lbl" style="border-top:none">Customer requests</div>
+
+          <div class="email-item unread sel" onclick="selEmail(0,this)">
+            <div class="ei-top"><span class="ei-from">Grace Benson · Bioscape Africa</span><span class="ei-time">14 Apr</span></div>
+            <div class="ei-subj">FREIGHT RATE- AARHUS/ CATANIA/ MILAZZO</div>
+            <div class="ei-foot"><span class="rfq-chip">Customer RFQ</span><span class="ei-status" style="color:var(--warn)">⚠ info needed</span></div>
+          </div>
+
+          <div class="email-item unread" onclick="selEmail(1,this)">
+            <div class="ei-top"><span class="ei-from">Demir Güzel · Sarten Packaging</span><span class="ei-time">9 Apr</span></div>
+            <div class="ei-subj">Sarten — DDP Price Quote Request</div>
+            <div class="ei-foot"><span class="rfq-chip">Customer RFQ</span><span class="ei-status" style="color:var(--accent-dark)">✓ ready</span></div>
+          </div>
+
+          <div class="email-item unread" onclick="selEmail(2,this)">
+            <div class="ei-top"><span class="ei-from">Kayode Akintade · Internal</span><span class="ei-time">10 Apr</span></div>
+            <div class="ei-subj">Eat n Go Quote Request</div>
+            <div class="ei-foot"><span class="rfq-chip">Internal RFQ</span><span class="ei-status" style="color:var(--warn)">⚠ info needed</span></div>
+          </div>
+
+          <div class="email-item" onclick="selEmail(6,this)">
+            <div class="ei-top"><span class="ei-from">Emeka Eze · Royal Foam Nigeria</span><span class="ei-time">8 Apr</span></div>
+            <div class="ei-subj">containers from china — polyol &amp; isocyanate</div>
+            <div class="ei-foot"><span class="rfq-chip">Customer RFQ</span><span class="ei-status" style="color:var(--accent-dark)">✓ ready</span></div>
+          </div>
+
+          <div class="email-item" onclick="selEmail(7,this)">
+            <div class="ei-top"><span class="ei-from">Tunde Fashola · Dankuru Industries</span><span class="ei-time">7 Apr</span></div>
+            <div class="ei-subj">Fwd: Fwd: RE: shipment — ceramic tiles</div>
+            <div class="ei-foot"><span class="rfq-chip">Customer RFQ</span><span class="ei-status" style="color:var(--warn)">⚠ info needed</span></div>
+          </div>
+
+          <div class="email-item" onclick="selEmail(8,this)">
+            <div class="ei-top"><span class="ei-from">Chinwe Obi</span><span class="ei-time">5 Apr</span></div>
+            <div class="ei-subj">hello pls I need shipping price</div>
+            <div class="ei-foot"><span class="rfq-chip">Customer RFQ</span><span class="ei-status" style="color:var(--warn)">⚠ info needed</span></div>
+          </div>
+
+          <div class="email-item" onclick="selEmail(9,this)">
+            <div class="ei-top"><span class="ei-from">Adaeze Nwosu · Nwosu Agro</span><span class="ei-time">4 Apr</span></div>
+            <div class="ei-subj">Export rates — sesame seeds to Rotterdam</div>
+            <div class="ei-foot"><span class="rfq-chip">Customer RFQ</span><span class="ei-status" style="color:var(--accent-dark)">✓ ready</span></div>
+          </div>
+
+          <div class="email-item" onclick="selEmail(10,this)">
+            <div class="ei-top"><span class="ei-from">Moses Dafiaghor · Saro Agro</span><span class="ei-time">2 Apr</span></div>
+            <div class="ei-subj">Import shipment request — Ningbo to Apapa</div>
+            <div class="ei-foot"><span class="rfq-chip">Customer RFQ</span><span class="ei-status" style="color:var(--accent-dark)">✓ ready</span></div>
+          </div>
+
+          <div class="inbox-section-lbl">Partner rate replies</div>
+
+          <div class="email-item" onclick="selEmail(3,this)">
+            <div class="ei-top"><span class="ei-from">May Zhao · OceanFavor International</span><span class="ei-time">12 Mar</span></div>
+            <div class="ei-subj">Re: ONEPORT 365 ↔ ARC RIDE SHIPMENT</div>
+            <div class="ei-foot"><span class="rfq-chip" style="background:#e0f2fe;color:#0369a1">Rate reply</span><span class="ei-status" style="color:var(--accent-dark)">✓ rates received</span></div>
+          </div>
+
+          <div class="email-item" onclick="selEmail(4,this)">
+            <div class="ei-top"><span class="ei-from">Summer Mo · Jaylead Logistics</span><span class="ei-time">12 Mar</span></div>
+            <div class="ei-subj">回复: Freight requests: China to SAF/EAF/WAF</div>
+            <div class="ei-foot"><span class="rfq-chip" style="background:#e0f2fe;color:#0369a1">Rate reply</span><span class="ei-status" style="color:var(--accent-dark)">✓ rates received</span></div>
+          </div>
+
+          <div class="inbox-section-lbl">Sent to partners</div>
+
+          <div class="email-item" onclick="selEmail(5,this)">
+            <div class="ei-top"><span class="ei-from">Chinedu Enworom → Titan Cargo</span><span class="ei-time">14 Apr</span></div>
+            <div class="ei-subj">Re: RFQ - BELGIUM TO APAPA EXW</div>
+            <div class="ei-foot"><span class="rfq-chip" style="background:#f3f4f6;color:#6b7280">Outbound</span><span class="ei-status" style="color:var(--text3)">sent · awaiting reply</span></div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- COL 2: EMAIL DETAIL -->
+      <div class="col-email">
+        <div class="detail-hd">
+          <div class="detail-subj" id="d-subj">FREIGHT RATE- AARHUS/ CATANIA/ MILAZZO</div>
+          <div class="detail-meta">
+            <span class="detail-meta-from" id="d-from">Grace Benson | Bioscape Commodities Africa</span>
+            <span class="rfq-chip" id="d-tag">Customer RFQ</span>
+            <span class="detail-meta-time" id="d-time">14 Apr 2026 · 09:15 · sales inbox</span>
+          </div>
+        </div>
+        <div class="processing-bar">
+          <div class="spinner"></div>
+          <div class="processing-bar-text">Reading email and pulling out shipment details…</div>
+          <span class="processing-badge">Processing</span>
+        </div>
+        <div class="detail-body" id="d-body"></div>
+        <div class="detail-actions" id="d-actions">
+          <button class="btn btn-primary btn-sm" onclick="showScreen(2)">View in RFQ Tracker →</button>
+          <button class="btn btn-sm">Reply</button>
+          <button class="btn btn-sm" style="margin-left:auto;color:var(--text3)">Archive</button>
+        </div>
+      </div>
+
+      <!-- COL 3: EXTRACTION PANEL -->
+      <div class="col-extract">
+        <div class="ep-hd">
+          <span class="ep-title">Extracted Details</span>
+          <span class="ep-rfqnum" id="ep-num">RFQ-2604-0040</span>
+        </div>
+        <div class="ep-body">
+          <div id="ep-fields"></div>
+          <div id="ep-missing-wrap">
+            <span class="ep-section-lbl missing-lbl">Missing Info</span>
+            <div id="ep-missing"></div>
+            <div class="ep-followup" id="ep-followup-wrap">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+                <span style="font-size:11px;font-weight:600;color:var(--text2)">Follow-up Draft</span>
+                <span class="ep-timer" id="ep-timer">sends in 5:00</span>
+              </div>
+              <div class="ep-draft" id="ep-draft"></div>
+              <div class="row" style="margin-top:10px">
+                <button class="btn btn-primary btn-sm" style="flex:1" onclick="epSendNow()">Send Now</button>
+                <button class="btn btn-danger btn-sm" onclick="epCancel()">Cancel</button>
+              </div>
+            </div>
+          </div>
+          <div id="ep-actions-wrap" style="margin-top:12px"></div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- SCREEN 2: TRACKER -->
+    <div class="screen" id="s2">
+<!-- SCREEN 2: TRACKER -->
+        <div class="screen" id="s2">
+          <div class="tracker-wrap">
+
+            <div>
+              <div class="page-title">RFQ Tracker</div>
+              <div class="page-sub">All incoming rate requests — click any row to view details</div>
+            </div>
+
+            <div class="stats-row">
+              <div class="stat-card">
+                <div class="stat-val">5</div>
+                <div class="stat-lbl">Received Today</div>
+                <div class="stat-note up">↑ 3 new this hour</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-val">4</div>
+                <div class="stat-lbl">Ready for Rates</div>
+                <div class="stat-note up">all details present</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-val">2</div>
+                <div class="stat-lbl">Awaiting Customer</div>
+                <div class="stat-note warn">follow-up sent</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-val">3</div>
+                <div class="stat-lbl">Rate Requested</div>
+                <div class="stat-note up">partner emailed</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-val">12</div>
+                <div class="stat-lbl">Open This Week</div>
+                <div class="stat-note warn">across all stages</div>
+              </div>
+            </div>
+
+            <div class="tracker-main">
+              <div class="tracker-table-col">
+                <div class="table-hd">
+                  <span class="table-hd-title">All RFQs</span>
+                  <span class="live-dot">Live</span>
+                </div>
+                <div class="tbl-scroll">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>RFQ No.</th>
+                        <th>Customer</th>
+                        <th>Route</th>
+                        <th>Commodity</th>
+                        <th>Stage</th>
+                        <th>Received</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr class="trow sel" onclick="selectRFQ(0,this)">
+                        <td class="tc" style="font-family:monospace;font-size:11px">RFQ-2604-0041</td>
+                        <td class="tc">Tunde Fashola · Dankuru</td>
+                        <td style="font-family:monospace;font-size:11px">FOG → LOS</td>
+                        <td>Ceramic tiles</td>
+                        <td><span class="badge b-miss">Info needed</span></td>
+                        <td>09:47</td>
+                      </tr>
+                      <tr class="trow" onclick="selectRFQ(1,this)">
+                        <td class="tc" style="font-family:monospace;font-size:11px">RFQ-2604-0040</td>
+                        <td class="tc">Grace Benson · Bioscape</td>
+                        <td style="font-family:monospace;font-size:11px">LOS → CAT/MIL/AAR</td>
+                        <td>PKC</td>
+                        <td><span class="badge b-miss">Info needed</span></td>
+                        <td>09:32</td>
+                      </tr>
+                      <tr class="trow" onclick="selectRFQ(2,this)">
+                        <td class="tc" style="font-family:monospace;font-size:11px">RFQ-2604-0039</td>
+                        <td class="tc">Chinwe Obi</td>
+                        <td style="font-family:monospace;font-size:11px">LHR → APP</td>
+                        <td>Used clothing</td>
+                        <td><span class="badge b-miss">Info needed</span></td>
+                        <td>09:11</td>
+                      </tr>
+                      <tr class="trow" onclick="selectRFQ(3,this)">
+                        <td class="tc" style="font-family:monospace;font-size:11px">RFQ-2604-0038</td>
+                        <td class="tc">Demir Güzel · Sarten</td>
+                        <td style="font-family:monospace;font-size:11px">IST → LOS</td>
+                        <td>Aerosol cans</td>
+                        <td><span class="badge b-ok">Ready</span></td>
+                        <td>08:55</td>
+                      </tr>
+                      <tr class="trow" onclick="selectRFQ(4,this)">
+                        <td class="tc" style="font-family:monospace;font-size:11px">RFQ-2604-0037</td>
+                        <td class="tc">Emeka Eze · Royal Foam</td>
+                        <td style="font-family:monospace;font-size:11px">TAO → APP</td>
+                        <td>Polyol / Isocyanate</td>
+                        <td><span class="badge b-ok">Ready</span></td>
+                        <td>Yesterday</td>
+                      </tr>
+                      <tr class="trow" onclick="selectRFQ(5,this)">
+                        <td class="tc" style="font-family:monospace;font-size:11px">RFQ-2604-0036</td>
+                        <td class="tc">Saro Agro</td>
+                        <td style="font-family:monospace;font-size:11px">NGB → APP</td>
+                        <td>In packings</td>
+                        <td><span class="badge b-rate">Rate requested</span></td>
+                        <td>Yesterday</td>
+                      </tr>
+                      <tr class="trow" onclick="selectRFQ(6,this)">
+                        <td class="tc" style="font-family:monospace;font-size:11px">RFQ-2604-0035</td>
+                        <td class="tc">Boulos Enterprise</td>
+                        <td style="font-family:monospace;font-size:11px">XMN → APP</td>
+                        <td>SKD Vehicles</td>
+                        <td><span class="badge b-purple">Quote sent</span></td>
+                        <td>Apr 21</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- DETAIL PANEL -->
+              <div class="tracker-detail-col">
+                <div class="dp-hd">
+                  <span class="dp-num" id="dp-num">RFQ-2604-0041</span>
+                  <div id="dp-status"><span class="badge b-miss">Info needed</span></div>
+                </div>
+                <div class="dp-body">
+                  <div class="dp-section-lbl">Shipment Details</div>
+                  <div id="dp-fields"></div>
+                  <div id="dp-missing-wrap">
+                    <div class="dp-section-lbl" style="color:var(--warn)">Missing Information</div>
+                    <div id="dp-missing"></div>
+                  </div>
+                  <div class="dp-section-lbl" style="margin-top:14px">Timeline</div>
+                  <div id="dp-timeline"></div>
+                </div>
+                <div class="dp-actions" id="dp-actions"></div>
+              </div>
+            </div><!-- end inbox-scroll -->
+
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+<script>
+
+
+function showScreen(n) {
+  [1,2].forEach(i => {
+    const el = document.getElementById(`s${i}`);
+    if(el) { el.style.display='none'; el.classList.remove('active'); }
+    const tab = document.getElementById(`st${i}`);
+    if(tab) tab.classList.remove('active');
+  });
+  const target = document.getElementById(`s${n}`);
+  if(target) {
+    target.style.display = n===1 ? 'grid' : 'block';
+    target.classList.add('active');
+  }
+  const tab = document.getElementById(`st${n}`);
+  if(tab) tab.classList.add('active');
+  if(n===2) selectRFQ(0, document.querySelector('.trow'));
+}
+const emails = [
+  // 0 — Customer RFQ: Grace Benson / Bioscape
+  { subj:'FREIGHT RATE- AARHUS/ CATANIA/ MILAZZO',
+    from:'grace.benson@bioscapeafrica.com',
+    name:'Grace Benson | Bioscape Commodities Africa',
+    type:'customer-rfq', time:'14 Apr 2026 · 09:15 · sales inbox',
+    body:`Dear Daniel,<br><br>Kindly share freight rate to the below destinations.<br><br><strong>Product:</strong> PKC<br><strong>Container:</strong> 40FT<br><strong>POL:</strong> LAGOS<br><br><strong>POD:</strong><br>&nbsp;&nbsp;· CATANIA, ITALY<br>&nbsp;&nbsp;· MILAZZO, ITALY<br>&nbsp;&nbsp;· AARHUS, DENMARK<br><br>Regards,<br><br>Grace Benson Edet<br>Mobile: +234 8131353057<br>Bioscape Commodities Africa Limited<br>118 Mulliner Towers, 39 Alfred Rewane Road, Ikoyi, Lagos`
+  },
+
+  // 1 — Customer RFQ: Demir Güzel / Sarten
+  { subj:'Sarten - DDP Price Quote Request',
+    from:'demirguzel@sarten.com.tr',
+    name:'Demir Güzel · Sarten Packaging A.Ş.',
+    type:'customer-rfq', time:'9 Apr 2026 · 11:08 · sales inbox',
+    body:`Hello Dear All,<br><br>I received your contact information from our partners in Mitsui, they are also in cc. As Sarten Packaging, we have some potential projects in Nigeria although our customers request DDP quotations.<br><br>We know the Nigeria custom clearance can be a bit challenging especially if you don't know the local dynamics. That's why we wanted to reach out to you to check if there could be any opportunity here. Please find the initial details of our projects below.<br><br><strong>1. Commodity type:</strong> Aerosol Can (HS Code: 73102191)<br><strong>2. Pickup address at origin:</strong> This can be discussed — we can either load from our factory in Istanbul or from our warehouse at Ambarlı port<br><strong>3. Delivery address:</strong> 13-14 Abimbola Way, Isaga Tedo, Ikeja, Lagos State<br><strong>4. Service required:</strong> DDP (Delivered Duty Paid) including customs clearance in Nigeria<br><strong>5. Volume:</strong> Approx 1×20FT per month, possibly 2×20FT<br><br>Could you please share your rates and also clarify what documents will be required for customs clearance?<br><br>Best regards,<br>Demir Güzel<br>Sarten Ambalaj A.Ş. · Istanbul`
+  },
+
+  // 2 — Internal RFQ: Kayode Akintade / Eat n Go
+  { subj:'Eat n Go Quote Request',
+    from:'Kayodea@oneport365.com',
+    name:'Kayode Akintade · OnePort 365 (Internal)',
+    type:'internal-rfq', time:'10 Apr 2026 · 15:02 · sales inbox',
+    body:`Hello Daniel,<br><br>Please find attached and assist with D2D quote for 1×40FT.<br><br><strong>POL:</strong> Hamburg<br><br><em style="color:var(--text3);font-size:11px">(Attachment: Eat_n_Go_shipment_details.pdf — see attached for full cargo specs)</em><br><br><br>Akintade Kayode<br>Senior Strategic Partnership Lead<br>+234 8056751616 · kayodea@oneport365.com<br>Meydan Grandstand, 6th floor, Dubai, U.A.E.`
+  },
+
+  // 3 — Rate reply: May Zhao / OceanFavor
+  { subj:'Re: ONEPORT 365 ↔ ARC RIDE SHIPMENT',
+    from:'overseas@oceanfavor.com',
+    name:'May Zhao (海外) · OceanFavor International Pte Ltd',
+    type:'rate-reply', time:'12 Mar 2026 · 05:25 · sales inbox',
+    body:`Dear Daniel,<br><br>Kindly check the attached quotation with local charges, haulage &amp; telex fee included.<br><br>If you have any doubt, do not hesitate to contact me.<br><br>Warm regards,<br>May<br><br><hr style="border:none;border-top:1px solid var(--border);margin:12px 0"><span style="color:var(--text3);font-size:11px">Original message from Daniel WILLOUGHBY &lt;Danielw@oneport365.com&gt;</span><br><br>Zhao Jia (May Zhao)<br>Business Manager | Overseas Dept.<br>Oceanfavor International Pte Ltd.<br>Tel/WhatsApp: +86 158 0121 5498<br>Web: www.oceanfavor.com`
+  },
+
+  // 4 — Rate reply: Summer Mo / Jaylead
+  { subj:'回复：Freight requests: China to SAF/EAF/WAF',
+    from:'summer@jaylead.com',
+    name:'Summer Mo (莫浩微) · Jaylead Logistics',
+    type:'rate-reply', time:'12 Mar 2026 · 10:37 · sales inbox',
+    body:`Dear Chinedu Enworom,<br><br>Pls check the total amount of USD. This is EXW price — we have few profit so other extra payment will declare as what is cost, such as:<br><br>&nbsp;&nbsp;· B/L Telex release: <strong>USD 65</strong><br>&nbsp;&nbsp;· Container over 20T: <strong>+USD 10 per 1,000kg</strong><br><br>Because now we don't have the booking for container, below is approximate charge. Anyway the extra charge is only small charges.<br><br><em style="color:var(--text3);font-size:11px">(Attachment: rate sheet included — MSDS cert expired Dec 2025, please provide 2026 cert before booking)</em><br><br>Summer MO — 物流操作部<br>Jaylead Logistics`
+  },
+
+  // 5 — Outbound sent: Chinedu → Titan Cargo
+  { subj:'Re: RFQ - BELGIUM TO APAPA EXW',
+    from:'chinedu@oneport365.com',
+    name:'Chinedu Enworom · OnePort 365 → Titan Cargo (Antwerp)',
+    type:'outbound', time:'14 Apr 2026 · 13:55 · sent',
+    body:`<div style="background:#f8faf8;border:1px solid var(--border);border-radius:6px;padding:8px 12px;margin-bottom:12px;font-size:11px;color:var(--text3)">📤 Sent by Chinedu Enworom to Kristof Jansen at Titan Cargo</div>Hello @Kristof Jansen,<br><br>Kindly check to confirm if we can match the below target EXW rate for General cargo.<br><br><strong>Ex Works → Lagos, Apapa</strong><br><br>&nbsp;&nbsp;1 × 20ft Dry &nbsp;&nbsp;→ &nbsp;&nbsp;<strong>€3,050 all-in</strong><br>&nbsp;&nbsp;1 × 40ft Dry &nbsp;&nbsp;→ &nbsp;&nbsp;<strong>€3,350 all-in</strong><br><br><hr style="border:none;border-top:1px solid var(--border);margin:12px 0"><span style="color:var(--text3);font-size:11px">Previous message from Kristof Jansen · Titan Cargo:<br>"It's only valid for harmless cargo. Can you please advise IMO class, UN number + PG?"</span><br><br>Chinedu Enworom<br>Senior Pricing &amp; Commercial Manager<br>+234 9131037130 · chinedu@oneport365.com<br>1-5 Odunlami Street, UAC House (7th Floor) Marina, Lagos`
+  },
+
+  // 6 — Royal Foam / Emeka Eze — DG chemicals (complete)
+  { subj:'containers from china — polyol & isocyanate',
+    from:'emeka.eze@royalfoamng.com',
+    name:'Emeka Eze · Royal Foam Nigeria',
+    type:'customer-rfq', time:'8 Apr 2026 · 14:10 · sales inbox',
+    body:`Hi,<br><br>Good day. We buy raw materials from China every quarter and we are due for another shipment. Our supplier is ready to load next week.<br><br>The materials are polyol and isocyanate used in making foam mattresses. Our supplier says they are class 6.1 dangerous goods — we have MSDS and all documents from previous shipments.<br><br><strong>Supplier:</strong> Yiwu Fuyang Chemical Co Ltd<br><strong>POL:</strong> Qingdao (CNTAO)<br><strong>POD:</strong> Apapa (NGAPP), Lagos<br><strong>Container:</strong> 20FT × 9<br><strong>Incoterm:</strong> CIF (same as previous)<br><strong>Ready:</strong> 28 April 2026<br><br>Our clearing agent is Daylight Shipping.<br><br>Regards,<br>Emeka Eze · Procurement Manager, Royal Foam Nigeria`
+  },
+
+  // 7 — Tunde Fashola / Dankuru — informal, info needed
+  { subj:'Fwd: Fwd: RE: shipment — ceramic tiles',
+    from:'tunde.fashola@dankuru.com.ng',
+    name:'Tunde Fashola · Dankuru Industries Ltd',
+    type:'customer-rfq', time:'7 Apr 2026 · 09:47 · sales inbox',
+    body:`<span style="color:var(--text3);font-size:10px">——— Forwarded message ———<br>From: Tunde Fashola &lt;tunde.fashola@dankuru.com.ng&gt;<br>Date: Mon, 7 Apr 2026<br><br></span>Good morning sir,<br><br>Please I want to know the cost of shipping my goods from china. I have been talking to someone about it but he said i should contact you directly. The goods is ceramic tiles, i have about 2 trucks worth. They are currently at the factory in foshan, guangdong province. I want to bring them to my warehouse in lagos island.<br><br>My business partner said i should ask about FOB but i dont fully understand what that means. Please explain and give me price.<br><br>Also my uncle said i need a 40ft container but i am not sure if one is enough. the tiles are about 18,000 pieces.<br><br>Tunde Fashola<br>Dankuru Industries Ltd · 08033451209`
+  },
+
+  // 8 — Chinwe Obi — cold informal enquiry
+  { subj:'hello pls I need shipping price',
+    from:'chinwe.obi22@gmail.com',
+    name:'Chinwe Obi',
+    type:'customer-rfq', time:'5 Apr 2026 · 09:11 · sales inbox',
+    body:`Good afternoon,<br><br>My name is Chinwe, i got your number from my friend Adaeze who used your company last year. She said you people are very good.<br><br>I want to ship some things from the UK to Nigeria. I have been buying fairly used children clothes and shoes from charity shops here in london for about 6 months now and i have a lot of bags. I think i have enough to fill a small container or something like that.<br><br>I dont know anything about shipping please guide me. How much will it cost and how long will it take. My sister in lagos will receive the goods at her shop in alaba international market.<br><br>I can call you if needed. My number here is +447823109456<br><br>Chinwe`
+  },
+
+  // 9 — Adaeze Nwosu / Nwosu Agro — sesame seeds export (complete)
+  { subj:'Export rates — sesame seeds to Rotterdam',
+    from:'adaeze.nwosu@nwosuagro.com.ng',
+    name:'Adaeze Nwosu · Nwosu Agro Commodities',
+    type:'customer-rfq', time:'4 Apr 2026 · 11:32 · sales inbox',
+    body:`Dear Commercial Team,<br><br>We are an agricultural export company based in Kano, Nigeria. We would like to get competitive rates for exporting sesame seeds to Rotterdam, Netherlands.<br><br><strong>Commodity:</strong> Sesame seeds (cleaned, hulled) — HS code 12074010<br><strong>POL:</strong> Lagos (Apapa)<br><strong>POD:</strong> Rotterdam, Netherlands<br><strong>Container:</strong> 20FT × 4<br><strong>Incoterm:</strong> FOB<br><strong>Cargo class:</strong> GC — food grade, non-hazardous<br><strong>Cargo ready:</strong> First week of May 2026<br><strong>Weight:</strong> approx 24 MT per container<br><br>We ship quarterly so a good rate could lead to a long-term relationship.<br><br>Best regards,<br>Adaeze Nwosu · Director, Nwosu Agro Commodities · +234 802 441 7890`
+  },
+
+  // 10 — Moses Dafiaghor / Saro Agro — Ningbo import (complete)
+  { subj:'Import shipment request — Ningbo to Apapa',
+    from:'moses.dafiaghor@saroafrica.com',
+    name:'Moses Dafiaghor · Saro Agro Sciences',
+    type:'customer-rfq', time:'2 Apr 2026 · 08:44 · sales inbox',
+    body:`Dear Team,<br><br>We need ocean freight rates for the below import shipment.<br><br><strong>Commodity:</strong> In Packings (Net Weight ≤ 300g) — agrochemical products<br><strong>POL:</strong> Ningbo (CNNGB), China<br><strong>POD:</strong> Apapa (NGAPP), Nigeria<br><strong>Container:</strong> 20FT × 1<br><strong>Incoterm:</strong> FOB<br><strong>Cargo class:</strong> GC<br><br>Please advise on rates, transit time, free days at destination, and local charges at Apapa. This is a repeat shipment — we have used OnePort 365 before for the same route.<br><br>Kind regards,<br>Moses Dafiaghor · Logistics Manager, Saro Agro Sciences<br>moses.dafiaghor@saroafrica.com`
+  },
+];
+
+// Extraction data per email
+const extractions = [
+  // 0 — Grace Benson / Bioscape — Customer RFQ
+  { num:'RFQ-2604-0040', type:'customer-rfq',
+    fields:[
+      {k:'Customer',v:'Grace Benson Edet',ok:true},
+      {k:'Company',v:'Bioscape Commodities Africa',ok:true},
+      {k:'POL',v:'Lagos, Nigeria (NGAPP)',ok:true},
+      {k:'POD',v:'Catania IT · Milazzo IT · Aarhus DK',ok:true},
+      {k:'Commodity',v:'PKC (Palm Kernel Cake)',ok:true},
+      {k:'Container',v:'40FT',ok:true},
+      {k:'Cargo class',v:'GC — agricultural commodity',ok:true},
+      {k:'Incoterm',v:'not specified',ok:false},
+      {k:'Quantity',v:'not specified',ok:false},
+    ],
+    missing:['Incoterm — FOB, EXW or CIF?','Number of 40FT containers needed'],
+    draft:`Dear Grace,\n\nThank you for your enquiry.\nTo prepare rates for all three\ndestinations we need:\n\n· Incoterm — FOB, EXW or CIF?\n· Number of 40FT containers\n\nPlease reply and we will revert\nwith rates shortly.\n\nBest regards,\nCommercial Team · OnePort 365` },
+
+  // 1 — Demir Güzel / Sarten — Customer RFQ (complete)
+  { num:'RFQ-2604-0038', type:'customer-rfq',
+    fields:[
+      {k:'Customer',v:'Demir Güzel',ok:true},
+      {k:'Company',v:'Sarten Packaging A.Ş.',ok:true},
+      {k:'POL',v:'Ambarlı, Istanbul — Turkey',ok:true},
+      {k:'POD',v:'Ikeja, Lagos (door delivery)',ok:true},
+      {k:'Commodity',v:'Aerosol cans — empty (HS 73102191)',ok:true},
+      {k:'Container',v:'20FT × 1 (possibly × 2)',ok:true},
+      {k:'Cargo class',v:'GC',ok:true},
+      {k:'Incoterm',v:'DDP — door to door',ok:true},
+      {k:'Quantity',v:'1–2 × 20FT monthly',ok:true},
+    ],
+    missing:[],
+    draft:null },
+
+  // 2 — Kayode / Eat n Go — Internal RFQ
+  { num:'RFQ-2604-0039', type:'internal-rfq',
+    fields:[
+      {k:'Requested by',v:'Kayode Akintade (Internal)',ok:true},
+      {k:'Customer',v:'Eat n Go',ok:true},
+      {k:'POL',v:'Hamburg, Germany',ok:true},
+      {k:'POD',v:'not specified — check attachment',ok:false},
+      {k:'Commodity',v:'not specified — see attachment',ok:false},
+      {k:'Container',v:'40FT × 1',ok:true},
+      {k:'Cargo class',v:'not specified',ok:false},
+      {k:'Incoterm',v:'D2D (door to door)',ok:true},
+    ],
+    missing:['POD — destination port or address','Commodity type','Cargo class (GC or DG?)'],
+    draft:`Dear Kayode,\n\nTo complete the D2D quote for\nEat n Go we need:\n\n· POD — delivery address in Nigeria\n· Commodity / cargo description\n· Cargo class — GC or DG?\n\nPlease confirm so we can proceed.\n\nThanks,\nCommercial Team · OnePort 365` },
+
+  // 3 — May Zhao / OceanFavor — Rate reply
+  { num:'RFQ-2603-0021', type:'rate-reply',
+    fields:[
+      {k:'Partner',v:'OceanFavor International Pte Ltd',ok:true},
+      {k:'Contact',v:'May Zhao (overseas@oceanfavor.com)',ok:true},
+      {k:'Re: RFQ',v:'Arc Ride Shipment',ok:true},
+      {k:'Attachment',v:'Quotation attached with local charges',ok:true},
+      {k:'Includes',v:'Local charges + haulage + telex fee',ok:true},
+      {k:'Status',v:'Rates received — review attachment',ok:true},
+    ],
+    missing:[],
+    draft:null },
+
+  // 4 — Summer Mo / Jaylead — Rate reply
+  { num:'RFQ-2603-0018', type:'rate-reply',
+    fields:[
+      {k:'Partner',v:'Jaylead Logistics',ok:true},
+      {k:'Contact',v:'Summer Mo (summer@jaylead.com)',ok:true},
+      {k:'Pricing basis',v:'EXW',ok:true},
+      {k:'B/L release',v:'USD 65',ok:true},
+      {k:'Overweight',v:'+USD 10 per 1,000kg over 20T',ok:true},
+      {k:'MSDS cert',v:'Expired Dec 2025 — 2026 cert required',ok:false},
+      {k:'Rates',v:'Approximate — no booking confirmed',ok:false},
+    ],
+    missing:['MSDS certificate — 2026 version required before booking'],
+    draft:null },
+
+  // 5 — Chinedu → Titan Cargo — Outbound sent
+  { num:'RFQ-2604-0035', type:'outbound',
+    fields:[
+      {k:'Sent by',v:'Chinedu Enworom',ok:true},
+      {k:'Sent to',v:'Kristof Jansen · Titan Cargo, Antwerp',ok:true},
+      {k:'Route',v:'Belgium → Apapa, Lagos',ok:true},
+      {k:'Service',v:'EXW — General cargo',ok:true},
+      {k:'Target 20FT',v:'€3,050 all-in',ok:true},
+      {k:'Target 40FT',v:'€3,350 all-in',ok:true},
+      {k:'Awaiting',v:'Titan confirmation on DG cargo',ok:false},
+    ],
+    missing:['Titan Cargo to confirm if DG cargo accepted at these rates'],
+    draft:null },
+
+  // 6 — Royal Foam / Emeka Eze — DG chemicals (complete)
+  { num:'RFQ-2604-0036', type:'customer-rfq',
+    fields:[
+      {k:'Customer',v:'Emeka Eze',ok:true},
+      {k:'Company',v:'Royal Foam Nigeria',ok:true},
+      {k:'POL',v:'Qingdao (CNTAO), China',ok:true},
+      {k:'POD',v:'Apapa (NGAPP), Nigeria',ok:true},
+      {k:'Commodity',v:'Polyol & Isocyanate — foam raw materials',ok:true},
+      {k:'Container',v:'20FT × 9',ok:true},
+      {k:'Cargo class',v:'DG Class 6.1 ⚠ MSDS available',ok:true},
+      {k:'Incoterm',v:'CIF',ok:true},
+      {k:'Ready date',v:'28 April 2026',ok:true},
+    ],
+    missing:[],
+    draft:null },
+
+  // 7 — Tunde Fashola / Dankuru — ceramic tiles (info needed)
+  { num:'RFQ-2604-0035', type:'customer-rfq',
+    fields:[
+      {k:'Customer',v:'Tunde Fashola',ok:true},
+      {k:'Company',v:'Dankuru Industries Ltd',ok:true},
+      {k:'POL',v:'Foshan, Guangdong — China',ok:true},
+      {k:'POD',v:'Lagos Island, Nigeria',ok:true},
+      {k:'Commodity',v:'Ceramic tiles (~18,000 pieces)',ok:true},
+      {k:'Container',v:'40FT — quantity unconfirmed',ok:false},
+      {k:'Cargo class',v:'GC',ok:true},
+      {k:'Incoterm',v:'FOB (customer unsure)',ok:false},
+      {k:'Loading port',v:'Foshan — confirm Guangzhou or Nansha',ok:false},
+    ],
+    missing:['Exact container quantity — 1 or 2 × 40FT?','Confirm incoterm — FOB, EXW or CIF?','Nearest loading port to Foshan factory'],
+    draft:`Dear Tunde,\n\nThank you for your enquiry.\nTo prepare your quote we need:\n\n· How many 40FT containers?\n· Incoterm — FOB, EXW or CIF?\n· Loading port — Guangzhou (CNCAN)\n  or Nansha (CNNSN)?\n\nPlease reply and we will come\nback with rates.\n\nBest regards,\nCommercial Team · OnePort 365` },
+
+  // 8 — Chinwe Obi — cold informal enquiry (info needed)
+  { num:'RFQ-2604-0034', type:'customer-rfq',
+    fields:[
+      {k:'Customer',v:'Chinwe Obi',ok:true},
+      {k:'Phone',v:'+447823109456',ok:true},
+      {k:'POL',v:'London, UK',ok:true},
+      {k:'POD',v:'Alaba Intl Market, Lagos',ok:true},
+      {k:'Commodity',v:'Used clothing & shoes (charity)',ok:true},
+      {k:'Container',v:'LCL — volume unknown',ok:false},
+      {k:'Cargo class',v:'GC',ok:true},
+      {k:'Incoterm',v:'not specified',ok:false},
+      {k:'Volume',v:'not specified — "bags of goods"',ok:false},
+    ],
+    missing:['Approx volume or weight (CBM or kg)','Pickup address in London','Service type — LCL or groupage?'],
+    draft:`Dear Chinwe,\n\nThank you for reaching out!\nTo give you an accurate price:\n\n· Approx volume or weight of goods\n  (cubic metres or kg)\n· Your collection address in London\n\nWe will guide you through the\nfull process from pickup to\ndelivery at Alaba market.\n\nBest regards,\nCommercial Team · OnePort 365` },
+
+  // 9 — Adaeze Nwosu — sesame seeds export (complete)
+  { num:'RFQ-2604-0033', type:'customer-rfq',
+    fields:[
+      {k:'Customer',v:'Adaeze Nwosu',ok:true},
+      {k:'Company',v:'Nwosu Agro Commodities',ok:true},
+      {k:'POL',v:'Lagos (Apapa), Nigeria',ok:true},
+      {k:'POD',v:'Rotterdam, Netherlands',ok:true},
+      {k:'Commodity',v:'Sesame seeds — hulled (HS 12074010)',ok:true},
+      {k:'Container',v:'20FT × 4',ok:true},
+      {k:'Cargo class',v:'GC — food grade',ok:true},
+      {k:'Incoterm',v:'FOB',ok:true},
+      {k:'Ready date',v:'First week of May 2026',ok:true},
+    ],
+    missing:[],
+    draft:null },
+
+  // 10 — Moses Dafiaghor / Saro Agro — Ningbo import (complete)
+  { num:'RFQ-2604-0032', type:'customer-rfq',
+    fields:[
+      {k:'Customer',v:'Moses Dafiaghor',ok:true},
+      {k:'Company',v:'Saro Agro Sciences',ok:true},
+      {k:'POL',v:'Ningbo (CNNGB), China',ok:true},
+      {k:'POD',v:'Apapa (NGAPP), Nigeria',ok:true},
+      {k:'Commodity',v:'In Packings ≤300g — agrochemicals',ok:true},
+      {k:'Container',v:'20FT × 1',ok:true},
+      {k:'Cargo class',v:'GC',ok:true},
+      {k:'Incoterm',v:'FOB',ok:true},
+      {k:'Note',v:'Repeat shipment — previous OnePort customer',ok:true},
+    ],
+    missing:[],
+    draft:null },
+];
+
+let epTimerInterval = null;
+let epTimerSecs = 180;
+
+function selEmail(i, el) {
+  document.querySelectorAll('.email-item').forEach(e => e.classList.remove('sel'));
+  el.classList.add('sel');
+  const e = emails[i];
+  const ex = extractions[i];
+
+  document.getElementById('d-subj').textContent = e.subj;
+  document.getElementById('d-from').textContent = e.name || e.from;
+  document.getElementById('d-time').textContent = e.time;
+  document.getElementById('d-body').innerHTML = e.body;
+
+  // Update processing banner based on type
+  const banner = document.querySelector('.processing-bar');
+  if (e.type === 'rate-reply') {
+    banner.style.background = '#eff6ff';
+    banner.style.borderColor = '#bfdbfe';
+    banner.querySelector('.processing-bar-text').textContent = 'Rate reply from partner — extracting rates from this email…';
+    banner.querySelector('.processing-badge').textContent = 'Rate reply';
+    banner.querySelector('.processing-badge').style.background = '#2563eb';
+  } else if (e.type === 'outbound') {
+    banner.style.background = '#f9fafb';
+    banner.style.borderColor = '#e5e7eb';
+    banner.querySelector('.processing-bar-text').textContent = 'This email was sent by your team to a freight partner.';
+    banner.querySelector('.processing-badge').textContent = 'Sent';
+    banner.querySelector('.processing-badge').style.background = '#6b7280';
+  } else if (e.type === 'internal-rfq') {
+    banner.style.background = '#fffbeb';
+    banner.style.borderColor = '#fde68a';
+    banner.querySelector('.processing-bar-text').textContent = 'Internal request — forwarded by OnePort staff on behalf of customer.';
+    banner.querySelector('.processing-badge').textContent = 'Internal';
+    banner.querySelector('.processing-badge').style.background = '#d97706';
+  } else {
+    banner.style.background = '#eef6e6';
+    banner.style.borderColor = '#c8e6a0';
+    banner.querySelector('.processing-bar-text').textContent = 'Reading email and pulling out shipment details…';
+    banner.querySelector('.processing-badge').textContent = 'Processing';
+    banner.querySelector('.processing-badge').style.background = 'var(--accent)';
+  }
+
+  // Show/hide action buttons based on type
+  const actionsEl = document.querySelector('.detail-actions');
+  if (e.type === 'rate-reply') {
+    actionsEl.innerHTML = `<button class="btn btn-primary btn-sm" onclick="showScreen(2)">View in RFQ Tracker →</button><button class="btn btn-sm">Parse rates</button>`;
+  } else if (e.type === 'outbound') {
+    actionsEl.innerHTML = `<button class="btn btn-sm" onclick="showScreen(2)">View in RFQ Tracker →</button><button class="btn btn-sm" style="margin-left:auto;color:var(--text3)">Archive</button>`;
+  } else {
+    actionsEl.innerHTML = `<button class="btn btn-primary btn-sm" onclick="showScreen(2)">View in RFQ Tracker →</button><button class="btn btn-sm">Reply</button><button class="btn btn-sm" style="margin-left:auto;color:var(--text3)">Archive</button>`;
+  }
+
+  renderExtraction(i);
+}
+
+function renderExtraction(i) {
+  const ex = extractions[i];
+  if (!ex) return;
+
+  document.getElementById('ep-num').textContent = ex.num;
+
+  // Title based on type
+  const epTitle = document.querySelector('.ep-title');
+  if (epTitle) {
+    if (ex.type === 'rate-reply') epTitle.textContent = 'Rate details';
+    else if (ex.type === 'outbound') epTitle.textContent = 'Outbound details';
+    else epTitle.textContent = 'Extracted details';
+  }
+
+  // Fields
+  document.getElementById('ep-fields').innerHTML = ex.fields.map(f =>
+    `<div class="ep-field">
+      <span class="ep-key">${f.k}</span>
+      <span class="ep-val ${f.ok?'':'miss'}">${f.ok?'<span class="ep-ok">✓</span>':''} ${f.v}</span>
+    </div>`
+  ).join('');
+
+  // Missing / action needed
+  const mw = document.getElementById('ep-missing-wrap');
+  const fw = document.getElementById('ep-followup-wrap');
+  if (ex.missing.length) {
+    mw.style.display = 'block';
+    const lbl = mw.querySelector('.ep-section-lbl');
+    if (lbl) lbl.textContent = ex.type === 'outbound' ? 'Awaiting' : ex.type === 'rate-reply' ? 'Action needed' : 'Missing info';
+    document.getElementById('ep-missing').innerHTML = ex.missing.map(m =>
+      `<div class="ep-missing-item">⚠ ${m}</div>`
+    ).join('');
+    fw.style.display = ex.draft ? 'block' : 'none';
+    if (ex.draft) {
+      document.getElementById('ep-draft').textContent = ex.draft;
+      startEpTimer();
+    }
+  } else {
+    mw.style.display = 'none';
+  }
+
+  // Actions
+  const aw = document.getElementById('ep-actions-wrap');
+  if (ex.type === 'rate-reply') {
+    aw.innerHTML = `<button class="btn btn-a btn-sm" style="width:100%">Parse &amp; save rates →</button>`;
+  } else if (ex.type === 'outbound') {
+    aw.innerHTML = `<button class="btn btn-sm" style="width:100%">View RFQ thread →</button>`;
+  } else if (!ex.missing.length) {
+    aw.innerHTML = `<button class="btn btn-a btn-sm" style="width:100%">Get rates →</button>`;
+  } else {
+    aw.innerHTML = `<button class="btn btn-sm" style="width:100%;color:var(--text3)" disabled>Complete info to get rates</button>`;
+  }
+}
+
+function startEpTimer() {
+  clearInterval(epTimerInterval);
+  epTimerSecs = 180;
+  const timerEl = document.getElementById('ep-timer');
+  if (timerEl) { timerEl.textContent = '3:00'; timerEl.className = 'ep-timer'; }
+  epTimerInterval = setInterval(() => {
+    epTimerSecs = Math.max(0, epTimerSecs - 1);
+    const m = Math.floor(epTimerSecs / 60);
+    const s = String(epTimerSecs % 60).padStart(2, '0');
+    const el = document.getElementById('ep-timer');
+    if (el) el.textContent = epTimerSecs > 0 ? `sends in ${m}:${s}` : '✓ sent';
+    if (epTimerSecs === 0) {
+      clearInterval(epTimerInterval);
+      const el2 = document.getElementById('ep-timer');
+      if (el2) el2.className = 'ep-timer sent';
+    }
+  }, 1000);
+}
+
+function epSendNow() {
+  clearInterval(epTimerInterval);
+  const el = document.getElementById('ep-timer');
+  if (el) { el.textContent = '✓ sent'; el.className = 'ep-timer sent'; }
+}
+
+function epCancel() {
+  clearInterval(epTimerInterval);
+  const el = document.getElementById('ep-timer');
+  if (el) { el.textContent = 'cancelled'; el.className = 'ep-timer'; el.style.background='#f3f4f6'; el.style.color='var(--text3)'; }
+  const fw = document.getElementById('ep-followup-wrap');
+  if (fw) fw.style.display = 'none';
+}
+
+// Init — show extraction for first selected email
+document.addEventListener('DOMContentLoaded', () => {
+  renderExtraction(2);
+  selectRFQ(0, document.querySelector('.trow'));
+});
+
+const rfqs = [
+  { num:'RFQ-2604-0041', customer:'Tunde Fashola', company:'Dankuru Industries Ltd', email:'tunde.fashola@dankuru.com.ng',
+    stage:'Info needed', stageCls:'b-miss',
+    fields:[['POL','Foshan, Guangdong — China'],['POD','Lagos Island, Nigeria'],['Commodity','Ceramic tiles (approx 18,000 pcs)'],['Container','40FT — qty unconfirmed'],['Cargo class','GC'],['Incoterm','FOB (unconfirmed — customer unsure)'],['Quantity','1–2 containers (TBC)']],
+    missing:['Exact container quantity — 1 or 2 × 40FT?','Confirm incoterm — customer mentioned FOB but unsure','Nearest port to Foshan is Guangzhou or Nansha — confirm loading port'],
+    timeline:[['09:47','Email received — forwarded chain'],['09:47','Details read from body'],['09:52','Follow-up sent — 3 questions']],
+    actions:[{label:'Edit details', cls:'btn'},{label:'Send to rates', cls:'btn btn-a', disabled:true}] },
+
+  { num:'RFQ-2604-0040', customer:'Grace Benson', company:'Bioscape Commodities Africa', email:'grace.benson@bioscapeafrica.com',
+    stage:'Info needed', stageCls:'b-miss',
+    fields:[['POL','Lagos, Nigeria'],['POD','Catania IT · Milazzo IT · Aarhus DK'],['Commodity','PKC — Palm Kernel Cake (agricultural, GC)'],['Container','40FT'],['Cargo class','GC'],['Incoterm','—'],['Quantity','2–3 containers (TBC)']],
+    missing:['Incoterm — FOB, EXW or CIF?','Exact container quantity needed to quote'],
+    timeline:[['09:32','Email received'],['09:32','Details read'],['09:37','Follow-up sent — 2 questions']],
+    actions:[{label:'Edit details', cls:'btn'},{label:'Send to rates', cls:'btn btn-a', disabled:true}] },
+
+  { num:'RFQ-2604-0039', customer:'Chinwe Obi', company:'Private individual', email:'chinwe.obi22@gmail.com',
+    stage:'Info needed', stageCls:'b-miss',
+    fields:[['POL','London, UK (exact port TBC)'],['POD','Apapa, Lagos — Nigeria'],['Commodity','Used clothing & shoes (charity shop)'],['Container','LCL — volume unknown'],['Cargo class','GC'],['Incoterm','—'],['Quantity','Unknown — "bags of goods"']],
+    missing:['Actual volume or weight of goods — bags is not enough to quote','Type of service — LCL likely but needs confirming','Pickup address in London'],
+    timeline:[['09:11','Email received'],['09:11','Details read — low information'],['09:16','Follow-up sent — 3 questions']],
+    actions:[{label:'Edit details', cls:'btn'},{label:'Send to rates', cls:'btn btn-a', disabled:true}] },
+
+  { num:'RFQ-2604-0038', customer:'Demir Güzel', company:'Sarten Packaging A.Ş.', email:'demirguzel@sarten.com.tr',
+    stage:'Ready', stageCls:'b-ok',
+    fields:[['POL','Ambarlı, Istanbul — Turkey'],['POD','Ikeja, Lagos (door delivery)'],['Commodity','Aerosol cans — empty, cosmetics (HS 7310.21.91)'],['Container','20FT × 1 (possibly × 2)'],['Cargo class','GC'],['Incoterm','DDP — door to door'],['Quantity','1–2 × 20FT monthly']],
+    missing:[],
+    timeline:[['08:55','Email received — 3rd reply in thread'],['08:55','Details read from thread history'],['08:55','All required fields present']],
+    actions:[{label:'Get rates', cls:'btn btn-a'}] },
+
+  { num:'RFQ-2604-0037', customer:'Emeka Eze', company:'Royal Foam Nigeria', email:'emeka.eze@royalfoamng.com',
+    stage:'Ready', stageCls:'b-ok',
+    fields:[['POL','Qingdao (CNTAO) — China'],['POD','Apapa (NGAPP) — Nigeria'],['Commodity','Polyol & Isocyanate (foam raw materials)'],['Container','20FT × 9'],['Cargo class','DG Class 6.1 — MSDS available'],['Incoterm','CIF'],['Quantity','9 × 20FT · ready 28 Apr']],
+    missing:[],
+    timeline:[['Yesterday 14:10','Email received'],['Yesterday 14:10','Details read — DG class identified from body'],['Yesterday 14:10','All fields present — DG flagged']],
+    actions:[{label:'Get rates', cls:'btn btn-a'}] },
+];
+
+
+
+function selectRFQ(i, el) {
+  document.querySelectorAll('.trow').forEach(r => r.classList.remove('sel'));
+  if(el) el.classList.add('sel');
+  const r = rfqs[i];
+  if(!r) return;
+
+  document.getElementById('dp-num').textContent = r.num;
+  document.getElementById('dp-status').innerHTML = `<span class="badge ${r.stageCls}">${r.stage}</span>`;
+
+  document.getElementById('dp-fields').innerHTML = r.fields.map(([k,v]) =>
+    `<div class="dp-field"><span class="dp-key">${k}</span><span class="dp-val ${v==='—'?'miss':''}">${v==='—'?'not provided':v}</span></div>`
+  ).join('');
+
+  const mw = document.getElementById('dp-missing-wrap');
+  if(r.missing.length) {
+    mw.style.display = 'block';
+    document.getElementById('dp-missing').innerHTML = r.missing.map(m =>
+      `<div class="dp-miss-item">${m}</div>`
+    ).join('');
+  } else {
+    mw.style.display = 'none';
+  }
+
+  document.getElementById('dp-timeline').innerHTML = r.timeline.map(([t,txt]) =>
+    `<div class="dp-tl-item"><span class="dp-tl-time">${t}</span><span>${txt}</span></div>`
+  ).join('');
+
+  document.getElementById('dp-actions').innerHTML = r.actions.map(a =>
+    `<button class="${a.cls} btn-sm"${a.disabled?' disabled':''}>${a.label}</button>`
+  ).join('');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  selEmail(0, document.querySelector('.email-item.sel'));
+  selectRFQ(0, document.querySelector('.trow'));
+});
+
+
+</script>
+</body>
+</html>
