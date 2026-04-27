@@ -180,8 +180,8 @@ tr.trow.sel td{background:#eef6e6}
     <div class="logo-box">
       <img src="/oneport365_logo.png" alt="OnePort 365" style="height:28px;width:auto;display:block">
     </div>
-    <div class="nav-item active" id="st1" onclick="showScreen(1)">✉ New RFQs <span class="nav-badge" id="new-count">3</span></div>
-    <div class="nav-item" id="st2" onclick="showScreen(2)">◈ RFQ Tracker <span class="nav-badge">12</span></div>
+    <div class="nav-item active" id="st1" onclick="showScreen(1)">✉ RFQ <span class="nav-badge" id="new-count">3</span></div>
+    <div class="nav-item" id="st2" onclick="showScreen(2)">◈ Deals <span class="nav-badge">12</span></div>
     <div class="nav-right">
       <div class="t-status"><div class="t-status-dot"></div>monitoring sales@oneport365.com</div>
       <div class="user-chip">
@@ -297,7 +297,7 @@ tr.trow.sel td{background:#eef6e6}
         </div>
         <div class="detail-body" id="d-body"></div>
         <div class="detail-actions" id="d-actions">
-          <button class="btn btn-primary btn-sm" onclick="showScreen(2)">View in RFQ Tracker →</button>
+          <button class="btn btn-primary btn-sm" onclick="showScreen(2)">View in Deals →</button>
           <button class="btn btn-sm">Reply</button>
           <button class="btn btn-sm" style="margin-left:auto;color:var(--text3)">Archive</button>
         </div>
@@ -337,7 +337,7 @@ tr.trow.sel td{background:#eef6e6}
           <div class="tracker-wrap">
 
             <div>
-              <div class="page-title">RFQ Tracker</div>
+              <div class="page-title">Deals</div>
               <div class="page-sub">All incoming rate requests — click any row to view details</div>
             </div>
 
@@ -801,11 +801,11 @@ function selEmail(i, el) {
   // Show/hide action buttons based on type
   const actionsEl = document.querySelector('.detail-actions');
   if (e.type === 'rate-reply') {
-    actionsEl.innerHTML = `<button class="btn btn-primary btn-sm" onclick="showScreen(2)">View in RFQ Tracker →</button><button class="btn btn-sm">Parse rates</button>`;
+    actionsEl.innerHTML = `<button class="btn btn-primary btn-sm" onclick="showScreen(2)">View in Deals →</button><button class="btn btn-sm">Parse rates</button>`;
   } else if (e.type === 'outbound') {
-    actionsEl.innerHTML = `<button class="btn btn-sm" onclick="showScreen(2)">View in RFQ Tracker →</button><button class="btn btn-sm" style="margin-left:auto;color:var(--text3)">Archive</button>`;
+    actionsEl.innerHTML = `<button class="btn btn-sm" onclick="showScreen(2)">View in Deals →</button><button class="btn btn-sm" style="margin-left:auto;color:var(--text3)">Archive</button>`;
   } else {
-    actionsEl.innerHTML = `<button class="btn btn-primary btn-sm" onclick="showScreen(2)">View in RFQ Tracker →</button><button class="btn btn-sm">Reply</button><button class="btn btn-sm" style="margin-left:auto;color:var(--text3)">Archive</button>`;
+    actionsEl.innerHTML = `<button class="btn btn-primary btn-sm" onclick="showScreen(2)">View in Deals →</button><button class="btn btn-sm">Reply</button><button class="btn btn-sm" style="margin-left:auto;color:var(--text3)">Archive</button>`;
   }
 
   renderExtraction(i);
