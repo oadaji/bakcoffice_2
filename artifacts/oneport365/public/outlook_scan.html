@@ -1292,17 +1292,21 @@ tr.trow.sel td{background:#eef6e6}
 
 // -- RATES DATA --
 const CARRIER_LOGOS = {
-  'MSC':         'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c6/MSC_logo.svg/120px-MSC_logo.svg.png',
-  'Maersk':      'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e7/Maersk_Logo.svg/120px-Maersk_Logo.svg.png',
-  'CMA CGM':     'https://upload.wikimedia.org/wikipedia/commons/thumb/6/68/CMA_CGM_logo.svg/120px-CMA_CGM_logo.svg.png',
-  'OOCL':        'https://upload.wikimedia.org/wikipedia/commons/thumb/b/be/OOCL_Logo.svg/120px-OOCL_Logo.svg.png',
-  'ZIM':         'https://upload.wikimedia.org/wikipedia/commons/thumb/7/76/ZIM_Integrated_Shipping_Services_logo.svg/120px-ZIM_Integrated_Shipping_Services_logo.svg.png',
-  'Hapag-Lloyd': 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/Hapag-Lloyd_logo.svg/120px-Hapag-Lloyd_logo.svg.png',
+  'MSC':         'https://logo.clearbit.com/msc.com',
+  'Maersk':      'https://logo.clearbit.com/maersk.com',
+  'CMA CGM':     'https://logo.clearbit.com/cma-cgm.com',
+  'OOCL':        'https://logo.clearbit.com/oocl.com',
+  'ZIM':         'https://logo.clearbit.com/zim.com',
+  'Hapag-Lloyd': 'https://logo.clearbit.com/hapag-lloyd.com',
+  'Evergreen':   'https://logo.clearbit.com/evergreen-marine.com',
+  'ONE':         'https://logo.clearbit.com/one-line.com',
+  'Yang Ming':   'https://logo.clearbit.com/yangming.com',
+  'Cosco':       'https://logo.clearbit.com/cosco.com',
 };
 function carrierLogo(name) {
   const url = CARRIER_LOGOS[name];
-  if (url) return `<img src="${url}" alt="${name}" style="height:22px;max-width:72px;object-fit:contain;vertical-align:middle" onerror="this.style.display='none';this.nextSibling.style.display='inline'"/><span style="display:none;font-size:11px;color:#1a2e1a">${name}</span>`;
-  return `<span style="font-size:11px;color:#1a2e1a">${name}</span>`;
+  if (url) return `<img src="${url}" alt="${name}" style="height:22px;max-width:80px;object-fit:contain;vertical-align:middle;border-radius:3px" onerror="this.style.display='none';this.nextSibling.style.display='inline'"/><span style="display:none;font-size:11px;font-weight:500;color:#1a2e1a">${name}</span>`;
+  return `<span style="font-size:11px;font-weight:500;color:#1a2e1a">${name}</span>`;
 }
 
 const RATES_DATA = [
@@ -1904,7 +1908,7 @@ function selectQuote(id, el) {
   const oceanTotal = q.oceanUSD + q.baf + q.caf + (q.ebs||0);
   document.getElementById('qp-ocean-tbody').innerHTML = `
     <tr>
-      <td style="padding:9px 10px;border:1px solid #e4e8e4;font-weight:600">${q.carrier}</td>
+      <td style="padding:9px 10px;border:1px solid #e4e8e4;font-weight:600">${carrierLogo(q.carrier)}</td>
       <td style="padding:9px 10px;border:1px solid #e4e8e4;font-size:11px;color:#4a5e4a">${q.pol.split('(')[0].trim()} -<br>${q.pod.split('(')[0].trim()}</td>
       <td style="padding:9px 10px;border:1px solid #e4e8e4;text-align:center">1</td>
       <td style="padding:9px 10px;border:1px solid #e4e8e4;text-align:center;font-weight:600">${q.oceanUSD.toLocaleString()}</td>
