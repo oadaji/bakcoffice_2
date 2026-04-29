@@ -2565,9 +2565,28 @@ const WA_CONVOS = [
 
 let waTimerInterval = null, waTimerSecs = 300, currentWA = 0;
 
+function showRFQSub(tab) {
+  const panels = { email: 'rfq-sub-email', whatsapp: 'rfq-sub-whatsapp' };
+  const tabs = { email: 'sub-email', whatsapp: 'sub-whatsapp' };
+  Object.entries(panels).forEach(([key, id]) => {
+    const panel = document.getElementById(id);
+    if (panel) panel.style.display = key === tab ? 'flex' : 'none';
+  });
+  Object.entries(tabs).forEach(([key, id]) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (key === tab) {
+      el.style.color = '#5a9132'; el.style.borderBottomColor = '#7AB648'; el.style.fontWeight = '600';
+    } else {
+      el.style.color = '#8a9e8a'; el.style.borderBottomColor = 'transparent'; el.style.fontWeight = '500';
+    }
+  });
+  if (tab === 'whatsapp') selWA(0, document.querySelector('#rfq-sub-whatsapp .email-item'));
+}
+
 function selWA(i, el) {
   if(!el) return;
-  document.querySelectorAll('#s4 .email-item').forEach(e=>e.classList.remove('sel'));
+  document.querySelectorAll('#rfq-sub-whatsapp .email-item').forEach(e=>e.classList.remove('sel'));
   el.classList.add('sel');
   currentWA = i;
   const c = WA_CONVOS[i];
