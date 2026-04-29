@@ -807,15 +807,15 @@ tr.trow.sel td{background:#eef6e6}
 
         <!-- RATE TYPE TABS -->
         <div style="display:flex;background:#fff;border:1px solid #e4e8e4;border-radius:8px;overflow:hidden;margin-bottom:14px;flex-shrink:0">
-          <div id="rtt-contract" onclick="filterRateType('contract')" style="display:flex;align-items:center;gap:6px;padding:9px 0;font-size:12px;font-weight:500;cursor:pointer;flex:1;justify-content:center;background:#eef6e6;color:#5a9132;border-right:1px solid #e4e8e4">
+          <div id="rtt-contract" onclick="filterRateType('ocean')" style="display:flex;align-items:center;gap:6px;padding:9px 0;font-size:12px;font-weight:500;cursor:pointer;flex:1;justify-content:center;background:#eef6e6;color:#5a9132;border-right:1px solid #e4e8e4">
             <span style="width:8px;height:8px;border-radius:50%;background:#d97706;display:inline-block"></span>Ocean Freight
             <span style="font-size:10px;padding:1px 6px;border-radius:10px;background:#7AB648;color:#fff;font-weight:600">8</span>
           </div>
-          <div id="rtt-spot" onclick="filterRateType('spot')" style="display:flex;align-items:center;gap:6px;padding:9px 0;font-size:12px;cursor:pointer;flex:1;justify-content:center;color:#8a9e8a;border-right:1px solid #e4e8e4">
+          <div id="rtt-spot" onclick="filterRateType('inhaulage')" style="display:flex;align-items:center;gap:6px;padding:9px 0;font-size:12px;cursor:pointer;flex:1;justify-content:center;color:#8a9e8a;border-right:1px solid #e4e8e4">
             <span style="width:8px;height:8px;border-radius:50%;background:#2563eb;display:inline-block"></span>In-Haulage
             <span style="font-size:10px;padding:1px 6px;border-radius:10px;background:rgba(0,0,0,.07);font-weight:600">4</span>
           </div>
-          <div id="rtt-local" onclick="filterRateType('local')" style="display:flex;align-items:center;gap:6px;padding:9px 0;font-size:12px;cursor:pointer;flex:1;justify-content:center;color:#8a9e8a">
+          <div id="rtt-local" onclick="filterRateType('other')" style="display:flex;align-items:center;gap:6px;padding:9px 0;font-size:12px;cursor:pointer;flex:1;justify-content:center;color:#8a9e8a">
             <span style="width:8px;height:8px;border-radius:50%;background:#7c3aed;display:inline-block"></span>Other Charges
             <span style="font-size:10px;padding:1px 6px;border-radius:10px;background:rgba(0,0,0,.07);font-weight:600">12</span>
           </div>
@@ -1291,21 +1291,24 @@ tr.trow.sel td{background:#eef6e6}
 
 
 // -- RATES DATA --
-const CARRIER_LOGOS = {
-  'MSC':         'https://logo.clearbit.com/msc.com',
-  'Maersk':      'https://logo.clearbit.com/maersk.com',
-  'CMA CGM':     'https://logo.clearbit.com/cma-cgm.com',
-  'OOCL':        'https://logo.clearbit.com/oocl.com',
-  'ZIM':         'https://logo.clearbit.com/zim.com',
-  'Hapag-Lloyd': 'https://logo.clearbit.com/hapag-lloyd.com',
-  'Evergreen':   'https://logo.clearbit.com/evergreen-marine.com',
-  'ONE':         'https://logo.clearbit.com/one-line.com',
-  'Yang Ming':   'https://logo.clearbit.com/yangming.com',
-  'Cosco':       'https://logo.clearbit.com/cosco.com',
+const CARRIER_BRAND = {
+  'MSC':         { bg:'#003399', fg:'#fff', text:'MSC' },
+  'Maersk':      { bg:'#42b0d5', fg:'#fff', text:'MAERSK' },
+  'CMA CGM':     { bg:'#c41230', fg:'#fff', text:'CMA CGM' },
+  'Hapag-Lloyd': { bg:'#f07000', fg:'#fff', text:'HAPAG-LLOYD' },
+  'OOCL':        { bg:'#cc0000', fg:'#fff', text:'OOCL' },
+  'ZIM':         { bg:'#003087', fg:'#fff', text:'ZIM' },
+  'Evergreen':   { bg:'#00843d', fg:'#fff', text:'EVERGREEN' },
+  'ONE':         { bg:'#e4002b', fg:'#fff', text:'ONE' },
+  'Yang Ming':   { bg:'#004a97', fg:'#fff', text:'YANG MING' },
+  'Cosco':       { bg:'#003087', fg:'#fff', text:'COSCO' },
+  'Road':        { bg:'#6b7280', fg:'#fff', text:'ROAD' },
+  'Port Authority': { bg:'#374151', fg:'#fff', text:'PORT' },
+  'Customs':     { bg:'#374151', fg:'#fff', text:'CUSTOMS' },
 };
 function carrierLogo(name) {
-  const url = CARRIER_LOGOS[name];
-  if (url) return `<img src="${url}" alt="${name}" style="height:22px;max-width:80px;object-fit:contain;vertical-align:middle;border-radius:3px" onerror="this.style.display='none';this.nextSibling.style.display='inline'"/><span style="display:none;font-size:11px;font-weight:500;color:#1a2e1a">${name}</span>`;
+  const b = CARRIER_BRAND[name];
+  if (b) return `<span style="display:inline-flex;align-items:center;background:${b.bg};color:${b.fg};font-size:9px;font-weight:700;padding:3px 7px;border-radius:4px;letter-spacing:.04em;white-space:nowrap;line-height:1.4">${b.text}</span>`;
   return `<span style="font-size:11px;font-weight:500;color:#1a2e1a">${name}</span>`;
 }
 
