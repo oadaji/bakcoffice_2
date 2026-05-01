@@ -2,6 +2,14 @@ import { Router, type IRouter } from "express";
 import { ImapFlow } from "imapflow";
 import { simpleParser } from "mailparser";
 import { Readable } from "stream";
+import { db, emailsTable, rfqsTable } from "@workspace/db";
+import { eq } from "drizzle-orm";
+
+// Strip angle brackets from Message-ID values for consistent storage
+function normaliseMessageId(raw: string | undefined): string | null {
+  if (!raw) return null;
+  return raw.trim().replace(/^<|>$/g, "");
+}
 
 const router: IRouter = Router();
 
@@ -137,6 +145,8 @@ router.post("/gmail/sync", async (req, res) => {
         const fromEmail = fromAddr?.address ?? "";
         const fromName = fromAddr?.name ?? fromEmail;
         const receivedAt = (parsed.date ?? new Date()).toISOString();
+        const messageId = normaliseMessageId(parsed.messageId);
+        const inReplyTo = normaliseMessageId(parsed.inReplyTo);
 
         // Prefer plain text; fall back to stripping HTML
         let body = parsed.text ?? "";
@@ -149,6 +159,44 @@ router.post("/gmail/sync", async (req, res) => {
           continue;
         }
 
+        const port = process.env.PORT ?? "8080";
+
+        // ── Reply detection ──────────────────────────────────────────────────
+        // If In-Reply-To matches a known email's messageId, route to thread ingest
+        if (inReplyTo) {
+          const parentRows = await db
+            .select({ emailId: emailsTable.id })
+            .from(emailsTable)
+            .where(eq(emailsTable.messageId, inReplyTo));
+
+          if (parentRows.length) {
+            const parentEmailId = parentRows[0].emailId;
+            const rfqRows = await db
+              .select({ rfqId: rfqsTable.id })
+              .from(rfqsTable)
+              .where(eq(rfqsTable.emailId, parentEmailId));
+
+            if (rfqRows.length) {
+              const rfqId = rfqRows[0].rfqId;
+              const replyResp = await fetch(`http://localhost:${port}/api/rfqs/${rfqId}/ingest-reply`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ uid, fromName, fromEmail, body, receivedAt, messageId }),
+              });
+              if (replyResp.ok) {
+                const result = await replyResp.json() as { skipped?: boolean };
+                if (!result.skipped) synced++;
+                else skipped++;
+              } else {
+                const errText = await replyResp.text();
+                errors.push(`reply ${uid}: ${errText}`);
+              }
+              continue;
+            }
+          }
+        }
+
+        // ── New email (not a reply) ──────────────────────────────────────────
         // Skip automated/marketing emails — List-Unsubscribe header is a reliable signal
         const hasListUnsubscribe = !!parsed.headers?.get("list-unsubscribe");
         if (isAutomatedEmail(fromEmail, subject, hasListUnsubscribe)) {
@@ -156,8 +204,6 @@ router.post("/gmail/sync", async (req, res) => {
           continue;
         }
 
-        // Call the ingest endpoint (handles dedup by uid + Claude extraction)
-        const port = process.env.PORT ?? "8080";
         const ingestResp = await fetch(`http://localhost:${port}/api/rfq/ingest`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -170,19 +216,16 @@ router.post("/gmail/sync", async (req, res) => {
             receivedAt,
             emailType: "customer-rfq",
             requireFreightMatch: true,
+            messageId,
           }),
         });
 
         if (ingestResp.status === 422) {
-          // Claude found no freight fields — not a genuine RFQ, skip silently
           skipped++;
         } else if (ingestResp.ok) {
           const wasNew = ingestResp.headers.get("x-was-new") === "true";
-          if (wasNew) {
-            synced++;
-          } else {
-            skipped++;
-          }
+          if (wasNew) synced++;
+          else skipped++;
         } else {
           const errText = await ingestResp.text();
           errors.push(`${uid}: ${errText}`);

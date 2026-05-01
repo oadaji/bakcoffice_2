@@ -234,6 +234,14 @@ tr.trow.sel td{background:#eef6e6}
 .btn[disabled]{opacity:.4;cursor:not-allowed}
 .row{display:flex;gap:7px;align-items:center}
 
+/* THREAD REPLIES */
+.thread-reply{border-top:2px solid var(--accent-light);margin-top:16px;padding-top:14px}
+.thread-reply-hd{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.thread-reply-badge{font-size:10px;font-weight:600;background:var(--accent-light);color:var(--accent-dark);padding:2px 8px;border-radius:10px}
+.thread-reply-meta{font-size:11px;color:var(--text3)}
+.thread-reply-body{font-size:12px;color:var(--text2);line-height:1.7;white-space:pre-wrap}
+.thread-empty{display:none}
+
 /* PASSWORD GATE */
 #pw-gate{position:fixed;inset:0;z-index:9999;background:var(--sidebar-bg);display:flex;align-items:center;justify-content:center}
 #pw-gate.hidden{display:none}
@@ -379,6 +387,7 @@ tr.trow.sel td{background:#eef6e6}
           <span class="processing-badge">Processing</span>
         </div>
         <div class="detail-body" id="d-body"></div>
+        <div id="d-thread"></div>
         <div class="detail-actions" id="d-actions">
           <button class="btn btn-primary btn-sm" onclick="showScreen(2)">View in Deals →</button>
           <button class="btn btn-sm">Reply</button>
@@ -2768,6 +2777,8 @@ function selEmail(rfqId, el) {
   document.getElementById('d-from').textContent = e.fromName || e.fromEmail || '';
   document.getElementById('d-time').textContent = (e.receivedAt ? fmtDateTime(e.receivedAt) : '') + ' · sales inbox';
   document.getElementById('d-body').innerHTML = bodyToHtml(e.body || '');
+  document.getElementById('d-thread').innerHTML = '';
+  loadThread(rfqId);
 
   // Update processing banner based on type
   const banner = document.querySelector('.processing-bar');
@@ -2811,6 +2822,35 @@ function selEmail(rfqId, el) {
   }
 
   renderExtraction(r);
+}
+
+async function loadThread(rfqId) {
+  try {
+    const resp = await fetch(`/api/rfqs/${rfqId}/thread`);
+    if (!resp.ok) return;
+    const { replies } = await resp.json();
+    const container = document.getElementById('d-thread');
+    if (!container) return;
+    if (!replies || !replies.length) { container.innerHTML = ''; return; }
+    container.innerHTML = replies.map((rep, i) => `
+      <div class="thread-reply">
+        <div class="thread-reply-hd">
+          <span class="thread-reply-badge">Customer reply ${replies.length > 1 ? i + 1 : ''}</span>
+          <span class="thread-reply-meta">${escHtml(rep.fromName || rep.fromEmail)} · ${rep.receivedAt ? fmtDateTime(rep.receivedAt) : ''}</span>
+        </div>
+        <div class="thread-reply-body">${escHtml(rep.body || '')}</div>
+      </div>`).join('');
+    // Also refresh the RFQ data in rfqData since status may have changed
+    const rfqResp = await fetch('/api/rfqs');
+    if (rfqResp.ok) {
+      const fresh = await rfqResp.json();
+      rfqData.length = 0;
+      fresh.forEach(item => rfqData.push(item));
+      renderInboxList();
+    }
+  } catch (err) {
+    console.error('loadThread error', err);
+  }
 }
 
 function renderExtraction(r) {

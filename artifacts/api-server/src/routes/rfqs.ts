@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db, emailsTable, rfqsTable } from "@workspace/db";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, or } from "drizzle-orm";
 import { anthropic } from "@workspace/integrations-anthropic-ai";
 import nodemailer from "nodemailer";
 
@@ -149,6 +149,136 @@ router.post("/rfqs/:id/send-followup", async (req, res) => {
   }
 });
 
+// POST /api/rfqs/:id/ingest-reply — attach a customer reply to an existing RFQ thread
+// Re-runs Claude on the full conversation and promotes status to "ready" if complete
+router.post("/rfqs/:id/ingest-reply", async (req, res) => {
+  try {
+    const rfqId = parseInt(req.params.id, 10);
+    const { uid, fromName, fromEmail, body, receivedAt, messageId } = req.body as {
+      uid: string;
+      fromName?: string;
+      fromEmail: string;
+      body: string;
+      receivedAt?: string;
+      messageId?: string;
+    };
+
+    // Load the parent RFQ + its source email
+    const rows = await db
+      .select()
+      .from(rfqsTable)
+      .leftJoin(emailsTable, eq(rfqsTable.emailId, emailsTable.id))
+      .where(eq(rfqsTable.id, rfqId));
+
+    if (!rows.length || !rows[0].emails) {
+      res.status(404).json({ error: "RFQ not found" });
+      return;
+    }
+
+    const rfq = rows[0].rfqs;
+    const parentEmail = rows[0].emails;
+
+    // Dedup — skip if we already processed this reply uid
+    const existing = await db
+      .select({ id: emailsTable.id })
+      .from(emailsTable)
+      .where(eq(emailsTable.uid, uid));
+    if (existing.length) {
+      res.json({ skipped: true, rfq });
+      return;
+    }
+
+    // Save the reply email linked to the parent
+    await db.insert(emailsTable).values({
+      uid,
+      fromName: fromName || fromEmail,
+      fromEmail,
+      subject: `Re: ${parentEmail.subject}`,
+      body,
+      emailType: "reply",
+      receivedAt: receivedAt ? new Date(receivedAt) : new Date(),
+      messageId: messageId ?? null,
+      inReplyTo: parentEmail.messageId ?? null,
+      parentEmailId: parentEmail.id,
+    });
+
+    // Build combined thread context for Claude
+    // Fetch all replies so far to include the full conversation
+    const replyRows = await db
+      .select()
+      .from(emailsTable)
+      .where(eq(emailsTable.parentEmailId, parentEmail.id))
+      .orderBy(emailsTable.receivedAt);
+
+    const threadBody = [
+      `ORIGINAL ENQUIRY (${parentEmail.fromName || parentEmail.fromEmail}):\n${parentEmail.body}`,
+      ...replyRows.map((r, i) =>
+        `CUSTOMER REPLY ${i + 1} (${r.fromName || r.fromEmail}, ${new Date(r.receivedAt).toLocaleDateString()}):\n${r.body}`
+      ),
+    ].join("\n\n──────────────\n\n");
+
+    // Re-run Claude on the full thread
+    const extraction = await extractWithClaude(
+      {
+        fromName: parentEmail.fromName,
+        fromEmail: parentEmail.fromEmail,
+        subject: parentEmail.subject,
+        body: threadBody,
+      },
+      rfq.emailType,
+    );
+
+    // Update the RFQ in place
+    const [updated] = await db
+      .update(rfqsTable)
+      .set({
+        status: extraction.status,
+        fields: extraction.fields,
+        missingFields: extraction.missing,
+        followUpDraft: extraction.missing.length ? extraction.draft ?? null : null,
+        updatedAt: new Date(),
+      })
+      .where(eq(rfqsTable.id, rfqId))
+      .returning();
+
+    req.log.info({ rfqId, fromEmail, replyCount: replyRows.length }, "Reply ingested, RFQ updated");
+    res.json({ rfq: updated, replyCount: replyRows.length });
+  } catch (err) {
+    req.log.error({ err }, "Failed to ingest reply");
+    res.status(500).json({ error: "Failed to ingest reply" });
+  }
+});
+
+// GET /api/rfqs/:id/thread — return all emails in the thread (original + replies)
+router.get("/rfqs/:id/thread", async (req, res) => {
+  try {
+    const rfqId = parseInt(req.params.id, 10);
+
+    const rows = await db
+      .select()
+      .from(rfqsTable)
+      .leftJoin(emailsTable, eq(rfqsTable.emailId, emailsTable.id))
+      .where(eq(rfqsTable.id, rfqId));
+
+    if (!rows.length || !rows[0].emails) {
+      res.status(404).json({ error: "RFQ not found" });
+      return;
+    }
+
+    const parentEmail = rows[0].emails;
+    const replies = await db
+      .select()
+      .from(emailsTable)
+      .where(eq(emailsTable.parentEmailId, parentEmail.id))
+      .orderBy(emailsTable.receivedAt);
+
+    res.json({ original: parentEmail, replies });
+  } catch (err) {
+    req.log.error({ err }, "Failed to load thread");
+    res.status(500).json({ error: "Failed to load thread" });
+  }
+});
+
 // POST /api/rfq/ingest — save email + run Claude extraction + create/update RFQ
 router.post("/rfq/ingest", async (req, res) => {
   try {
@@ -161,6 +291,7 @@ router.post("/rfq/ingest", async (req, res) => {
       receivedAt,
       emailType = "customer-rfq",
       requireFreightMatch = false,
+      messageId,
     } = req.body as {
       uid: string;
       fromName: string;
@@ -170,6 +301,7 @@ router.post("/rfq/ingest", async (req, res) => {
       receivedAt?: string;
       emailType?: string;
       requireFreightMatch?: boolean;
+      messageId?: string;
     };
 
     if (!uid || !fromEmail || !subject || !body) {
@@ -205,6 +337,7 @@ router.post("/rfq/ingest", async (req, res) => {
         body,
         emailType,
         receivedAt: receivedAt ? new Date(receivedAt) : new Date(),
+        messageId: messageId ?? null,
       })
       .returning();
 
