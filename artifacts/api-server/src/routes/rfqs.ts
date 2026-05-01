@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
+import { randomUUID } from "crypto";
 import { db, emailsTable, rfqsTable } from "@workspace/db";
-import { eq, desc, or } from "drizzle-orm";
+import { eq, desc, or, inArray } from "drizzle-orm";
 import { anthropic } from "@workspace/integrations-anthropic-ai";
 import nodemailer from "nodemailer";
 
@@ -95,6 +96,7 @@ router.patch("/rfqs/:id", async (req, res) => {
 });
 
 // POST /api/rfqs/:id/send-followup — send the follow-up draft email to the customer
+// For grouped RFQs (groupTotal > 1) one combined email is sent and all siblings are marked replied
 router.post("/rfqs/:id/send-followup", async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
@@ -134,15 +136,28 @@ router.post("/rfqs/:id/send-followup", async (req, res) => {
       text: bodyText,
     });
 
-    // Persist draft changes + mark as replied
-    const [updated] = await db
-      .update(rfqsTable)
-      .set({ status: "replied", followUpDraft: bodyText, updatedAt: new Date() })
-      .where(eq(rfqsTable.id, id))
-      .returning();
-
-    req.log.info({ rfqId: id, to: email.fromEmail }, "Follow-up email sent");
-    res.json({ sent: true, rfq: updated });
+    // For grouped RFQs, mark all siblings as replied with the same draft
+    if (rfq.groupId && (rfq.groupTotal ?? 1) > 1) {
+      const siblingRows = await db
+        .select({ id: rfqsTable.id })
+        .from(rfqsTable)
+        .where(eq(rfqsTable.groupId, rfq.groupId));
+      const siblingIds = siblingRows.map((r) => r.id);
+      await db
+        .update(rfqsTable)
+        .set({ status: "replied", followUpDraft: bodyText, updatedAt: new Date() })
+        .where(inArray(rfqsTable.id, siblingIds));
+      req.log.info({ rfqId: id, groupId: rfq.groupId, siblingCount: siblingIds.length, to: email.fromEmail }, "Group follow-up email sent");
+      res.json({ sent: true, groupId: rfq.groupId, siblingCount: siblingIds.length });
+    } else {
+      const [updated] = await db
+        .update(rfqsTable)
+        .set({ status: "replied", followUpDraft: bodyText, updatedAt: new Date() })
+        .where(eq(rfqsTable.id, id))
+        .returning();
+      req.log.info({ rfqId: id, to: email.fromEmail }, "Follow-up email sent");
+      res.json({ sent: true, rfq: updated });
+    }
   } catch (err) {
     req.log.error({ err }, "Failed to send follow-up email");
     res.status(500).json({ error: "Failed to send email" });
@@ -217,8 +232,8 @@ router.post("/rfqs/:id/ingest-reply", async (req, res) => {
       ),
     ].join("\n\n──────────────\n\n");
 
-    // Re-run Claude on the full thread
-    const extraction = await extractWithClaude(
+    // Re-run Claude on the full thread — a reply always refines a single shipment
+    const multiExtraction = await extractWithClaude(
       {
         fromName: parentEmail.fromName,
         fromEmail: parentEmail.fromEmail,
@@ -227,6 +242,10 @@ router.post("/rfqs/:id/ingest-reply", async (req, res) => {
       },
       rfq.emailType,
     );
+    const extraction = multiExtraction.shipments[0];
+    const replyDraft = extraction.missing.length
+      ? (multiExtraction.combinedDraft ?? extraction.draft ?? null)
+      : null;
 
     // Update the RFQ in place
     const [updated] = await db
@@ -235,7 +254,7 @@ router.post("/rfqs/:id/ingest-reply", async (req, res) => {
         status: extraction.status,
         fields: extraction.fields,
         missingFields: extraction.missing,
-        followUpDraft: extraction.missing.length ? extraction.draft ?? null : null,
+        followUpDraft: replyDraft,
         updatedAt: new Date(),
       })
       .where(eq(rfqsTable.id, rfqId))
@@ -341,43 +360,64 @@ router.post("/rfq/ingest", async (req, res) => {
       })
       .returning();
 
-    // Run Claude extraction
-    const extraction = await extractWithClaude(
+    // Run Claude extraction — returns array of shipments (length ≥ 1)
+    const multiExtraction = await extractWithClaude(
       { fromName, fromEmail, subject, body },
       emailType,
     );
+
+    const { shipments, combinedDraft } = multiExtraction;
 
     // If requireFreightMatch is set, reject emails with no freight-specific fields extracted.
     // The key freight indicators are POL, POD, Commodity, Container, Incoterm, Quantity.
     // Customer and Company alone do not make an RFQ.
     if (requireFreightMatch) {
       const FREIGHT_KEYS = new Set(["POL", "POD", "Commodity", "Container", "Incoterm", "Quantity"]);
-      const hasFreightField = extraction.fields.some((f) => FREIGHT_KEYS.has(f.k) && f.ok);
-      if (!hasFreightField) {
-        // Roll back the email record we just inserted
+      const anyFreightField = shipments.some((s) =>
+        s.fields.some((f) => FREIGHT_KEYS.has(f.k) && f.ok)
+      );
+      if (!anyFreightField) {
         await db.delete(emailsTable).where(eq(emailsTable.id, email.id));
         res.status(422).json({ rejected: true, reason: "no_freight_fields" });
         return;
       }
     }
 
-    // Create RFQ record
-    const refNum = generateRef();
-    const [rfq] = await db
-      .insert(rfqsTable)
-      .values({
-        emailId: email.id,
-        ref: refNum,
-        emailType,
-        status: extraction.status,
-        fields: extraction.fields,
-        missingFields: extraction.missing,
-        followUpDraft: extraction.draft ?? null,
-      })
-      .returning();
+    // Assign a shared groupId when there are multiple shipments
+    const isGroup = shipments.length > 1;
+    const groupId = isGroup ? randomUUID() : null;
+
+    // Create one RFQ per detected shipment
+    const createdRfqs = [];
+    for (let idx = 0; idx < shipments.length; idx++) {
+      const s = shipments[idx];
+      const refNum = generateRef();
+      // The combined follow-up draft goes on the first shipment only (it covers all)
+      const rfqDraft = isGroup
+        ? (idx === 0 ? combinedDraft ?? null : null)
+        : (combinedDraft ?? s.draft ?? null);
+      const [rfq] = await db
+        .insert(rfqsTable)
+        .values({
+          emailId: email.id,
+          ref: refNum,
+          emailType,
+          status: s.status,
+          fields: s.fields,
+          missingFields: s.missing,
+          followUpDraft: rfqDraft,
+          groupId,
+          groupIndex: isGroup ? idx + 1 : null,
+          groupTotal: isGroup ? shipments.length : null,
+          sourceMessageId: messageId ?? null,
+        })
+        .returning();
+      createdRfqs.push(rfq);
+    }
 
     res.setHeader("x-was-new", "true");
-    res.json({ ...rfq, email });
+    // Return first RFQ as the primary; include groupTotal so callers know about siblings
+    res.json({ ...createdRfqs[0], email, groupTotal: shipments.length });
   } catch (err) {
     req.log.error({ err }, "Failed to ingest RFQ");
     res.status(500).json({ error: "Failed to ingest RFQ" });
@@ -433,6 +473,22 @@ function generateRef(): string {
   return `RFQ-${yy}${mm}-0${seq}`;
 }
 
+type SingleExtraction = {
+  label: string;
+  fields: Array<{ k: string; v: string; ok: boolean }>;
+  missing: string[];
+  draft: string | null;
+  status: string;
+};
+
+type MultiExtraction = {
+  shipments: SingleExtraction[];
+  combinedDraft: string | null;
+};
+
+// extractWithClaude — detects multiple shipments in one email and returns an array.
+// Single-shipment emails return a one-element array. combinedDraft covers all missing
+// fields across all shipments in a single reply (so only one email is sent).
 async function extractWithClaude(
   email: {
     fromName?: string;
@@ -441,12 +497,9 @@ async function extractWithClaude(
     body: string;
   },
   emailType: string,
-): Promise<{
-  fields: Array<{ k: string; v: string; ok: boolean }>;
-  missing: string[];
-  draft: string | null;
-  status: string;
-}> {
+): Promise<MultiExtraction> {
+  const cleanBody = email.body.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+
   const prompt = `You are a freight operations assistant at OnePort 365, a Nigerian logistics company.
 Analyze this email and extract shipment/RFQ details.
 
@@ -454,37 +507,47 @@ Email type: ${emailType}
 From: ${email.fromName || ""} <${email.fromEmail || ""}>
 Subject: ${email.subject || ""}
 Body:
-${email.body.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim()}
+${cleanBody}
 
-Return a JSON object with this exact structure:
+IMPORTANT: Detect whether the email contains MORE THAN ONE distinct shipment request.
+Signals for multiple shipments: different commodities described separately, different origins/destinations, phrases like "also", "another one", "second item", "one more thing", customer asking about separate pricing, different quantities with different descriptions.
+
+Return ONLY a JSON object with this exact structure — even for a single shipment:
 {
-  "fields": [
-    {"k": "Customer", "v": "<name or 'not specified'>", "ok": true/false},
-    {"k": "Company", "v": "<company or 'not specified'>", "ok": true/false},
-    {"k": "POL", "v": "<port of loading with country code if known, or 'not specified'>", "ok": true/false},
-    {"k": "POD", "v": "<port of discharge, or 'not specified'>", "ok": true/false},
-    {"k": "Commodity", "v": "<cargo description, or 'not specified'>", "ok": true/false},
-    {"k": "Container", "v": "<type × qty e.g. 20FT × 2, or 'not specified'>", "ok": true/false},
-    {"k": "Cargo class", "v": "<GC or DG Class X.X, or 'not specified'>", "ok": true/false},
-    {"k": "Incoterm", "v": "<FOB/EXW/CIF/DDP/etc or 'not specified'>", "ok": true/false},
-    {"k": "Quantity", "v": "<container count or weight/volume, or 'not specified'>", "ok": true/false}
+  "shipments": [
+    {
+      "label": "<short commodity/route label e.g. 'Cashew nuts · Apapa → Jebel Ali'>",
+      "fields": [
+        {"k": "Customer", "v": "<name or 'not specified'>", "ok": true/false},
+        {"k": "Company", "v": "<company or 'not specified'>", "ok": true/false},
+        {"k": "POL", "v": "<port of loading with country code if known, or 'not specified'>", "ok": true/false},
+        {"k": "POD", "v": "<port of discharge, or 'not specified'>", "ok": true/false},
+        {"k": "Commodity", "v": "<cargo description, or 'not specified'>", "ok": true/false},
+        {"k": "Container", "v": "<type × qty e.g. 20FT × 2, or 'not specified'>", "ok": true/false},
+        {"k": "Cargo class", "v": "<GC or DG Class X.X, or 'not specified'>", "ok": true/false},
+        {"k": "Incoterm", "v": "<FOB/EXW/CIF/DDP/etc or 'not specified'>", "ok": true/false},
+        {"k": "Quantity", "v": "<container count or weight/volume, or 'not specified'>", "ok": true/false}
+      ],
+      "missing": ["<question to ask for missing field 1>", ...],
+      "draft": null,
+      "status": "info_needed" or "ready"
+    }
   ],
-  "missing": ["<question to ask for missing field 1>", ...],
-  "draft": "<follow-up email draft text if any fields are missing, otherwise null>",
-  "status": "info_needed" or "ready"
+  "combinedDraft": "<single follow-up email covering missing fields for ALL shipments, with clearly labelled sections per shipment if more than one. null if nothing is missing across all shipments.>"
 }
 
 Rules:
 - ok=true if the value is actually specified in the email; ok=false if inferred or missing
 - missing[] lists only truly missing critical fields (POL, POD, commodity, container type, incoterm)
-- If all critical fields are present, missing=[] and draft=null and status="ready"
-- draft should be a warm, professional follow-up from "Commercial Team · OnePort 365" asking only for the missing items
+- If all critical fields are present for a shipment, missing=[] and status="ready" for that shipment
+- combinedDraft should be a warm, professional follow-up from "Commercial Team · OnePort 365"
+- For multiple shipments, combinedDraft must use clearly labelled sections (e.g. "Re: Shipment 1 — Cashew nuts:")
 - For rate-reply emails, extract partner details and rate info instead of customer RFQ fields
 - Return ONLY the JSON object, no markdown, no explanation`;
 
   const response = await anthropic.messages.create({
     model: "claude-sonnet-4-6",
-    max_tokens: 1500,
+    max_tokens: 2000,
     messages: [{ role: "user", content: prompt }],
   });
 
@@ -497,13 +560,22 @@ Rules:
       .replace(/^```\s*/i, "")
       .replace(/\s*```$/i, "")
       .trim();
-    return JSON.parse(cleaned);
+    const parsed = JSON.parse(cleaned) as MultiExtraction;
+    if (!Array.isArray(parsed.shipments) || parsed.shipments.length === 0) {
+      throw new Error("No shipments array");
+    }
+    return parsed;
   } catch {
+    // Fallback — treat as single shipment
     return {
-      fields: [{ k: "Raw response", v: text.slice(0, 200), ok: false }],
-      missing: ["Could not parse extraction"],
-      draft: null,
-      status: "info_needed",
+      shipments: [{
+        label: email.subject || "Shipment enquiry",
+        fields: [{ k: "Raw response", v: text.slice(0, 200), ok: false }],
+        missing: ["Could not parse extraction"],
+        draft: null,
+        status: "info_needed",
+      }],
+      combinedDraft: null,
     };
   }
 }

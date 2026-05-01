@@ -13,6 +13,11 @@ export const rfqsTable = pgTable("rfqs", {
   missingFields: jsonb("missing_fields").notNull().default([]),
   followUpDraft: text("follow_up_draft"),
   notes: text("notes"),
+  // Multi-shipment grouping — all RFQs split from the same source email share a groupId
+  groupId: text("group_id"),
+  groupIndex: integer("group_index"),
+  groupTotal: integer("group_total"),
+  sourceMessageId: text("source_message_id"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

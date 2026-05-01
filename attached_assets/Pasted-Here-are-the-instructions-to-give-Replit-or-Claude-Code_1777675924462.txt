@@ -1,0 +1,65 @@
+Here are the instructions to give Replit (or Claude Code) to implement this:
+
+Feature: Multi-RFQ detection and splitting from a single email/WhatsApp message
+
+What to build
+When an incoming message contains multiple distinct shipment requests, the system should automatically detect this, assign a separate RFQ number to each, and show them as individual line items in the Deals table — while keeping a link back to the single source message.
+
+1. Detection logic (backend / AI extraction layer)
+When extracting fields from an incoming message, the AI prompt should include an instruction to identify whether the message contains more than one shipment request. The signal for multiple shipments is any combination of:
+
+Different commodities described separately
+Different origins or destinations mentioned
+Customer explicitly asking "is this separate price?" or similar
+Different quantities with different units or descriptions
+Phrases like "second item", "also", "another one", "one more thing"
+
+The extraction response should return an array of RFQ objects, not a single object. Even if there is only one shipment, it should return an array of length 1. This makes the parsing consistent regardless of input.
+
+2. RFQ number assignment
+Each detected shipment in the array gets its own RFQ number generated sequentially. For the Ikenna example this would produce:
+RFQ-2604-0051  — Cashew nuts · Apapa → Jebel Ali
+RFQ-2604-0052  — Shea butter · Kano/Lagos → Dubai
+Both RFQ numbers are stored with a sourceMessageId field pointing back to the original email or WhatsApp thread ID. This is the link that connects them.
+
+3. Deals table display
+In the Deals table, each RFQ number appears as its own row — standard behaviour. The new addition is a grouping indicator when two or more RFQs share the same sourceMessageId.
+The first row in a group shows a small expand/collapse chevron. When collapsed, only the first RFQ row is visible with a badge showing "+1 more from same message". When expanded, all rows in the group are shown with a subtle left border or background tint to indicate they belong together.
+The customer name, email, and source link are the same across all rows in the group. The route, commodity, status, and stage are independent per row.
+
+4. RFQ intake panel behaviour
+When a grouped message is selected in the email inbox, the extraction panel should show a tab for each detected RFQ:
+[RFQ-2604-0051 — Cashew] [RFQ-2604-0052 — Shea Butter]
+Each tab shows the extracted fields, missing info, and follow-up draft for that specific shipment. The follow-up draft for the combined email is a single reply that addresses missing fields for all RFQs in one message — not separate emails per RFQ.
+
+5. Follow-up email behaviour
+Even though there are multiple RFQ records, only one follow-up email is sent to the customer. It is structured with clearly labelled sections per shipment as shown in the example above. The system should not send two separate emails to the same person about the same original message.
+
+6. Quote and invoice behaviour
+Each RFQ generates its own quote with its own quote number. When both quotes are approved, they generate two separate invoices. This should be reflected in the Quotes tab — both quotes are visible as separate rows but with a visual indicator that they came from the same customer enquiry.
+
+7. Schema changes required
+Add the following fields to the RFQ/Deal model:
+sourceMessageId     String    — ID of the originating email or WhatsApp message
+groupId             String    — shared across all RFQs from the same message
+groupIndex          Integer   — position within the group (1, 2, 3...)
+groupTotal          Integer   — total RFQs in the group
+Add the following field to the Quote model:
+sourceRfqGroup      String    — groupId from the originating RFQ group
+
+8. Edge cases to handle
+
+If the customer sends a follow-up message about only one of the two RFQs, it should attach to that specific RFQ record, not the whole group
+If one RFQ in a group is ready to quote but the other is missing fields, the ready one should be able to proceed independently — they are not blocked by each other
+If a group has three or more RFQs, the same logic applies — all get individual records but share the source link and grouped display
+
+
+Summary of files likely to change
+
+routes/rfq.js or controllers/rfqController.js — extraction now returns array, loop creates multiple records
+models/RFQ.js — add sourceMessageId, groupId, groupIndex, groupTotal
+models/Quote.js — add sourceRfqGroup
+pages/Deals.jsx or equivalent — grouping logic in table render
+pages/RFQIntake.jsx — tab switching per RFQ within grouped extraction panel
+services/claudeService.js — update extraction prompt to return array and detect multiple shipments
+services/emailService.js — combined follow-up logic when groupTotal > 1

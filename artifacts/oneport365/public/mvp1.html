@@ -113,6 +113,14 @@ html,body{height:100%;background:#f0f4f0;color:#1a1a1a;font-family:'Inter',sans-
 .ep-draft:focus{border-color:var(--accent);background:#fff}
 .ep-timer{font-size:10px;color:var(--warn);background:#fffbeb;padding:2px 7px;border-radius:4px;font-weight:500}
 .ep-timer.sent{color:#166534;background:#dcfce7}
+.ep-tab{display:inline-flex;align-items:center;height:32px;padding:0 11px;font-size:11px;font-weight:500;color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;margin-right:2px;white-space:nowrap;transition:color .12s}
+.ep-tab.active{color:var(--accent-dark);font-weight:600;border-bottom-color:var(--accent)}
+.ep-tab:hover:not(.active){color:var(--text2)}
+.group-badge{display:inline-block;font-size:10px;font-weight:600;color:var(--accent-dark);background:#e8f4e8;border:1px solid #c3e6c3;border-radius:10px;padding:1px 7px;margin-left:6px;vertical-align:middle;cursor:pointer}
+.deal-group-row td:first-child{padding-left:22px}
+.deal-group-row{background:#fafcfa}
+.deal-group-divider td{padding:0;height:2px;background:linear-gradient(to right,var(--accent) 3px,transparent 3px)}
+.trow-group-hd .chev{display:inline-block;transition:transform .15s;font-size:10px;margin-right:5px;color:var(--text3)}
 
 /* SCREENS 2 + 3 */
 #s2{flex-direction:column;overflow-y:auto;background:var(--bg);justify-content:flex-start;align-items:stretch}
@@ -401,6 +409,8 @@ tr.trow.sel td{background:#eef6e6}
           <span class="ep-title">Extracted Details</span>
           <span class="ep-rfqnum" id="ep-num">RFQ-2604-0040</span>
         </div>
+        <!-- Multi-shipment tabs (hidden for single-shipment emails) -->
+        <div id="ep-tabs" style="display:none;padding:0 14px;border-bottom:1px solid var(--border);flex-shrink:0;overflow-x:auto;white-space:nowrap"></div>
         <div class="ep-body">
           <div id="ep-fields"></div>
           <div id="ep-missing-wrap">
@@ -2503,8 +2513,10 @@ function waCancel() {
   document.getElementById('wa-ep-followup').style.display='none';
 }
 // ── API-driven inbox data ───────────────────────────────────────────────────
-let rfqData = [];         // fetched from /api/rfqs
-let currentRfqId = null;  // selected RFQ db id
+let rfqData = [];             // fetched from /api/rfqs
+let currentRfqId = null;      // selected RFQ db id
+let currentGroupRfqs = [];    // sibling RFQs for the selected group (empty for singles)
+let expandedDealGroups = new Set(); // groupIds expanded in the Deals table
 
 function fmtDate(iso) {
   if (!iso) return '';
@@ -2582,21 +2594,40 @@ async function syncGmail() {
 }
 
 function renderInboxList() {
+  // For grouped RFQs, show one inbox item per unique email (emailId), using the first RFQ as the representative
   const customers = rfqData.filter(r => r.emailType === 'customer-rfq' || r.emailType === 'internal-rfq');
   const partners  = rfqData.filter(r => r.emailType === 'rate-reply');
   const outbound  = rfqData.filter(r => r.emailType === 'outbound');
+
+  // Deduplicate customers by emailId — keep first occurrence (lowest groupIndex)
+  const seenEmailIds = new Set();
+  const uniqueCustomers = customers.filter(r => {
+    const eid = r.emailId ?? r.id;
+    if (seenEmailIds.has(eid)) return false;
+    seenEmailIds.add(eid);
+    return true;
+  });
+
   let html = '';
 
-  if (customers.length) {
+  if (uniqueCustomers.length) {
     html += `<div class="inbox-section-lbl" style="border-top:none">Customer requests</div>`;
-    customers.forEach(r => {
+    uniqueCustomers.forEach(r => {
       const chip = r.emailType === 'internal-rfq' ? 'Internal RFQ' : 'Customer RFQ';
-      const st = r.status;
+      // For grouped emails, status = worst-case across siblings
+      const siblings = r.groupId ? customers.filter(x => x.groupId === r.groupId) : [r];
+      const allReplied = siblings.every(x => x.status === 'replied');
+      const anyReady = siblings.some(x => x.status === 'ready');
+      const overallStatus = allReplied ? 'replied' : (anyReady && siblings.every(x => x.status === 'ready' || x.status === 'replied') ? 'ready' : r.status);
+      const st = overallStatus;
       const statusTxt = st==='ready'?'✓ ready':st==='replied'?'✓ replied':st==='archived'?'◻ archived':'⚠ info needed';
       const statusColor = (st==='ready'||st==='replied')?'var(--accent-dark)':st==='archived'?'var(--text3)':'var(--warn)';
       const fromShort = (r.email?.fromName||r.email?.fromEmail||'').split('·')[0].trim().slice(0,36);
+      const groupBadge = (r.groupTotal ?? 1) > 1
+        ? `<span class="group-badge">${r.groupTotal} shipments</span>`
+        : '';
       html += `<div class="email-item${st!=='archived'?' unread':''}" data-rfq-id="${r.id}" onclick="selEmail(${r.id},this)">
-        <div class="ei-top"><span class="ei-from">${escHtml(fromShort)}</span><span class="ei-time">${fmtDate(r.email?.receivedAt)}</span></div>
+        <div class="ei-top"><span class="ei-from">${escHtml(fromShort)}${groupBadge}</span><span class="ei-time">${fmtDate(r.email?.receivedAt)}</span></div>
         <div class="ei-subj">${escHtml(r.email?.subject||'')}</div>
         <div class="ei-foot"><span class="rfq-chip">${chip}</span><span class="ei-status" style="color:${statusColor}">${statusTxt}</span></div>
       </div>`;
@@ -2643,6 +2674,11 @@ function selEmail(rfqId, el) {
   const r = rfqData.find(x => x.id === rfqId);
   if (!r) return;
   currentRfqId = rfqId;
+  // Collect all RFQs from the same email (for grouped multi-shipment emails)
+  const emailId = r.emailId ?? r.id;
+  currentGroupRfqs = rfqData
+    .filter(x => (x.emailId ?? x.id) === emailId && (x.emailType === 'customer-rfq' || x.emailType === 'internal-rfq'))
+    .sort((a, b) => (a.groupIndex ?? 1) - (b.groupIndex ?? 1));
   const e = r.email || {};
 
   document.getElementById('d-subj').textContent = e.subject || '';
@@ -2696,13 +2732,20 @@ function selEmail(rfqId, el) {
   } else if (r.emailType === 'outbound') {
     actionsEl.innerHTML = `<button class="btn btn-sm" style="margin-left:auto;color:var(--text3)" onclick="archiveRfq(${rfqId})">Archive</button>`;
   } else {
-    const replyBtn = r.status === 'replied'
+    // For grouped emails, all siblings are replied together — check if first sibling is replied
+    const replyRfqId = currentGroupRfqs.length ? currentGroupRfqs[0].id : rfqId;
+    const allReplied = currentGroupRfqs.length
+      ? currentGroupRfqs.every(x => x.status === 'replied')
+      : r.status === 'replied';
+    const replyBtn = allReplied
       ? `<button class="btn btn-sm" disabled style="color:var(--accent-dark);background:#dcfce7;border-color:#bbf7d0;cursor:default">✓ Reply sent</button>`
-      : `<button class="btn btn-sm" onclick="replyRfq(${rfqId})">Reply</button>`;
+      : `<button class="btn btn-sm" onclick="replyRfq(${replyRfqId})">Reply</button>`;
     actionsEl.innerHTML = `${replyBtn}<button class="btn btn-sm" style="margin-left:auto;color:var(--text3)" onclick="archiveRfq(${rfqId})">Archive</button>`;
   }
 
-  renderExtraction(r);
+  // Render extraction panel: for grouped emails show the first RFQ's combined draft
+  const renderTarget = currentGroupRfqs.length ? currentGroupRfqs[0] : r;
+  renderExtraction(renderTarget);
 }
 
 async function loadThread(rfqId) {
@@ -2738,9 +2781,28 @@ function renderExtraction(r) {
   if (!r) return;
   const fields = Array.isArray(r.fields) ? r.fields : [];
   const missing = Array.isArray(r.missingFields) ? r.missingFields : [];
-  const draft = r.followUpDraft || null;
+  // For grouped RFQs the combined follow-up draft lives on the first sibling
+  const draftSource = currentGroupRfqs.length > 1 ? currentGroupRfqs[0] : r;
+  const draft = draftSource.followUpDraft || null;
 
   document.getElementById('ep-num').textContent = r.ref || '';
+
+  // ── Multi-shipment tabs ──────────────────────────────────────────────────
+  const tabsEl = document.getElementById('ep-tabs');
+  if (currentGroupRfqs.length > 1) {
+    tabsEl.style.display = 'block';
+    tabsEl.innerHTML = currentGroupRfqs.map(sibling => {
+      const commField = Array.isArray(sibling.fields) ? sibling.fields.find(f => /commodity/i.test(f.k)) : null;
+      const label = commField?.v && commField.v !== 'not specified'
+        ? commField.v.split(/[,·]/)[0].trim().slice(0, 22)
+        : (sibling.ref || `Shipment ${sibling.groupIndex}`);
+      const isActive = sibling.id === r.id;
+      return `<span class="ep-tab${isActive?' active':''}" onclick="selectGroupRfqTab(${sibling.id})">${escHtml(label)}</span>`;
+    }).join('');
+  } else {
+    tabsEl.style.display = 'none';
+    tabsEl.innerHTML = '';
+  }
 
   // Title based on type
   const epTitle = document.querySelector('.ep-title');
@@ -2808,6 +2870,13 @@ function renderExtraction(r) {
   } else {
     aw.innerHTML = `<button class="btn btn-sm" style="width:100%;color:var(--text3)" disabled>Complete info to get rates</button>`;
   }
+}
+
+function selectGroupRfqTab(rfqId) {
+  const r = rfqData.find(x => x.id === rfqId);
+  if (!r) return;
+  currentRfqId = rfqId;
+  renderExtraction(r);
 }
 
 async function archiveRfq(rfqId) {
@@ -2903,6 +2972,32 @@ document.addEventListener('DOMContentLoaded', () => {
 let currentRFQIndex = 0;
 let currentRfqPipelineId = null;
 
+function dealRowHtml(r, i, extraCls) {
+  const fields = Array.isArray(r.fields) ? r.fields : [];
+  const polF = fields.find(f => /pol|port.of.load/i.test(f.k));
+  const podF = fields.find(f => /pod|port.of.dis/i.test(f.k));
+  const commF = fields.find(f => /commodity/i.test(f.k));
+  const pol = polF?.v && polF.v !== 'not specified' ? polF.v : '—';
+  const pod = podF?.v && podF.v !== 'not specified' ? podF.v : '—';
+  const commodity = commF?.v && commF.v !== 'not specified' ? commF.v : '—';
+  const route = (pol !== '—' || pod !== '—') ? `${pol} → ${pod}` : '—';
+  const customer = r.email?.fromName || r.email?.fromEmail || '—';
+  let stageCls, stageLabel;
+  if (r.status === 'ready')        { stageCls = 'b-ok';   stageLabel = 'Ready'; }
+  else if (r.status === 'replied') { stageCls = 'b-wait'; stageLabel = 'Follow-up sent'; }
+  else if (r.status === 'archived'){ stageCls = 'b-gray'; stageLabel = 'Archived'; }
+  else                             { stageCls = 'b-miss'; stageLabel = 'Info needed'; }
+  const timeStr = r.email?.receivedAt ? fmtDate(r.email.receivedAt) : '—';
+  return `<tr class="trow${extraCls?' '+extraCls:''}" onclick="selectRFQ(${i},this)">
+    <td class="tc" style="font-family:monospace;font-size:11px">${escHtml(r.ref || `RFQ-${r.id}`)}</td>
+    <td class="tc">${escHtml(customer)}</td>
+    <td style="font-family:monospace;font-size:11px">${escHtml(route)}</td>
+    <td>${escHtml(commodity)}</td>
+    <td><span class="badge ${stageCls}">${stageLabel}</span></td>
+    <td>${escHtml(timeStr)}</td>
+  </tr>`;
+}
+
 function renderDealsTable() {
   const customerRfqs = rfqData.filter(x => x.emailType === 'customer-rfq' || x.emailType === 'internal-rfq');
   const tbody = document.getElementById('deals-tbody');
@@ -2928,35 +3023,69 @@ function renderDealsTable() {
     return;
   }
 
-  tbody.innerHTML = customerRfqs.map((r, i) => {
-    const fields = Array.isArray(r.fields) ? r.fields : [];
-    const polF = fields.find(f => /pol|port.of.load/i.test(f.k));
-    const podF = fields.find(f => /pod|port.of.dis/i.test(f.k));
-    const commF = fields.find(f => /commodity/i.test(f.k));
-    const pol = polF?.v && polF.v !== 'not specified' ? polF.v : '—';
-    const pod = podF?.v && podF.v !== 'not specified' ? podF.v : '—';
-    const commodity = commF?.v && commF.v !== 'not specified' ? commF.v : '—';
-    const route = (pol !== '—' || pod !== '—') ? `${pol} → ${pod}` : '—';
-    const customer = r.email?.fromName || r.email?.fromEmail || '—';
+  // Group by groupId; non-grouped rows rendered individually
+  const processedGroups = new Set();
+  let rows = '';
+  customerRfqs.forEach((r, i) => {
+    if (r.groupId && (r.groupTotal ?? 1) > 1) {
+      // Skip siblings — they'll be rendered under the group header
+      if (r.groupIndex && r.groupIndex > 1) return;
+      if (processedGroups.has(r.groupId)) return;
+      processedGroups.add(r.groupId);
 
-    let stageCls, stageLabel;
-    if (r.status === 'ready')        { stageCls = 'b-ok';   stageLabel = 'Ready'; }
-    else if (r.status === 'replied') { stageCls = 'b-wait'; stageLabel = 'Follow-up sent'; }
-    else if (r.status === 'archived'){ stageCls = 'b-gray'; stageLabel = 'Archived'; }
-    else                             { stageCls = 'b-miss'; stageLabel = 'Info needed'; }
+      const siblings = customerRfqs.filter(x => x.groupId === r.groupId).sort((a,b) => (a.groupIndex??1)-(b.groupIndex??1));
+      const isExpanded = expandedDealGroups.has(r.groupId);
+      const hiddenCount = siblings.length - 1;
 
-    const receivedAt = r.email?.receivedAt;
-    const timeStr = receivedAt ? fmtDate(receivedAt) : '—';
+      // Header row: first shipment with expand chevron
+      const fields = Array.isArray(r.fields) ? r.fields : [];
+      const polF = fields.find(f => /pol|port.of.load/i.test(f.k));
+      const podF = fields.find(f => /pod|port.of.dis/i.test(f.k));
+      const commF = fields.find(f => /commodity/i.test(f.k));
+      const pol = polF?.v && polF.v !== 'not specified' ? polF.v : '—';
+      const pod = podF?.v && podF.v !== 'not specified' ? podF.v : '—';
+      const commodity = commF?.v && commF.v !== 'not specified' ? commF.v : '—';
+      const route = (pol !== '—' || pod !== '—') ? `${pol} → ${pod}` : '—';
+      const customer = r.email?.fromName || r.email?.fromEmail || '—';
+      let stageCls = 'b-miss', stageLabel = 'Info needed';
+      if (r.status === 'ready')        { stageCls = 'b-ok';   stageLabel = 'Ready'; }
+      else if (r.status === 'replied') { stageCls = 'b-wait'; stageLabel = 'Follow-up sent'; }
+      else if (r.status === 'archived'){ stageCls = 'b-gray'; stageLabel = 'Archived'; }
+      const timeStr = r.email?.receivedAt ? fmtDate(r.email.receivedAt) : '—';
+      const chevron = isExpanded ? '▾' : '▸';
+      const collapseBadge = !isExpanded
+        ? `<span class="group-badge" onclick="event.stopPropagation();toggleDealGroup('${r.groupId}')">+${hiddenCount} more</span>`
+        : '';
 
-    return `<tr class="trow" onclick="selectRFQ(${i},this)">
-      <td class="tc" style="font-family:monospace;font-size:11px">${escHtml(r.ref || `RFQ-${r.id}`)}</td>
-      <td class="tc">${escHtml(customer)}</td>
-      <td style="font-family:monospace;font-size:11px">${escHtml(route)}</td>
-      <td>${escHtml(commodity)}</td>
-      <td><span class="badge ${stageCls}">${stageLabel}</span></td>
-      <td>${escHtml(timeStr)}</td>
-    </tr>`;
-  }).join('');
+      rows += `<tr class="trow trow-group-hd" onclick="selectRFQ(${i},this)">
+        <td class="tc" style="font-family:monospace;font-size:11px">
+          <span class="chev" onclick="event.stopPropagation();toggleDealGroup('${r.groupId}')">${chevron}</span>${escHtml(r.ref||`RFQ-${r.id}`)}
+        </td>
+        <td class="tc">${escHtml(customer)}${collapseBadge}</td>
+        <td style="font-family:monospace;font-size:11px">${escHtml(route)}</td>
+        <td>${escHtml(commodity)}</td>
+        <td><span class="badge ${stageCls}">${stageLabel}</span></td>
+        <td>${escHtml(timeStr)}</td>
+      </tr>`;
+
+      if (isExpanded) {
+        siblings.slice(1).forEach((sib, si) => {
+          const sibIdx = customerRfqs.indexOf(sib);
+          rows += dealRowHtml(sib, sibIdx, 'deal-group-row');
+        });
+      }
+    } else {
+      rows += dealRowHtml(r, i, '');
+    }
+  });
+
+  tbody.innerHTML = rows;
+}
+
+function toggleDealGroup(groupId) {
+  if (expandedDealGroups.has(groupId)) expandedDealGroups.delete(groupId);
+  else expandedDealGroups.add(groupId);
+  renderDealsTable();
 }
 
 // Helper: get field value by key from {k,v,ok}[] array
