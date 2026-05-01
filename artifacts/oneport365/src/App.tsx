@@ -86,7 +86,7 @@ export default function App() {
         </a>
 
         {/* MVP 1 card */}
-        <a href="/outlook_scan.html" style={{
+        <a href="/mvp1.html" style={{
           display: 'flex', flexDirection: 'column',
           background: 'rgba(212,225,0,0.05)',
           border: '2px solid #D4E100',
