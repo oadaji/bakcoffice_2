@@ -2740,7 +2740,7 @@ function selEmail(rfqId, el) {
     const replyBtn = allReplied
       ? `<button class="btn btn-sm" disabled style="color:var(--accent-dark);background:#dcfce7;border-color:#bbf7d0;cursor:default">✓ Reply sent</button>`
       : `<button class="btn btn-sm" onclick="replyRfq(${replyRfqId})">Reply</button>`;
-    actionsEl.innerHTML = `${replyBtn}<button class="btn btn-sm" style="margin-left:auto;color:var(--text3)" onclick="archiveRfq(${rfqId})">Archive</button>`;
+    actionsEl.innerHTML = `${replyBtn}<button class="btn btn-sm" style="margin-left:auto;color:var(--text3)" onclick="archiveRfq(${rfqId})">Archive</button><button class="btn btn-sm" style="color:#dc2626;border-color:#fecaca" onclick="deleteRfq(${rfqId})" title="Remove from inbox">Remove</button>`;
   }
 
   // Render extraction panel: for grouped emails show the first RFQ's combined draft
@@ -2888,6 +2888,30 @@ async function archiveRfq(rfqId) {
   const r = rfqData.find(x => x.id === rfqId);
   if (r) r.status = 'archived';
   renderInboxList();
+}
+
+async function deleteRfq(rfqId) {
+  if (!confirm('Permanently remove this email from the inbox?')) return;
+  try {
+    const resp = await fetch(`/api/rfqs/${rfqId}`, { method: 'DELETE' });
+    if (!resp.ok) { const e = await resp.json(); throw new Error(e.error || 'Delete failed'); }
+    // Remove all RFQs sharing the same email from local data
+    const r = rfqData.find(x => x.id === rfqId);
+    const emailId = r?.emailId ?? r?.id;
+    const toRemove = rfqData.filter(x => (x.emailId ?? x.id) === emailId).map(x => x.id);
+    toRemove.forEach(rid => {
+      const idx = rfqData.findIndex(x => x.id === rid);
+      if (idx !== -1) rfqData.splice(idx, 1);
+    });
+    // Clear the detail pane
+    document.getElementById('d-subj').textContent = '';
+    document.getElementById('d-from').textContent = '';
+    document.getElementById('d-body').innerHTML = '';
+    document.getElementById('ep-fields').innerHTML = '';
+    renderInboxList();
+  } catch (err) {
+    alert('Could not remove: ' + err.message);
+  }
 }
 
 async function replyRfq(rfqId) {

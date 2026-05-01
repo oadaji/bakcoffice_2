@@ -26,6 +26,9 @@ const AUTOMATED_ADDRESS_PATTERNS = [
   /^alerts?@/i,
   /^newsletter@/i,
   /^updates?@/i,
+  /^orders?@/i,           // retail/food order systems (orders@, order@)
+  /^support@/i,
+  /^billing@/i,
   /^info@accounts\./i,
   /@accounts\.google\.com$/i,
   /@notifications\./i,
@@ -41,6 +44,11 @@ const AUTOMATED_SUBJECT_PATTERNS = [
   /your (order|receipt|invoice) (has been|was)/i,
   /password reset/i,
   /\[automated\]/i,
+  // Non-freight subject signals
+  /cupcake|pastry|bakery|cake order|food order/i,
+  /appointment (confirmed|reminder|booked)/i,
+  /booking confirmation/i,
+  /thank you for your (order|purchase)/i,
 ];
 
 function isAutomatedEmail(fromEmail: string, subject: string, hasListUnsubscribe: boolean): boolean {

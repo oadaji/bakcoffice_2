@@ -62,6 +62,32 @@ router.get("/rfqs/:id", async (req, res) => {
   }
 });
 
+// DELETE /api/rfqs/:id — hard-delete an RFQ and its source email (if no other RFQs reference it)
+router.delete("/rfqs/:id", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const rows = await db.select().from(rfqsTable).where(eq(rfqsTable.id, id));
+    if (!rows.length) {
+      res.status(404).json({ error: "RFQ not found" });
+      return;
+    }
+    const rfq = rows[0];
+    await db.delete(rfqsTable).where(eq(rfqsTable.id, id));
+    // Delete source email only if no other RFQs still reference it
+    if (rfq.emailId) {
+      const others = await db.select({ id: rfqsTable.id }).from(rfqsTable).where(eq(rfqsTable.emailId, rfq.emailId));
+      if (!others.length) {
+        await db.delete(emailsTable).where(eq(emailsTable.id, rfq.emailId));
+      }
+    }
+    req.log.info({ rfqId: id }, "RFQ deleted");
+    res.json({ deleted: true });
+  } catch (err) {
+    req.log.error({ err }, "Failed to delete RFQ");
+    res.status(500).json({ error: "Failed to delete RFQ" });
+  }
+});
+
 // PATCH /api/rfqs/:id — update status, draft, notes
 router.patch("/rfqs/:id", async (req, res) => {
   try {
@@ -368,15 +394,16 @@ router.post("/rfq/ingest", async (req, res) => {
 
     const { shipments, combinedDraft } = multiExtraction;
 
-    // If requireFreightMatch is set, reject emails with no freight-specific fields extracted.
-    // The key freight indicators are POL, POD, Commodity, Container, Incoterm, Quantity.
-    // Customer and Company alone do not make an RFQ.
+    // If requireFreightMatch is set, reject emails that are not genuine freight/logistics enquiries.
+    // A real freight RFQ must mention at least a port/city of origin (POL) or destination (POD).
+    // This gates out personal emails, food orders, retail confirmations, etc. that Claude might
+    // otherwise extract a "Commodity" from — e.g. a cupcake order has a commodity but no route.
     if (requireFreightMatch) {
-      const FREIGHT_KEYS = new Set(["POL", "POD", "Commodity", "Container", "Incoterm", "Quantity"]);
-      const anyFreightField = shipments.some((s) =>
-        s.fields.some((f) => FREIGHT_KEYS.has(f.k) && f.ok)
+      const ROUTE_KEYS = new Set(["POL", "POD"]);
+      const hasRouteField = shipments.some((s) =>
+        s.fields.some((f) => ROUTE_KEYS.has(f.k) && f.ok)
       );
-      if (!anyFreightField) {
+      if (!hasRouteField) {
         await db.delete(emailsTable).where(eq(emailsTable.id, email.id));
         res.status(422).json({ rejected: true, reason: "no_freight_fields" });
         return;
