@@ -169,13 +169,14 @@ router.post("/gmail/sync", async (req, res) => {
             body,
             receivedAt,
             emailType: "customer-rfq",
+            requireFreightMatch: true,
           }),
         });
 
-        if (ingestResp.ok) {
-          const result = await ingestResp.json() as { email?: { id?: number } };
-          // ingest returns existing record silently — check if it was already in DB
-          // The ingest route upserts, so we check via a header or rely on uid dedup
+        if (ingestResp.status === 422) {
+          // Claude found no freight fields — not a genuine RFQ, skip silently
+          skipped++;
+        } else if (ingestResp.ok) {
           const wasNew = ingestResp.headers.get("x-was-new") === "true";
           if (wasNew) {
             synced++;

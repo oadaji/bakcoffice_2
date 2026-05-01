@@ -92,6 +92,7 @@ router.post("/rfq/ingest", async (req, res) => {
       body,
       receivedAt,
       emailType = "customer-rfq",
+      requireFreightMatch = false,
     } = req.body as {
       uid: string;
       fromName: string;
@@ -100,6 +101,7 @@ router.post("/rfq/ingest", async (req, res) => {
       body: string;
       receivedAt?: string;
       emailType?: string;
+      requireFreightMatch?: boolean;
     };
 
     if (!uid || !fromEmail || !subject || !body) {
@@ -143,6 +145,20 @@ router.post("/rfq/ingest", async (req, res) => {
       { fromName, fromEmail, subject, body },
       emailType,
     );
+
+    // If requireFreightMatch is set, reject emails with no freight-specific fields extracted.
+    // The key freight indicators are POL, POD, Commodity, Container, Incoterm, Quantity.
+    // Customer and Company alone do not make an RFQ.
+    if (requireFreightMatch) {
+      const FREIGHT_KEYS = new Set(["POL", "POD", "Commodity", "Container", "Incoterm", "Quantity"]);
+      const hasFreightField = extraction.fields.some((f) => FREIGHT_KEYS.has(f.k) && f.ok);
+      if (!hasFreightField) {
+        // Roll back the email record we just inserted
+        await db.delete(emailsTable).where(eq(emailsTable.id, email.id));
+        res.status(422).json({ rejected: true, reason: "no_freight_fields" });
+        return;
+      }
+    }
 
     // Create RFQ record
     const refNum = generateRef();
