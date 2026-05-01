@@ -2800,11 +2800,20 @@ function selEmail(rfqId, el) {
     banner.querySelector('.processing-badge').textContent = 'Internal';
     banner.querySelector('.processing-badge').style.background = '#d97706';
   } else {
-    banner.style.background = '#eef6e6';
-    banner.style.borderColor = '#c8e6a0';
-    banner.querySelector('.processing-bar-text').textContent = 'Reading email and pulling out shipment details…';
-    banner.querySelector('.processing-badge').textContent = 'Processing';
-    banner.querySelector('.processing-badge').style.background = 'var(--accent)';
+    const isComplete = r.status === 'ready' || r.status === 'replied';
+    banner.style.background = isComplete ? '#f0fdf4' : '#eef6e6';
+    banner.style.borderColor = isComplete ? '#86efac' : '#c8e6a0';
+    const spinner = banner.querySelector('.spinner');
+    if (spinner) spinner.style.display = isComplete ? 'none' : '';
+    if (isComplete) {
+      banner.querySelector('.processing-bar-text').textContent = '✓ Shipment details extracted successfully.';
+      banner.querySelector('.processing-badge').textContent = 'Complete';
+      banner.querySelector('.processing-badge').style.background = '#16a34a';
+    } else {
+      banner.querySelector('.processing-bar-text').textContent = 'Reading email and pulling out shipment details…';
+      banner.querySelector('.processing-badge').textContent = 'Processing';
+      banner.querySelector('.processing-badge').style.background = 'var(--accent)';
+    }
   }
 
   // Show/hide action buttons based on type
