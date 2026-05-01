@@ -233,9 +233,76 @@ tr.trow.sel td{background:#eef6e6}
 .btn-danger{border-color:#fecaca;color:var(--danger)}
 .btn[disabled]{opacity:.4;cursor:not-allowed}
 .row{display:flex;gap:7px;align-items:center}
+
+/* PASSWORD GATE */
+#pw-gate{position:fixed;inset:0;z-index:9999;background:var(--sidebar-bg);display:flex;align-items:center;justify-content:center}
+#pw-gate.hidden{display:none}
+.pw-card{background:#fff;border-radius:16px;padding:40px 36px;width:340px;box-shadow:0 24px 60px rgba(0,0,0,.25);text-align:center}
+.pw-logo{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:24px}
+.pw-logo-icon{width:36px;height:36px;background:var(--accent);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#fff;font-weight:700}
+.pw-logo-text{font-size:17px;font-weight:700;color:#1a2e1a}
+.pw-logo-text span{color:var(--accent)}
+.pw-heading{font-size:15px;font-weight:600;color:#1a2e1a;margin-bottom:6px}
+.pw-sub{font-size:12px;color:var(--text3);margin-bottom:24px}
+.pw-input{width:100%;padding:10px 14px;border:1.5px solid var(--border2);border-radius:8px;font-size:14px;font-family:inherit;outline:none;transition:border-color .15s;text-align:center;letter-spacing:2px;color:#1a2e1a}
+.pw-input:focus{border-color:var(--accent)}
+.pw-input.shake{animation:shake .35s ease}
+@keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}
+.pw-error{font-size:11px;color:var(--danger);margin-top:8px;min-height:16px}
+.pw-btn{margin-top:18px;width:100%;padding:11px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;transition:background .15s}
+.pw-btn:hover{background:var(--accent-dark)}
+.pw-badge{margin-top:20px;font-size:10px;color:var(--text3)}
 </style>
 </head>
 <body>
+
+<!-- PASSWORD GATE -->
+<div id="pw-gate">
+  <div class="pw-card">
+    <div class="pw-logo">
+      <div class="pw-logo-icon">⬡</div>
+      <div class="pw-logo-text">OnePort <span>365</span></div>
+    </div>
+    <div class="pw-heading">Demo Access</div>
+    <div class="pw-sub">Enter the password to continue</div>
+    <form onsubmit="checkPassword();return false;">
+      <input class="pw-input" id="pw-input" type="password" placeholder="••••••••••" autocomplete="current-password" maxlength="32"/>
+      <div class="pw-error" id="pw-error"></div>
+      <button class="pw-btn" type="submit">Enter</button>
+    </form>
+    <div class="pw-badge">OnePort 365 · RFQ Intake Demo</div>
+  </div>
+</div>
+<script>
+(function() {
+  const SESSION_KEY = 'op365_demo_auth';
+  const CORRECT = 'oneport365';
+  if (sessionStorage.getItem(SESSION_KEY) === '1') {
+    document.getElementById('pw-gate').classList.add('hidden');
+  }
+  window.checkPassword = function() {
+    const val = document.getElementById('pw-input').value;
+    if (val === CORRECT) {
+      sessionStorage.setItem(SESSION_KEY, '1');
+      document.getElementById('pw-gate').classList.add('hidden');
+    } else {
+      const inp = document.getElementById('pw-input');
+      const err = document.getElementById('pw-error');
+      err.textContent = 'Incorrect password. Please try again.';
+      inp.value = '';
+      inp.classList.remove('shake');
+      void inp.offsetWidth;
+      inp.classList.add('shake');
+      inp.focus();
+    }
+  };
+  document.addEventListener('DOMContentLoaded', function() {
+    const inp = document.getElementById('pw-input');
+    if (inp && !document.getElementById('pw-gate').classList.contains('hidden')) inp.focus();
+  });
+})();
+</script>
+
 <div class="app">
 
   <!-- TOPNAV -->
