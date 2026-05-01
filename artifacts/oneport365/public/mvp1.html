@@ -286,7 +286,13 @@ tr.trow.sel td{background:#eef6e6}
       <div class="col-inbox">
         <div class="inbox-hd">
           <span class="inbox-hd-title">New RFQ Requests</span>
-          <div class="monitoring-pill"><div style="width:6px;height:6px;border-radius:50%;background:var(--accent);animation:pulse 2s ease infinite"></div>Live</div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <button id="gmail-sync-btn" onclick="syncGmail()" title="Sync Gmail inbox" style="display:flex;align-items:center;gap:5px;padding:3px 9px;font-size:10px;font-weight:600;font-family:Inter,sans-serif;cursor:pointer;border-radius:20px;border:1px solid #d2d9e0;background:#fff;color:var(--text2);line-height:1.4;transition:background .15s">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3"/></svg>
+              <span id="gmail-sync-label">Sync Gmail</span>
+            </button>
+            <div class="monitoring-pill"><div style="width:6px;height:6px;border-radius:50%;background:var(--accent);animation:pulse 2s ease infinite"></div>Live</div>
+          </div>
         </div>
         <div class="inbox-scroll">
 
@@ -2595,6 +2601,37 @@ async function loadInbox() {
   } catch(e) {
     document.getElementById('inbox-list').innerHTML =
       '<div style="padding:16px;color:var(--danger);font-size:11px">Failed to load inbox</div>';
+  }
+}
+
+async function syncGmail() {
+  const btn = document.getElementById('gmail-sync-btn');
+  const lbl = document.getElementById('gmail-sync-label');
+  btn.disabled = true;
+  btn.style.opacity = '0.6';
+  lbl.textContent = 'Syncing…';
+  try {
+    const res = await fetch('/api/gmail/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ maxResults: 20, query: 'in:inbox' }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Sync failed');
+    const { synced, skipped } = data;
+    lbl.textContent = synced > 0 ? `+${synced} new` : 'Up to date';
+    if (synced > 0) await loadInbox();
+    setTimeout(() => { lbl.textContent = 'Sync Gmail'; btn.disabled = false; btn.style.opacity = '1'; }, 3000);
+  } catch(e) {
+    lbl.textContent = 'Error';
+    btn.style.background = '#fff0f0';
+    btn.style.color = 'var(--danger)';
+    btn.style.borderColor = 'var(--danger)';
+    setTimeout(() => {
+      lbl.textContent = 'Sync Gmail';
+      btn.disabled = false; btn.style.opacity = '1';
+      btn.style.background = ''; btn.style.color = ''; btn.style.borderColor = '';
+    }, 3000);
   }
 }
 
