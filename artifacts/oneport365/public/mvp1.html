@@ -290,77 +290,7 @@ tr.trow.sel td{background:#eef6e6}
         </div>
         <div class="inbox-scroll">
 
-          <div class="inbox-section-lbl" style="border-top:none">Customer requests</div>
-
-          <div class="email-item unread sel" onclick="selEmail(0,this)">
-            <div class="ei-top"><span class="ei-from">Grace Benson · Bioscape Africa</span><span class="ei-time">14 Apr</span></div>
-            <div class="ei-subj">FREIGHT RATE- AARHUS/ CATANIA/ MILAZZO</div>
-            <div class="ei-foot"><span class="rfq-chip">Customer RFQ</span><span class="ei-status" style="color:var(--warn)">⚠ info needed</span></div>
-          </div>
-
-          <div class="email-item unread" onclick="selEmail(1,this)">
-            <div class="ei-top"><span class="ei-from">Demir Güzel · Sarten Packaging</span><span class="ei-time">9 Apr</span></div>
-            <div class="ei-subj">Sarten — DDP Price Quote Request</div>
-            <div class="ei-foot"><span class="rfq-chip">Customer RFQ</span><span class="ei-status" style="color:var(--accent-dark)">✓ ready</span></div>
-          </div>
-
-          <div class="email-item unread" onclick="selEmail(2,this)">
-            <div class="ei-top"><span class="ei-from">Kayode Akintade · Internal</span><span class="ei-time">10 Apr</span></div>
-            <div class="ei-subj">Eat n Go Quote Request</div>
-            <div class="ei-foot"><span class="rfq-chip">Internal RFQ</span><span class="ei-status" style="color:var(--warn)">⚠ info needed</span></div>
-          </div>
-
-          <div class="email-item" onclick="selEmail(6,this)">
-            <div class="ei-top"><span class="ei-from">Emeka Eze · Royal Foam Nigeria</span><span class="ei-time">8 Apr</span></div>
-            <div class="ei-subj">containers from china — polyol &amp; isocyanate</div>
-            <div class="ei-foot"><span class="rfq-chip">Customer RFQ</span><span class="ei-status" style="color:var(--accent-dark)">✓ ready</span></div>
-          </div>
-
-          <div class="email-item" onclick="selEmail(7,this)">
-            <div class="ei-top"><span class="ei-from">Tunde Fashola · Dankuru Industries</span><span class="ei-time">7 Apr</span></div>
-            <div class="ei-subj">Fwd: Fwd: RE: shipment — ceramic tiles</div>
-            <div class="ei-foot"><span class="rfq-chip">Customer RFQ</span><span class="ei-status" style="color:var(--warn)">⚠ info needed</span></div>
-          </div>
-
-          <div class="email-item" onclick="selEmail(8,this)">
-            <div class="ei-top"><span class="ei-from">Chinwe Obi</span><span class="ei-time">5 Apr</span></div>
-            <div class="ei-subj">hello pls I need shipping price</div>
-            <div class="ei-foot"><span class="rfq-chip">Customer RFQ</span><span class="ei-status" style="color:var(--warn)">⚠ info needed</span></div>
-          </div>
-
-          <div class="email-item" onclick="selEmail(9,this)">
-            <div class="ei-top"><span class="ei-from">Adaeze Nwosu · Nwosu Agro</span><span class="ei-time">4 Apr</span></div>
-            <div class="ei-subj">Export rates — sesame seeds to Rotterdam</div>
-            <div class="ei-foot"><span class="rfq-chip">Customer RFQ</span><span class="ei-status" style="color:var(--accent-dark)">✓ ready</span></div>
-          </div>
-
-          <div class="email-item" onclick="selEmail(10,this)">
-            <div class="ei-top"><span class="ei-from">Moses Dafiaghor · Saro Agro</span><span class="ei-time">2 Apr</span></div>
-            <div class="ei-subj">Import shipment request — Ningbo to Apapa</div>
-            <div class="ei-foot"><span class="rfq-chip">Customer RFQ</span><span class="ei-status" style="color:var(--accent-dark)">✓ ready</span></div>
-          </div>
-
-          <div class="inbox-section-lbl">Partner rate replies</div>
-
-          <div class="email-item" onclick="selEmail(3,this)">
-            <div class="ei-top"><span class="ei-from">May Zhao · OceanFavor International</span><span class="ei-time">12 Mar</span></div>
-            <div class="ei-subj">Re: ONEPORT 365 ↔ ARC RIDE SHIPMENT</div>
-            <div class="ei-foot"><span class="rfq-chip" style="background:#e0f2fe;color:#0369a1">Rate reply</span><span class="ei-status" style="color:var(--accent-dark)">✓ rates received</span></div>
-          </div>
-
-          <div class="email-item" onclick="selEmail(4,this)">
-            <div class="ei-top"><span class="ei-from">Summer Mo · Jaylead Logistics</span><span class="ei-time">12 Mar</span></div>
-            <div class="ei-subj">回复: Freight requests: China to SAF/EAF/WAF</div>
-            <div class="ei-foot"><span class="rfq-chip" style="background:#e0f2fe;color:#0369a1">Rate reply</span><span class="ei-status" style="color:var(--accent-dark)">✓ rates received</span></div>
-          </div>
-
-          <div class="inbox-section-lbl">Sent to partners</div>
-
-          <div class="email-item" onclick="selEmail(5,this)">
-            <div class="ei-top"><span class="ei-from">Chinedu Enworom → Titan Cargo</span><span class="ei-time">14 Apr</span></div>
-            <div class="ei-subj">Re: RFQ - BELGIUM TO APAPA EXW</div>
-            <div class="ei-foot"><span class="rfq-chip" style="background:#f3f4f6;color:#6b7280">Outbound</span><span class="ei-status" style="color:var(--text3)">sent · awaiting reply</span></div>
-          </div>
+          <div id="inbox-list"><div style="padding:24px;text-align:center;color:var(--text3);font-size:12px">Loading inbox…</div></div>
 
         </div>
       </div>
@@ -2626,6 +2556,101 @@ function waCancel() {
   if(el){el.textContent='cancelled';el.style.background='#f3f4f6';el.style.color='#8a9e8a';}
   document.getElementById('wa-ep-followup').style.display='none';
 }
+// ── API-driven inbox data ───────────────────────────────────────────────────
+let rfqData = [];         // fetched from /api/rfqs
+let currentRfqId = null;  // selected RFQ db id
+
+function fmtDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+}
+function fmtDateTime(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+    + ' · ' + d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+}
+function escHtml(str) {
+  return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function bodyToHtml(str) {
+  return escHtml(str).replace(/\n/g,'<br>');
+}
+
+async function loadInbox() {
+  try {
+    const res = await fetch('/api/rfqs');
+    if (!res.ok) throw new Error('Failed to load');
+    rfqData = await res.json();
+    renderInboxList();
+    // auto-select first item
+    if (rfqData.length) {
+      const first = document.querySelector('.email-item');
+      if (first) {
+        const id = parseInt(first.dataset.rfqId, 10);
+        selEmail(id, first);
+      }
+    }
+  } catch(e) {
+    document.getElementById('inbox-list').innerHTML =
+      '<div style="padding:16px;color:var(--danger);font-size:11px">Failed to load inbox</div>';
+  }
+}
+
+function renderInboxList() {
+  const customers = rfqData.filter(r => r.emailType === 'customer-rfq' || r.emailType === 'internal-rfq');
+  const partners  = rfqData.filter(r => r.emailType === 'rate-reply');
+  const outbound  = rfqData.filter(r => r.emailType === 'outbound');
+  let html = '';
+
+  if (customers.length) {
+    html += `<div class="inbox-section-lbl" style="border-top:none">Customer requests</div>`;
+    customers.forEach(r => {
+      const chip = r.emailType === 'internal-rfq' ? 'Internal RFQ' : 'Customer RFQ';
+      const st = r.status;
+      const statusTxt = st==='ready'?'✓ ready':st==='replied'?'✓ replied':st==='archived'?'◻ archived':'⚠ info needed';
+      const statusColor = (st==='ready'||st==='replied')?'var(--accent-dark)':st==='archived'?'var(--text3)':'var(--warn)';
+      const fromShort = (r.email?.fromName||r.email?.fromEmail||'').split('·')[0].trim().slice(0,36);
+      html += `<div class="email-item${st!=='archived'?' unread':''}" data-rfq-id="${r.id}" onclick="selEmail(${r.id},this)">
+        <div class="ei-top"><span class="ei-from">${escHtml(fromShort)}</span><span class="ei-time">${fmtDate(r.email?.receivedAt)}</span></div>
+        <div class="ei-subj">${escHtml(r.email?.subject||'')}</div>
+        <div class="ei-foot"><span class="rfq-chip">${chip}</span><span class="ei-status" style="color:${statusColor}">${statusTxt}</span></div>
+      </div>`;
+    });
+  }
+
+  if (partners.length) {
+    html += `<div class="inbox-section-lbl">Partner rate replies</div>`;
+    partners.forEach(r => {
+      const hasMissing = r.missingFields?.length > 0;
+      const statusTxt = hasMissing ? '⚠ action needed' : '✓ rates received';
+      const statusColor = hasMissing ? 'var(--warn)' : 'var(--accent-dark)';
+      const fromShort = (r.email?.fromName||r.email?.fromEmail||'').split('·')[0].trim().slice(0,36);
+      html += `<div class="email-item" data-rfq-id="${r.id}" onclick="selEmail(${r.id},this)">
+        <div class="ei-top"><span class="ei-from">${escHtml(fromShort)}</span><span class="ei-time">${fmtDate(r.email?.receivedAt)}</span></div>
+        <div class="ei-subj">${escHtml(r.email?.subject||'')}</div>
+        <div class="ei-foot"><span class="rfq-chip" style="background:#e0f2fe;color:#0369a1">Rate reply</span><span class="ei-status" style="color:${statusColor}">${statusTxt}</span></div>
+      </div>`;
+    });
+  }
+
+  if (outbound.length) {
+    html += `<div class="inbox-section-lbl">Sent to partners</div>`;
+    outbound.forEach(r => {
+      const fromShort = (r.email?.fromName||r.email?.fromEmail||'').slice(0,36);
+      html += `<div class="email-item" data-rfq-id="${r.id}" onclick="selEmail(${r.id},this)">
+        <div class="ei-top"><span class="ei-from">${escHtml(fromShort)}</span><span class="ei-time">${fmtDate(r.email?.receivedAt)}</span></div>
+        <div class="ei-subj">${escHtml(r.email?.subject||'')}</div>
+        <div class="ei-foot"><span class="rfq-chip" style="background:#f3f4f6;color:#6b7280">Outbound</span><span class="ei-status" style="color:var(--text3)">sent · awaiting reply</span></div>
+      </div>`;
+    });
+  }
+
+  document.getElementById('inbox-list').innerHTML = html || '<div style="padding:16px;color:var(--text3);font-size:11px">No emails found</div>';
+}
+
+// ── LEGACY STUBS (unused after API wiring) ───────────────────────────────────
 const emails = [
   // 0 - Customer RFQ: Grace Benson / Bioscape
   { subj:'FREIGHT RATE- AARHUS/ CATANIA/ MILAZZO',
@@ -2890,32 +2915,34 @@ const extractions = [
 let epTimerInterval = null;
 let epTimerSecs = 180;
 
-function selEmail(i, el) {
+function selEmail(rfqId, el) {
   document.querySelectorAll('.email-item').forEach(e => e.classList.remove('sel'));
-  el.classList.add('sel');
-  const e = emails[i];
-  const ex = extractions[i];
+  if (el) el.classList.add('sel');
+  const r = rfqData.find(x => x.id === rfqId);
+  if (!r) return;
+  currentRfqId = rfqId;
+  const e = r.email || {};
 
-  document.getElementById('d-subj').textContent = e.subj;
-  document.getElementById('d-from').textContent = e.name || e.from;
-  document.getElementById('d-time').textContent = e.time;
-  document.getElementById('d-body').innerHTML = e.body;
+  document.getElementById('d-subj').textContent = e.subject || '';
+  document.getElementById('d-from').textContent = e.fromName || e.fromEmail || '';
+  document.getElementById('d-time').textContent = (e.receivedAt ? fmtDateTime(e.receivedAt) : '') + ' · sales inbox';
+  document.getElementById('d-body').innerHTML = bodyToHtml(e.body || '');
 
   // Update processing banner based on type
   const banner = document.querySelector('.processing-bar');
-  if (e.type === 'rate-reply') {
+  if (r.emailType === 'rate-reply') {
     banner.style.background = '#eff6ff';
     banner.style.borderColor = '#bfdbfe';
     banner.querySelector('.processing-bar-text').textContent = 'Rate reply from partner — extracting rates from this email…';
     banner.querySelector('.processing-badge').textContent = 'Rate reply';
     banner.querySelector('.processing-badge').style.background = '#2563eb';
-  } else if (e.type === 'outbound') {
+  } else if (r.emailType === 'outbound') {
     banner.style.background = '#f9fafb';
     banner.style.borderColor = '#e5e7eb';
     banner.querySelector('.processing-bar-text').textContent = 'This email was sent by your team to a freight partner.';
     banner.querySelector('.processing-badge').textContent = 'Sent';
     banner.querySelector('.processing-badge').style.background = '#6b7280';
-  } else if (e.type === 'internal-rfq') {
+  } else if (r.emailType === 'internal-rfq') {
     banner.style.background = '#fffbeb';
     banner.style.borderColor = '#fde68a';
     banner.querySelector('.processing-bar-text').textContent = 'Internal request — forwarded by OnePort staff on behalf of customer.';
@@ -2931,69 +2958,95 @@ function selEmail(i, el) {
 
   // Show/hide action buttons based on type
   const actionsEl = document.querySelector('.detail-actions');
-  if (e.type === 'rate-reply') {
+  if (r.emailType === 'rate-reply') {
     actionsEl.innerHTML = `<button class="btn btn-primary btn-sm" onclick="showScreen(2)">View in Deals →</button><button class="btn btn-sm">Parse rates</button>`;
-  } else if (e.type === 'outbound') {
-    actionsEl.innerHTML = `<button class="btn btn-sm" onclick="showScreen(2)">View in Deals →</button><button class="btn btn-sm" style="margin-left:auto;color:var(--text3)">Archive</button>`;
+  } else if (r.emailType === 'outbound') {
+    actionsEl.innerHTML = `<button class="btn btn-sm" onclick="showScreen(2)">View in Deals →</button><button class="btn btn-sm" style="margin-left:auto;color:var(--text3)" onclick="archiveRfq(${rfqId})">Archive</button>`;
   } else {
-    actionsEl.innerHTML = `<button class="btn btn-primary btn-sm" onclick="showScreen(2)">View in Deals →</button><button class="btn btn-sm">Reply</button><button class="btn btn-sm" style="margin-left:auto;color:var(--text3)">Archive</button>`;
+    actionsEl.innerHTML = `<button class="btn btn-primary btn-sm" onclick="showScreen(2)">View in Deals →</button><button class="btn btn-sm" onclick="replyRfq(${rfqId})">Reply</button><button class="btn btn-sm" style="margin-left:auto;color:var(--text3)" onclick="archiveRfq(${rfqId})">Archive</button>`;
   }
 
-  renderExtraction(i);
+  renderExtraction(r);
 }
 
-function renderExtraction(i) {
-  const ex = extractions[i];
-  if (!ex) return;
+function renderExtraction(r) {
+  if (!r) return;
+  const fields = Array.isArray(r.fields) ? r.fields : [];
+  const missing = Array.isArray(r.missingFields) ? r.missingFields : [];
+  const draft = r.followUpDraft || null;
 
-  document.getElementById('ep-num').textContent = ex.num;
+  document.getElementById('ep-num').textContent = r.ref || '';
 
   // Title based on type
   const epTitle = document.querySelector('.ep-title');
   if (epTitle) {
-    if (ex.type === 'rate-reply') epTitle.textContent = 'Rate details';
-    else if (ex.type === 'outbound') epTitle.textContent = 'Outbound details';
+    if (r.emailType === 'rate-reply') epTitle.textContent = 'Rate details';
+    else if (r.emailType === 'outbound') epTitle.textContent = 'Outbound details';
     else epTitle.textContent = 'Extracted details';
   }
 
   // Fields
-  document.getElementById('ep-fields').innerHTML = ex.fields.map(f =>
+  document.getElementById('ep-fields').innerHTML = fields.map(f =>
     `<div class="ep-field">
-      <span class="ep-key">${f.k}</span>
-      <span class="ep-val ${f.ok?'':'miss'}">${f.ok?'<span class="ep-ok">✓</span>':''} ${f.v}</span>
+      <span class="ep-key">${escHtml(f.k)}</span>
+      <span class="ep-val ${f.ok?'':'miss'}">${f.ok?'<span class="ep-ok">✓</span>':''} ${escHtml(f.v)}</span>
     </div>`
   ).join('');
 
   // Missing / action needed
   const mw = document.getElementById('ep-missing-wrap');
   const fw = document.getElementById('ep-followup-wrap');
-  if (ex.missing.length) {
+  if (missing.length) {
     mw.style.display = 'block';
     const lbl = mw.querySelector('.ep-section-lbl');
-    if (lbl) lbl.textContent = ex.type === 'outbound' ? 'Awaiting' : ex.type === 'rate-reply' ? 'Action needed' : 'Missing info';
-    document.getElementById('ep-missing').innerHTML = ex.missing.map(m =>
-      `<div class="ep-missing-item">⚠ ${m}</div>`
+    if (lbl) lbl.textContent = r.emailType === 'outbound' ? 'Awaiting' : r.emailType === 'rate-reply' ? 'Action needed' : 'Missing info';
+    document.getElementById('ep-missing').innerHTML = missing.map(m =>
+      `<div class="ep-missing-item">⚠ ${escHtml(m)}</div>`
     ).join('');
-    fw.style.display = ex.draft ? 'block' : 'none';
-    if (ex.draft) {
-      document.getElementById('ep-draft').value = ex.draft;
+    fw.style.display = draft ? 'block' : 'none';
+    if (draft) {
+      document.getElementById('ep-draft').value = draft;
       startEpTimer();
     }
   } else {
     mw.style.display = 'none';
+    fw.style.display = 'none';
   }
 
   // Actions
   const aw = document.getElementById('ep-actions-wrap');
-  if (ex.type === 'rate-reply') {
+  if (r.emailType === 'rate-reply') {
     aw.innerHTML = `<button class="btn btn-a btn-sm" style="width:100%">Parse &amp; save rates →</button>`;
-  } else if (ex.type === 'outbound') {
+  } else if (r.emailType === 'outbound') {
     aw.innerHTML = `<button class="btn btn-sm" style="width:100%">View RFQ thread →</button>`;
-  } else if (!ex.missing.length) {
+  } else if (!missing.length) {
     aw.innerHTML = `<button class="btn btn-a btn-sm" style="width:100%">Get rates →</button>`;
   } else {
     aw.innerHTML = `<button class="btn btn-sm" style="width:100%;color:var(--text3)" disabled>Complete info to get rates</button>`;
   }
+}
+
+async function archiveRfq(rfqId) {
+  await fetch(`/api/rfqs/${rfqId}`, {
+    method: 'PATCH',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ status: 'archived' })
+  });
+  const r = rfqData.find(x => x.id === rfqId);
+  if (r) r.status = 'archived';
+  renderInboxList();
+}
+
+async function replyRfq(rfqId) {
+  const draft = document.getElementById('ep-draft')?.value;
+  await fetch(`/api/rfqs/${rfqId}`, {
+    method: 'PATCH',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ status: 'replied', followUpDraft: draft })
+  });
+  const r = rfqData.find(x => x.id === rfqId);
+  if (r) { r.status = 'replied'; if (draft) r.followUpDraft = draft; }
+  renderInboxList();
 }
 
 function startEpTimer() {
@@ -3015,10 +3068,21 @@ function startEpTimer() {
   }, 1000);
 }
 
-function epSendNow() {
+async function epSendNow() {
   clearInterval(epTimerInterval);
   const el = document.getElementById('ep-timer');
   if (el) { el.textContent = '✓ sent'; el.className = 'ep-timer sent'; }
+  if (currentRfqId) {
+    const draft = document.getElementById('ep-draft')?.value;
+    await fetch(`/api/rfqs/${currentRfqId}`, {
+      method: 'PATCH',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ status: 'replied', followUpDraft: draft })
+    });
+    const r = rfqData.find(x => x.id === currentRfqId);
+    if (r) { r.status = 'replied'; if (draft) r.followUpDraft = draft; }
+    renderInboxList();
+  }
 }
 
 function epCancel() {
@@ -3029,82 +3093,70 @@ function epCancel() {
   if (fw) fw.style.display = 'none';
 }
 
-// Init - show extraction for first selected email
+// Init — load from API
 document.addEventListener('DOMContentLoaded', () => {
-  renderExtraction(2);
+  loadInbox();
   selectRFQ(0, document.querySelector('.trow'));
 });
 
-const rfqs = [
-  { num:'RFQ-2604-0041', customer:'Tunde Fashola', company:'Dankuru Industries Ltd', email:'tunde.fashola@dankuru.com.ng',
-    stage:'Info needed', stageCls:'b-miss',
-    fields:[['POL','Foshan, Guangdong — China'],['POD','Lagos Island, Nigeria'],['Commodity','Ceramic tiles (approx 18,000 pcs)'],['Container','40FT — qty unconfirmed'],['Cargo class','GC'],['Incoterm','FOB (unconfirmed — customer unsure)'],['Quantity','1–2 containers (TBC)']],
-    missing:['Exact container quantity — 1 or 2 × 40FT?','Confirm incoterm — customer mentioned FOB but unsure','Nearest port to Foshan is Guangzhou or Nansha — confirm loading port'],
-    timeline:[['09:47','Email received — forwarded chain'],['09:47','Details read from body'],['09:52','Follow-up sent — 3 questions']],
-    actions:[{label:'Edit details', cls:'btn'},{label:'Send to rates', cls:'btn btn-a', disabled:true}] },
-
-  { num:'RFQ-2604-0040', customer:'Grace Benson', company:'Bioscape Commodities Africa', email:'grace.benson@bioscapeafrica.com',
-    stage:'Info needed', stageCls:'b-miss',
-    fields:[['POL','Lagos, Nigeria'],['POD','Catania IT · Milazzo IT · Aarhus DK'],['Commodity','PKC — Palm Kernel Cake (agricultural, GC)'],['Container','40FT'],['Cargo class','GC'],['Incoterm','—'],['Quantity','2–3 containers (TBC)']],
-    missing:['Incoterm — FOB, EXW or CIF?','Exact container quantity needed to quote'],
-    timeline:[['09:32','Email received'],['09:32','Details read'],['09:37','Follow-up sent — 2 questions']],
-    actions:[{label:'Edit details', cls:'btn'},{label:'Send to rates', cls:'btn btn-a', disabled:true}] },
-
-  { num:'RFQ-2604-0039', customer:'Chinwe Obi', company:'Private individual', email:'chinwe.obi22@gmail.com',
-    stage:'Info needed', stageCls:'b-miss',
-    fields:[['POL','London, UK (exact port TBC)'],['POD','Apapa, Lagos — Nigeria'],['Commodity','Used clothing & shoes (charity shop)'],['Container','LCL — volume unknown'],['Cargo class','GC'],['Incoterm','—'],['Quantity','Unknown — "bags of goods"']],
-    missing:['Actual volume or weight of goods — bags is not enough to quote','Type of service — LCL likely but needs confirming','Pickup address in London'],
-    timeline:[['09:11','Email received'],['09:11','Details read — low information'],['09:16','Follow-up sent — 3 questions']],
-    actions:[{label:'Edit details', cls:'btn'},{label:'Send to rates', cls:'btn btn-a', disabled:true}] },
-
-  { num:'RFQ-2604-0038', customer:'Demir Güzel', company:'Sarten Packaging A.Ş.', email:'demirguzel@sarten.com.tr',
-    stage:'Ready', stageCls:'b-ok',
-    fields:[['POL','Ambarlı, Istanbul — Turkey'],['POD','Ikeja, Lagos (door delivery)'],['Commodity','Aerosol cans — empty, cosmetics (HS 7310.21.91)'],['Container','20FT × 1 (possibly × 2)'],['Cargo class','GC'],['Incoterm','DDP — door to door'],['Quantity','1–2 × 20FT monthly']],
-    missing:[],
-    timeline:[['08:55','Email received — 3rd reply in thread'],['08:55','Details read from thread history'],['08:55','All required fields present']],
-    actions:[{label:'Get rates', cls:'btn btn-a'}] },
-
-  { num:'RFQ-2604-0037', customer:'Emeka Eze', company:'Royal Foam Nigeria', email:'emeka.eze@royalfoamng.com',
-    stage:'Ready', stageCls:'b-ok',
-    fields:[['POL','Qingdao (CNTAO) — China'],['POD','Apapa (NGAPP) — Nigeria'],['Commodity','Polyol & Isocyanate (foam raw materials)'],['Container','20FT × 9'],['Cargo class','DG Class 6.1 — MSDS available'],['Incoterm','CIF'],['Quantity','9 × 20FT · ready 28 Apr']],
-    missing:[],
-    timeline:[['Yesterday 14:10','Email received'],['Yesterday 14:10','Details read — DG class identified from body'],['Yesterday 14:10','All fields present — DG flagged']],
-    actions:[{label:'Get rates', cls:'btn btn-a'}] },
-];
-
-
-
+// Pipeline panel — uses shared rfqData from API
 let currentRFQIndex = 0;
+let currentRfqPipelineId = null;
+
+// Helper: get field value by key from {k,v,ok}[] array
+function rfqFieldGet(fields, key) {
+  if (!Array.isArray(fields)) return '—';
+  const f = fields.find(x => x.k && x.k.toLowerCase().includes(key.toLowerCase()));
+  return f ? f.v : '—';
+}
 
 function selectRFQ(i, el) {
   document.querySelectorAll('.trow').forEach(r => r.classList.remove('sel'));
   if(el) el.classList.add('sel');
-  const r = rfqs[i];
-  if(!r) return;
+  // Use rfqData if loaded, else gracefully skip
+  const customerRfqs = rfqData.filter(x => x.emailType === 'customer-rfq' || x.emailType === 'internal-rfq');
+  const r = customerRfqs[i];
+  if(!r) { currentRFQIndex = i; showDealTab('details'); return; }
   currentRFQIndex = i;
+  currentRfqPipelineId = r.id;
 
-  document.getElementById('dp-num').textContent = r.num;
-  document.getElementById('dp-status').innerHTML = `<span class="badge ${r.stageCls}">${r.stage}</span>`;
+  const fields = Array.isArray(r.fields) ? r.fields : [];
+  const missing = Array.isArray(r.missingFields) ? r.missingFields : [];
+  const stageCls = r.status === 'ready' ? 'b-ok' : r.status === 'replied' ? 'b-ok' : 'b-miss';
+  const stageLabel = r.status === 'ready' ? 'Ready' : r.status === 'replied' ? 'Replied' : r.status === 'archived' ? 'Archived' : 'Info needed';
 
-  document.getElementById('dp-fields').innerHTML = r.fields.map(([k,v]) =>
-    `<div class="dp-field"><span class="dp-key">${k}</span><span class="dp-val ${v==='—'?'miss':''}">${v==='—'?'not provided':v}</span></div>`
+  document.getElementById('dp-num').textContent = r.ref || '';
+  document.getElementById('dp-status').innerHTML = `<span class="badge ${stageCls}">${stageLabel}</span>`;
+
+  document.getElementById('dp-fields').innerHTML = fields.map(f =>
+    `<div class="dp-field"><span class="dp-key">${escHtml(f.k)}</span><span class="dp-val ${f.ok?'':'miss'}">${f.ok?'':''} ${escHtml(f.v)}</span></div>`
   ).join('');
 
   const mw = document.getElementById('dp-missing-wrap');
-  if(r.missing.length) {
+  if(missing.length) {
     mw.style.display = 'block';
-    document.getElementById('dp-missing').innerHTML = r.missing.map(m =>
-      `<div class="dp-miss-item">${m}</div>`
+    document.getElementById('dp-missing').innerHTML = missing.map(m =>
+      `<div class="dp-miss-item">${escHtml(m)}</div>`
     ).join('');
   } else {
     mw.style.display = 'none';
   }
 
-  document.getElementById('dp-timeline').innerHTML = r.timeline.map(([t,txt]) =>
+  const receivedAt = r.email?.receivedAt;
+  const tl = [
+    [receivedAt ? fmtDateTime(receivedAt) : '—', 'Email received'],
+    [receivedAt ? fmtDateTime(receivedAt) : '—', fields.length ? 'Details extracted from email' : 'Extraction pending'],
+    r.status === 'replied' ? ['—', 'Follow-up sent'] : null,
+  ].filter(Boolean);
+
+  document.getElementById('dp-timeline').innerHTML = tl.map(([t,txt]) =>
     `<div class="dp-tl-item"><span class="dp-tl-time">${t}</span><span>${txt}</span></div>`
   ).join('');
 
-  document.getElementById('dp-actions').innerHTML = r.actions.map(a =>
+  const actions = missing.length
+    ? [{label:'Edit details', cls:'btn'},{label:'Send to rates', cls:'btn btn-a', disabled:true}]
+    : [{label:'Get rates', cls:'btn btn-a'}];
+  document.getElementById('dp-actions').innerHTML = actions.map(a =>
     `<button class="${a.cls} btn-sm"${a.disabled?' disabled':''}>${a.label}</button>`
   ).join('');
 
@@ -3136,26 +3188,21 @@ function showDealTab(tab) {
 }
 
 function populateDatasheet() {
-  const r = rfqs[currentRFQIndex];
+  const customerRfqs = rfqData.filter(x => x.emailType === 'customer-rfq' || x.emailType === 'internal-rfq');
+  const r = customerRfqs[currentRFQIndex];
   if(!r) return;
 
-  const get = (fields, key) => {
-    const f = fields.find(([k]) => k.toLowerCase().includes(key.toLowerCase()));
-    return f ? f[1] : '';
-  };
-
-  // Auto-fill from RFQ fields
-  const commodity = get(r.fields, 'Commodity');
-  const container = get(r.fields, 'Container');
-  const incoterm = get(r.fields, 'Incoterm');
-  const pol = get(r.fields, 'POL');
-  const pod = get(r.fields, 'POD');
-  const cargo = get(r.fields, 'Cargo');
+  // Auto-fill from RFQ fields (new {k,v,ok} format)
+  const commodity = rfqFieldGet(r.fields, 'Commodity');
+  const container = rfqFieldGet(r.fields, 'Container');
+  const incoterm  = rfqFieldGet(r.fields, 'Incoterm');
+  const pol       = rfqFieldGet(r.fields, 'POL');
+  const pod       = rfqFieldGet(r.fields, 'POD');
 
   const setFilled = (id, val) => {
     const el = document.getElementById(id);
     if(!el) return;
-    if(val && val !== '—') {
+    if(val && val !== '—' && val !== 'not specified') {
       el.value = val;
       el.classList.add('ds-filled');
     } else {
@@ -3176,14 +3223,16 @@ function populateDatasheet() {
   setFilled('ds-ctr-type', ctrMatch ? ctrMatch[0] : container.split(' ')[0]);
   setFilled('ds-ctr-num', numMatch ? numMatch[1] : '');
 
-  // Shipper from customer info
-  setFilled('ds-ship-name', r.company);
-  setFilled('ds-ship-contact', r.customer);
-  setFilled('ds-ship-email', r.email);
+  // Shipper from customer/email info
+  const customerName = rfqFieldGet(r.fields, 'Customer');
+  const companyName  = rfqFieldGet(r.fields, 'Company');
+  setFilled('ds-ship-name', companyName !== '—' ? companyName : '');
+  setFilled('ds-ship-contact', customerName !== '—' ? customerName : '');
+  setFilled('ds-ship-email', r.email?.fromEmail || '');
 
   // Weight from quantity if available
-  const qty = get(r.fields, 'Quantity');
-  if(qty && qty !== '—') setFilled('ds-weight', qty);
+  const qty = rfqFieldGet(r.fields, 'Quantity');
+  if(qty && qty !== '—' && qty !== 'not specified') setFilled('ds-weight', qty);
 
   // Best-matched carrier from rates
   const matchedRate = RATES_DATA.find(rt =>
@@ -3214,25 +3263,23 @@ function downloadDatasheet() {
 }
 
 function populateQuote() {
-  const r = rfqs[currentRFQIndex];
+  const customerRfqs = rfqData.filter(x => x.emailType === 'customer-rfq' || x.emailType === 'internal-rfq');
+  const r = customerRfqs[currentRFQIndex];
   if(!r) return;
 
-  const get = (fields, key) => {
-    const f = fields.find(([k]) => k.toLowerCase().includes(key.toLowerCase()));
-    return f ? f[1] : '—';
-  };
-
-  const pol = get(r.fields, 'POL');
-  const pod = get(r.fields, 'POD');
-  const container = get(r.fields, 'Container');
-  const commodity = get(r.fields, 'Commodity');
-  const incoterm = get(r.fields, 'Incoterm');
+  const pol       = rfqFieldGet(r.fields, 'POL');
+  const pod       = rfqFieldGet(r.fields, 'POD');
+  const container = rfqFieldGet(r.fields, 'Container');
+  const commodity = rfqFieldGet(r.fields, 'Commodity');
+  const incoterm  = rfqFieldGet(r.fields, 'Incoterm');
+  const customerName = rfqFieldGet(r.fields, 'Customer');
+  const companyName  = rfqFieldGet(r.fields, 'Company');
 
   // Quote header
-  document.getElementById('q-num').textContent = 'QUOTE-' + r.num.replace('RFQ-','');
+  document.getElementById('q-num').textContent = 'QUOTE-' + (r.ref||'').replace('RFQ-','');
   document.getElementById('q-date').textContent = 'Issued: ' + new Date().toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'numeric'}) + ' · Valid 7 days';
-  document.getElementById('q-to').textContent = r.customer + ' · ' + r.company;
-  document.getElementById('q-to-email').textContent = r.email;
+  document.getElementById('q-to').textContent = (customerName !== '—' ? customerName : '') + (companyName !== '—' ? ' · ' + companyName : '');
+  document.getElementById('q-to-email').textContent = r.email?.fromEmail || '';
 
   // Shipment summary
   document.getElementById('q-shipment').innerHTML = [
@@ -3246,11 +3293,11 @@ function populateQuote() {
 }
 
 function recalcQuote() {
-  const r = rfqs[currentRFQIndex];
+  const customerRfqs = rfqData.filter(x => x.emailType === 'customer-rfq' || x.emailType === 'internal-rfq');
+  const r = customerRfqs[currentRFQIndex];
   if(!r) return;
-  const get = (fields, key) => { const f = fields.find(([k]) => k.toLowerCase().includes(key.toLowerCase())); return f ? f[1] : ''; };
-  const pol = get(r.fields, 'POL');
-  const pod = get(r.fields, 'POD');
+  const pol = rfqFieldGet(r.fields, 'POL');
+  const pod = rfqFieldGet(r.fields, 'POD');
 
   // Find best matched rate
   const rate = RATES_DATA.find(rt =>
