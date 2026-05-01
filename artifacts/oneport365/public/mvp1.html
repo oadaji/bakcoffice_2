@@ -275,15 +275,10 @@ tr.trow.sel td{background:#eef6e6}
 </div>
 <script>
 (function() {
-  const SESSION_KEY = 'op365_demo_auth';
   const CORRECT = 'oneport365';
-  if (sessionStorage.getItem(SESSION_KEY) === '1') {
-    document.getElementById('pw-gate').classList.add('hidden');
-  }
   window.checkPassword = function() {
     const val = document.getElementById('pw-input').value;
     if (val === CORRECT) {
-      sessionStorage.setItem(SESSION_KEY, '1');
       document.getElementById('pw-gate').classList.add('hidden');
     } else {
       const inp = document.getElementById('pw-input');
@@ -298,7 +293,7 @@ tr.trow.sel td{background:#eef6e6}
   };
   document.addEventListener('DOMContentLoaded', function() {
     const inp = document.getElementById('pw-input');
-    if (inp && !document.getElementById('pw-gate').classList.contains('hidden')) inp.focus();
+    if (inp) inp.focus();
   });
 })();
 </script>
