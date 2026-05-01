@@ -30,7 +30,7 @@ export default function App() {
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: 16 }}>
+      <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap', justifyContent: 'center' }}>
         <a href="/outlook_scan.html" style={{
           display: 'flex', flexDirection: 'column',
           background: 'rgba(255,255,255,0.05)',
@@ -79,6 +79,44 @@ export default function App() {
           </div>
           <div style={{
             marginTop: 18, fontSize: 11, color: '#7AB648', fontWeight: 500,
+            display: 'flex', alignItems: 'center', gap: 4,
+          }}>
+            Open →
+          </div>
+        </a>
+
+        {/* MVP 1 card */}
+        <a href="/outlook_scan.html" style={{
+          display: 'flex', flexDirection: 'column',
+          background: 'rgba(212,225,0,0.05)',
+          border: '2px solid #D4E100',
+          borderRadius: 12, padding: '24px 28px',
+          cursor: 'pointer', textDecoration: 'none',
+          transition: 'all 0.15s',
+          width: 220,
+        }}
+          onMouseOver={e => (e.currentTarget.style.background = 'rgba(212,225,0,0.1)')}
+          onMouseOut={e => (e.currentTarget.style.background = 'rgba(212,225,0,0.05)')}
+        >
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10,
+          }}>
+            <span style={{
+              fontSize: 10, fontWeight: 700, color: '#D4E100',
+              background: 'rgba(212,225,0,0.15)',
+              border: '1px solid rgba(212,225,0,0.4)',
+              padding: '2px 8px', borderRadius: 20,
+              letterSpacing: '0.06em', textTransform: 'uppercase',
+            }}>MVP 1</span>
+          </div>
+          <div style={{ fontSize: 13, fontWeight: 600, color: '#fff', marginBottom: 6 }}>
+            RFQ Intake
+          </div>
+          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', lineHeight: 1.6 }}>
+            Email categorisation, field extraction, missing-info detection &amp; automated follow-up drafting.
+          </div>
+          <div style={{
+            marginTop: 18, fontSize: 11, color: '#D4E100', fontWeight: 500,
             display: 'flex', alignItems: 'center', gap: 4,
           }}>
             Open →
