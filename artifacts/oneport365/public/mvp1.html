@@ -2544,8 +2544,11 @@ async function loadInbox() {
   }
 }
 
-// Record session start time — sync will only pull emails received after this
-const SESSION_START = new Date().toISOString();
+// Always look back 24 h so emails that arrived before page-load are not missed.
+// UID deduplication on the server prevents double-ingesting anything already saved.
+function syncSince() {
+  return new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+}
 
 async function syncGmail() {
   const btn = document.getElementById('gmail-sync-btn');
@@ -2557,7 +2560,7 @@ async function syncGmail() {
     const res = await fetch('/api/gmail/sync', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ maxResults: 20, since: SESSION_START }),
+      body: JSON.stringify({ maxResults: 50, since: syncSince() }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Sync failed');
