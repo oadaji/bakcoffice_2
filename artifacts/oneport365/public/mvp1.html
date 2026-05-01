@@ -501,7 +501,6 @@ tr.trow.sel td{background:#eef6e6}
                 <div style="display:flex;border-bottom:1px solid var(--border);background:#f8faf8;flex-shrink:0">
                   <div id="dp-tab-details" onclick="showDealTab('details')" style="padding:0 12px;height:34px;display:flex;align-items:center;font-size:11px;font-weight:600;color:var(--accent-dark);cursor:pointer;border-bottom:2px solid var(--accent);white-space:nowrap">Details</div>
                   <div id="dp-tab-datasheet" onclick="showDealTab('datasheet')" style="padding:0 12px;height:34px;display:flex;align-items:center;font-size:11px;font-weight:500;color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap">Datasheet</div>
-                  <div id="dp-tab-quote" onclick="showDealTab('quote')" style="padding:0 12px;height:34px;display:flex;align-items:center;font-size:11px;font-weight:500;color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap">Quote</div>
                 </div>
 
                 <!-- TAB: DETAILS -->
@@ -603,83 +602,8 @@ tr.trow.sel td{background:#eef6e6}
                     <!-- SAVE -->
                     <div style="margin-top:14px;display:flex;gap:6px">
                       <button onclick="saveDatasheet()" class="btn btn-primary btn-sm" style="flex:1">Save datasheet</button>
-                      <button onclick="showDealTab('quote')" class="btn btn-sm">→ Generate Quote</button>
                     </div>
                     <div id="ds-saved" style="display:none;margin-top:8px;padding:7px 10px;background:var(--accent-light);border:1px solid #c8e6a0;border-radius:6px;font-size:11px;color:var(--accent-dark)">✓ Datasheet saved</div>
-                  </div>
-                </div>
-
-                <!-- TAB: QUOTE -->
-                <div id="dp-panel-quote" style="display:none;flex:1;overflow-y:auto;flex-direction:column;min-height:0">
-                  <div style="padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;background:#f8faf8">
-                    <div style="font-size:11px;color:var(--text3)">Customer quote</div>
-                    <div style="display:flex;gap:6px">
-                      <button onclick="sendQuoteEmail()" class="btn btn-primary btn-sm" style="font-size:10px">✉ Send to customer</button>
-                      <button onclick="downloadQuotePDF()" class="btn btn-sm" style="font-size:10px">↓ PDF</button>
-                    </div>
-                  </div>
-                  <div id="quote-content" style="padding:14px;flex:1;overflow-y:auto">
-
-                    <!-- Quote header -->
-                    <div style="background:var(--sidebar-bg);border-radius:8px;padding:14px;margin-bottom:12px;color:#fff">
-                      <div style="display:flex;align-items:center;justify-content:space-between">
-                        <div>
-                          <div style="font-size:15px;font-weight:700">OnePort 365</div>
-                          <div style="font-size:10px;color:rgba(255,255,255,.6);margin-top:2px">Freight Quotation</div>
-                        </div>
-                        <div style="text-align:right">
-                          <div id="q-num" style="font-size:12px;font-weight:600;color:var(--accent)">QUOTE-2604-0040</div>
-                          <div id="q-date" style="font-size:10px;color:rgba(255,255,255,.5);margin-top:2px"></div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <!-- To -->
-                    <div style="margin-bottom:10px">
-                      <div style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;margin-bottom:4px">Addressed to</div>
-                      <div id="q-to" style="font-size:12px;color:var(--text);font-weight:500"></div>
-                      <div id="q-to-email" style="font-size:11px;color:var(--text3)"></div>
-                    </div>
-
-                    <!-- Shipment summary -->
-                    <div style="background:#f8faf8;border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:10px">
-                      <div style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;margin-bottom:8px">Shipment</div>
-                      <div id="q-shipment"></div>
-                    </div>
-
-                    <!-- Rate breakdown -->
-                    <div style="background:#f8faf8;border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:10px">
-                      <div style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;margin-bottom:8px">Rate breakdown (per container)</div>
-                      <div id="q-rates"></div>
-                    </div>
-
-                    <!-- Margin control -->
-                    <div style="background:#f8faf8;border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:10px">
-                      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-                        <div style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase">Pricing</div>
-                        <div style="display:flex;align-items:center;gap:6px">
-                          <span style="font-size:10px;color:var(--text3)">Margin</span>
-                          <input id="q-margin" type="number" value="13" min="0" max="50" onchange="recalcQuote()" style="width:50px;padding:3px 6px;border:1px solid var(--border2);border-radius:4px;font-size:11px;text-align:center;outline:none"/>
-                          <span style="font-size:10px;color:var(--text3)">%</span>
-                        </div>
-                      </div>
-                      <div id="q-pricing"></div>
-                    </div>
-
-                    <!-- Validity & terms -->
-                    <div style="font-size:10px;color:var(--text3);line-height:1.7;padding:8px 10px;background:#fffbeb;border:1px solid #fde68a;border-radius:6px;margin-bottom:10px">
-                      <div style="font-weight:600;color:#92400e;margin-bottom:3px">Quote validity & terms</div>
-                      This quote is valid for <strong>7 days</strong> from the date of issue.<br>
-                      Rates are subject to space and equipment availability at time of booking.<br>
-                      Local charges at destination may vary — customs clearance billed at actuals.<br>
-                      All rates in USD unless otherwise stated.
-                    </div>
-
-                    <!-- Send confirm -->
-                    <div id="quote-sent-confirm" style="display:none;padding:10px;background:var(--accent-light);border:1px solid #c8e6a0;border-radius:8px;font-size:12px;color:var(--accent-dark);text-align:center">
-                      ✓ Quote sent to customer via email
-                    </div>
-
                   </div>
                 </div>
 
@@ -3094,7 +3018,7 @@ function selectRFQ(i, el) {
 }
 
 function showDealTab(tab) {
-  ['details','datasheet','quote'].forEach(t => {
+  ['details','datasheet'].forEach(t => {
     const panel = document.getElementById('dp-panel-'+t);
     const tabEl = document.getElementById('dp-tab-'+t);
     if(panel) panel.style.display = 'none';
@@ -3113,7 +3037,6 @@ function showDealTab(tab) {
     tabEl.style.fontWeight = '600';
   }
   if(tab === 'datasheet') populateDatasheet();
-  if(tab === 'quote') populateQuote();
 }
 
 function populateDatasheet() {
