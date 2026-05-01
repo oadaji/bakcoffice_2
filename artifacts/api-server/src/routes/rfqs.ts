@@ -107,30 +107,36 @@ router.post("/rfq/ingest", async (req, res) => {
       return;
     }
 
-    // Upsert email
+    // Check if email already exists by uid — skip Claude if so
     const existing = await db
       .select()
       .from(emailsTable)
       .where(eq(emailsTable.uid, uid));
 
-    let email;
     if (existing.length) {
-      email = existing[0];
-    } else {
-      const [inserted] = await db
-        .insert(emailsTable)
-        .values({
-          uid,
-          fromName: fromName || fromEmail,
-          fromEmail,
-          subject,
-          body,
-          emailType,
-          receivedAt: receivedAt ? new Date(receivedAt) : new Date(),
-        })
-        .returning();
-      email = inserted;
+      // Already ingested — return the existing RFQ without re-running Claude
+      const existingRfq = await db
+        .select()
+        .from(rfqsTable)
+        .where(eq(rfqsTable.emailId, existing[0].id));
+      res.setHeader("x-was-new", "false");
+      res.json({ ...(existingRfq[0] ?? {}), email: existing[0] });
+      return;
     }
+
+    // New email — insert it
+    const [email] = await db
+      .insert(emailsTable)
+      .values({
+        uid,
+        fromName: fromName || fromEmail,
+        fromEmail,
+        subject,
+        body,
+        emailType,
+        receivedAt: receivedAt ? new Date(receivedAt) : new Date(),
+      })
+      .returning();
 
     // Run Claude extraction
     const extraction = await extractWithClaude(
@@ -138,43 +144,22 @@ router.post("/rfq/ingest", async (req, res) => {
       emailType,
     );
 
-    // Check if RFQ already exists for this email
-    const existingRfq = await db
-      .select()
-      .from(rfqsTable)
-      .where(eq(rfqsTable.emailId, email.id));
+    // Create RFQ record
+    const refNum = generateRef();
+    const [rfq] = await db
+      .insert(rfqsTable)
+      .values({
+        emailId: email.id,
+        ref: refNum,
+        emailType,
+        status: extraction.status,
+        fields: extraction.fields,
+        missingFields: extraction.missing,
+        followUpDraft: extraction.draft ?? null,
+      })
+      .returning();
 
-    let rfq;
-    if (existingRfq.length) {
-      const [updated] = await db
-        .update(rfqsTable)
-        .set({
-          fields: extraction.fields,
-          missingFields: extraction.missing,
-          followUpDraft: extraction.draft ?? null,
-          status: extraction.status,
-          updatedAt: new Date(),
-        })
-        .where(eq(rfqsTable.id, existingRfq[0].id))
-        .returning();
-      rfq = updated;
-    } else {
-      const refNum = generateRef();
-      const [inserted] = await db
-        .insert(rfqsTable)
-        .values({
-          emailId: email.id,
-          ref: refNum,
-          emailType,
-          status: extraction.status,
-          fields: extraction.fields,
-          missingFields: extraction.missing,
-          followUpDraft: extraction.draft ?? null,
-        })
-        .returning();
-      rfq = inserted;
-    }
-
+    res.setHeader("x-was-new", "true");
     res.json({ ...rfq, email });
   } catch (err) {
     req.log.error({ err }, "Failed to ingest RFQ");
