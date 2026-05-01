@@ -389,7 +389,6 @@ tr.trow.sel td{background:#eef6e6}
         <div class="detail-body" id="d-body"></div>
         <div id="d-thread"></div>
         <div class="detail-actions" id="d-actions">
-          <button class="btn btn-primary btn-sm" onclick="showScreen(2)">View in Deals →</button>
           <button class="btn btn-sm">Reply</button>
           <button class="btn btn-sm" style="margin-left:auto;color:var(--text3)">Archive</button>
         </div>
@@ -2040,7 +2039,7 @@ function selOutreach(i, el) {
     aw.innerHTML = `<button onclick="saveRateToDB()" class="btn btn-primary btn-sm">Save rates to DB →</button>
     <button onclick="rejectRate()" class="btn btn-sm btn-danger">Reject</button>`;
   } else {
-    aw.innerHTML = `<button onclick="showScreen(2)" class="btn btn-primary btn-sm">View in Deals →</button>`;
+    aw.innerHTML = ``;
   }
 
   // Right panel — RFQ num
@@ -2811,14 +2810,14 @@ function selEmail(rfqId, el) {
   // Show/hide action buttons based on type
   const actionsEl = document.querySelector('.detail-actions');
   if (r.emailType === 'rate-reply') {
-    actionsEl.innerHTML = `<button class="btn btn-primary btn-sm" onclick="showScreen(2)">View in Deals →</button><button class="btn btn-sm">Parse rates</button>`;
+    actionsEl.innerHTML = `<button class="btn btn-sm">Parse rates</button>`;
   } else if (r.emailType === 'outbound') {
-    actionsEl.innerHTML = `<button class="btn btn-sm" onclick="showScreen(2)">View in Deals →</button><button class="btn btn-sm" style="margin-left:auto;color:var(--text3)" onclick="archiveRfq(${rfqId})">Archive</button>`;
+    actionsEl.innerHTML = `<button class="btn btn-sm" style="margin-left:auto;color:var(--text3)" onclick="archiveRfq(${rfqId})">Archive</button>`;
   } else {
     const replyBtn = r.status === 'replied'
       ? `<button class="btn btn-sm" disabled style="color:var(--accent-dark);background:#dcfce7;border-color:#bbf7d0;cursor:default">✓ Reply sent</button>`
       : `<button class="btn btn-sm" onclick="replyRfq(${rfqId})">Reply</button>`;
-    actionsEl.innerHTML = `<button class="btn btn-primary btn-sm" onclick="showScreen(2)">View in Deals →</button>${replyBtn}<button class="btn btn-sm" style="margin-left:auto;color:var(--text3)" onclick="archiveRfq(${rfqId})">Archive</button>`;
+    actionsEl.innerHTML = `${replyBtn}<button class="btn btn-sm" style="margin-left:auto;color:var(--text3)" onclick="archiveRfq(${rfqId})">Archive</button>`;
   }
 
   renderExtraction(r);
