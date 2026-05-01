@@ -60,22 +60,20 @@ router.post("/gmail/sync", async (req, res) => {
     await client.connect();
     await client.mailboxOpen("INBOX");
 
-    // Search for messages received on or after sinceDate
-    // IMAP SINCE uses date only (not time), so we use the date part
-    const imapSince = new Date(sinceDate);
-    imapSince.setHours(0, 0, 0, 0); // start of that day for IMAP SINCE
+    // Fetch the most recent N messages by sequence number
+    // Server-side internalDate filter handles the precise time cutoff
+    const status = await client.status("INBOX", { messages: true });
+    const total = status.messages ?? 0;
 
-    const uids = await client.search({ since: imapSince }, { uid: true });
-
-    if (!uids || uids.length === 0) {
+    if (total === 0) {
       await client.logout();
-      res.json({ synced: 0, skipped: 0, message: "No new messages since " + sinceDate.toISOString() });
+      res.json({ synced: 0, skipped: 0, message: "Inbox is empty" });
       return;
     }
 
-    // Take only the last N uids (most recent)
-    const targetUids = uids.slice(-maxResults);
-    const range = targetUids.join(",");
+    const start = Math.max(1, total - maxResults + 1);
+    const range = `${start}:${total}`;
+    req.log.info({ total, start, range, sinceDate: sinceDate.toISOString() }, "IMAP fetch range");
 
     let synced = 0;
     let skipped = 0;
@@ -83,7 +81,7 @@ router.post("/gmail/sync", async (req, res) => {
 
     for await (const msg of client.fetch(range, { envelope: true, source: true, internalDate: true })) {
       try {
-        // Server-side time filter — skip messages older than sinceDate (IMAP SINCE is date-only)
+        // Server-side time filter — skip messages received before sinceDate
         const msgDate = msg.internalDate ?? msg.envelope.date ?? new Date(0);
         if (new Date(msgDate) < sinceDate) {
           skipped++;
