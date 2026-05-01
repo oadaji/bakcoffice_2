@@ -277,14 +277,6 @@ tr.trow.sel td{background:#eef6e6}
       <div style="display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;width:100%">
 
         <!-- SUB-TABS -->
-        <div style="background:#fff;border-bottom:1px solid #e4e8e4;display:flex;align-items:center;padding:0 16px;gap:0;flex-shrink:0">
-          <div id="sub-email" onclick="showRFQSub('email')" style="padding:0 16px;height:38px;display:flex;align-items:center;gap:7px;font-size:12px;font-weight:600;color:#5a9132;cursor:pointer;border-bottom:2px solid #7AB648;white-space:nowrap">
-            ✉ Email <span style="font-size:10px;padding:1px 6px;border-radius:10px;background:#7AB648;color:#fff;font-weight:600">3</span>
-          </div>
-          <div id="sub-whatsapp" onclick="showRFQSub('whatsapp')" style="padding:0 16px;height:38px;display:flex;align-items:center;gap:7px;font-size:12px;font-weight:500;color:#8a9e8a;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap">
-            <span style="color:#25D366">●</span> WhatsApp <span style="font-size:10px;padding:1px 6px;border-radius:10px;background:rgba(0,0,0,.07);color:#4a5e4a;font-weight:600">5</span>
-          </div>
-        </div>
 
         <!-- EMAIL SUB-PANEL -->
         <div id="rfq-sub-email" style="display:flex;flex:1;min-height:0;overflow:hidden">
@@ -424,56 +416,6 @@ tr.trow.sel td{background:#eef6e6}
 
         </div><!-- end email sub-panel -->
 
-        <!-- WHATSAPP SUB-PANEL -->
-        <div id="rfq-sub-whatsapp" style="display:none;flex:1;min-height:0;overflow:hidden">
-          <div class="col-inbox" style="width:300px;border-right:1px solid #e4e8e4;background:#fff;display:flex;flex-direction:column;overflow:hidden">
-            <div style="padding:10px 14px;border-bottom:1px solid #e4e8e4;display:flex;align-items:center;justify-content:space-between;background:#f0f2f0">
-              <div>
-                <div style="font-size:11px;font-weight:600;color:#1a2e1a;text-transform:uppercase;letter-spacing:.05em">WhatsApp Business</div>
-                <div style="display:flex;align-items:center;gap:5px;margin-top:2px"><div style="width:6px;height:6px;border-radius:50%;background:#25D366;animation:pulse 2s ease infinite"></div><span style="font-size:10px;color:#8a9e8a">+234 XXX XXX XXXX · live</span></div>
-              </div>
-              <div style="width:32px;height:32px;border-radius:50%;background:#25D366;display:flex;align-items:center;justify-content:center;font-size:16px">💬</div>
-            </div>
-            <div style="flex:1;overflow-y:auto">
-              <div style="padding:6px 14px 4px;font-size:10px;font-weight:600;color:#8a9e8a;text-transform:uppercase;letter-spacing:.05em;background:#f8faf8;border-bottom:1px solid #e4e8e4">RFQ conversations</div>
-              <div class="email-item unread sel" onclick="selWA(0,this)"><div class="ei-top"><div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0"><div style="width:34px;height:34px;border-radius:50%;background:#dcfce7;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">👩🏽</div><div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:600;color:#1a2e1a">Amaka Obi</div><div style="font-size:11px;color:#8a9e8a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">pls I need rate for china to lagos...</div></div></div><div style="flex-shrink:0;text-align:right"><div style="font-size:10px;color:#25D366;font-weight:600">now</div><span class="rfq-chip" style="margin-top:3px;display:inline-block">RFQ</span></div></div></div>
-              <div class="email-item unread" onclick="selWA(1,this)"><div class="ei-top"><div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0"><div style="width:34px;height:34px;border-radius:50%;background:#dbeafe;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">👨🏾</div><div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:600;color:#1a2e1a">Bello Musa</div><div style="font-size:11px;color:#8a9e8a">🎤 Voice note · 0:23</div></div></div><div style="flex-shrink:0;text-align:right"><div style="font-size:10px;color:#8a9e8a">09:41</div><span class="rfq-chip" style="margin-top:3px;display:inline-block">RFQ</span></div></div></div>
-              <div class="email-item unread" onclick="selWA(2,this)"><div class="ei-top"><div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0"><div style="width:34px;height:34px;border-radius:50%;background:#fef3c7;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">👩🏻</div><div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:600;color:#1a2e1a">Fatima Al-Hassan</div><div style="font-size:11px;color:#8a9e8a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">📄 Forwarded: Shipment_Request.pdf</div></div></div><div style="flex-shrink:0;text-align:right"><div style="font-size:10px;color:#8a9e8a">09:28</div><span class="rfq-chip" style="margin-top:3px;display:inline-block">RFQ</span></div></div></div>
-              <div class="email-item" onclick="selWA(3,this)"><div class="ei-top"><div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0"><div style="width:34px;height:34px;border-radius:50%;background:#ede9fe;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">👨🏿</div><div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:500;color:#1a2e1a">Chukwuemeka Eze</div><div style="font-size:11px;color:#8a9e8a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">good morning, how much to ship tiles...</div></div></div><div style="flex-shrink:0;text-align:right"><div style="font-size:10px;color:#8a9e8a">Yesterday</div><span class="rfq-chip" style="margin-top:3px;display:inline-block">RFQ</span></div></div></div>
-              <div class="email-item" onclick="selWA(4,this)"><div class="ei-top"><div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0"><div style="width:34px;height:34px;border-radius:50%;background:#fee2e2;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">👩🏾</div><div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:500;color:#1a2e1a">Ngozi Traders</div><div style="font-size:11px;color:#8a9e8a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">📷 Image · forwarded quote sheet</div></div></div><div style="flex-shrink:0;text-align:right"><div style="font-size:10px;color:#8a9e8a">Yesterday</div><span class="rfq-chip" style="margin-top:3px;display:inline-block">RFQ</span></div></div></div>
-            </div>
-          </div>
-          <div class="col-email" style="background:#e5ddd5;display:flex;flex-direction:column;overflow:hidden;border-right:1px solid #e4e8e4">
-            <div style="padding:10px 16px;background:#f0f2f0;border-bottom:1px solid #d0d8d0;display:flex;align-items:center;gap:10px;flex-shrink:0">
-              <div style="width:36px;height:36px;border-radius:50%;background:#dcfce7;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0" id="wa-avatar">👩🏽</div>
-              <div><div style="font-size:13px;font-weight:600;color:#1a2e1a" id="wa-name">Amaka Obi</div><div style="font-size:11px;color:#25D366" id="wa-status">online</div></div>
-              <div style="margin-left:auto;display:flex;gap:5px;align-items:center"><span class="rfq-chip">RFQ</span><span style="font-size:10px;color:#4a5e4a;padding:2px 8px;background:#fff;border-radius:10px;border:1px solid #e4e8e4" id="wa-extraction-status">reading...</span></div>
-            </div>
-            <div style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:8px" id="wa-messages"></div>
-            <div style="padding:10px 14px;background:#f0f2f0;border-top:1px solid #d0d8d0;display:flex;gap:8px;align-items:flex-end;flex-shrink:0">
-              <div style="flex:1;background:#fff;border-radius:20px;padding:8px 14px;font-size:12px;color:#8a9e8a;border:1px solid #e4e8e4">Type a reply...</div>
-              <button style="width:36px;height:36px;border-radius:50%;background:#25D366;border:none;cursor:pointer;font-size:16px;flex-shrink:0">➤</button>
-            </div>
-          </div>
-          <div class="col-extract" style="background:#fafbfa;display:flex;flex-direction:column;overflow:hidden">
-            <div class="ep-hd"><span class="ep-title">Extracted Details</span><span class="ep-rfqnum" id="wa-ep-num">RFQ-2604-0042</span></div>
-            <div class="ep-body">
-              <div id="wa-ep-fields"></div>
-              <div id="wa-ep-missing-wrap"><span class="ep-section-lbl missing-lbl">Missing Info</span><div id="wa-ep-missing"></div>
-                <div class="ep-followup" id="wa-ep-followup">
-                  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px"><span style="font-size:11px;font-weight:600;color:#4a5e4a">Reply draft</span><span class="ep-timer" id="wa-ep-timer">sends in 5:00</span></div>
-                  <div class="ep-draft" id="wa-ep-draft"></div>
-                  <div class="row" style="margin-top:10px">
-                    <button class="btn btn-primary btn-sm" style="flex:1" onclick="waSendNow()">Send on WhatsApp</button>
-                    <button class="btn btn-danger btn-sm" onclick="waCancel()">Cancel</button>
-                  </div>
-                </div>
-              </div>
-              <div style="margin-top:8px;padding:8px;background:#e8f5e0;border-radius:6px;font-size:10px;color:#5a9132;border:1px solid #c8e6a0">📱 Reply sent back via WhatsApp</div>
-              <div id="wa-ep-actions" style="margin-top:12px"></div>
-            </div>
-          </div>
-        </div><!-- end whatsapp sub-panel -->
 
       </div><!-- end s1 inner wrapper -->
     </div><!-- end s1 -->
