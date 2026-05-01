@@ -2914,8 +2914,7 @@ async function replyRfq(rfqId) {
     const r = rfqData.find(x => x.id === rfqId);
     if (r) { r.status = 'replied'; if (draft) r.followUpDraft = draft; }
     renderInboxList();
-    // Re-render the extraction panel so the lock state applies immediately
-    selectRfq(rfqId);
+    selEmail(rfqId);
   } catch (err) {
     alert('Could not send email: ' + err.message);
   } finally {
@@ -2958,8 +2957,7 @@ async function epSendNow() {
       const r = rfqData.find(x => x.id === currentRfqId);
       if (r) { r.status = 'replied'; if (draft) r.followUpDraft = draft; }
       renderInboxList();
-      // Re-render extraction panel to lock draft immediately
-      selectRfq(currentRfqId);
+      selEmail(currentRfqId);
     } catch (err) {
       if (el) { el.textContent = '✗ failed'; el.style.color = '#dc2626'; }
       alert('Could not send email: ' + err.message);
