@@ -109,7 +109,8 @@ html,body{height:100%;background:#f0f4f0;color:#1a1a1a;font-family:'Inter',sans-
 .missing-lbl{color:var(--danger)!important}
 .ep-missing-item{font-size:11px;color:#92400e;padding:5px 8px;background:#fffbeb;border-left:3px solid var(--warn);margin-bottom:4px;border-radius:0 4px 4px 0;line-height:1.5}
 .ep-followup{background:#fff;border:1px solid var(--border);border-radius:8px;padding:10px;margin-top:8px}
-.ep-draft{font-size:10px;color:var(--text2);line-height:1.7;white-space:pre-wrap;font-family:monospace}
+.ep-draft{font-size:10px;color:var(--text2);line-height:1.7;white-space:pre-wrap;font-family:monospace;width:100%;min-height:120px;resize:vertical;border:1px solid var(--border2);border-radius:6px;padding:8px;outline:none;background:#fafbfa;box-sizing:border-box;transition:border-color .15s}
+.ep-draft:focus{border-color:var(--accent);background:#fff}
 .ep-timer{font-size:10px;color:var(--warn);background:#fffbeb;padding:2px 7px;border-radius:4px;font-weight:500}
 .ep-timer.sent{color:#166534;background:#dcfce7}
 
@@ -403,7 +404,7 @@ tr.trow.sel td{background:#eef6e6}
                 <span style="font-size:11px;font-weight:600;color:var(--text2)">Follow-up Draft</span>
                 <span class="ep-timer" id="ep-timer">sends in 5:00</span>
               </div>
-              <div class="ep-draft" id="ep-draft"></div>
+              <textarea class="ep-draft" id="ep-draft" spellcheck="true" placeholder="Follow-up draft will appear here…"></textarea>
               <div class="row" style="margin-top:10px">
                 <button class="btn btn-primary btn-sm" style="flex:1" onclick="epSendNow()">Send Now</button>
                 <button class="btn btn-danger btn-sm" onclick="epCancel()">Cancel</button>
@@ -2975,7 +2976,7 @@ function renderExtraction(i) {
     ).join('');
     fw.style.display = ex.draft ? 'block' : 'none';
     if (ex.draft) {
-      document.getElementById('ep-draft').textContent = ex.draft;
+      document.getElementById('ep-draft').value = ex.draft;
       startEpTimer();
     }
   } else {
