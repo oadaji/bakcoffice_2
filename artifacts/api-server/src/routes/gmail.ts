@@ -5,6 +5,43 @@ import { Readable } from "stream";
 
 const router: IRouter = Router();
 
+// ── Automated-sender filter ───────────────────────────────────────────────────
+// Returns true if the email should be skipped (not an RFQ candidate)
+
+const AUTOMATED_ADDRESS_PATTERNS = [
+  /^no.?reply@/i,
+  /^noreply@/i,
+  /^do.?not.?reply@/i,
+  /^mailer@/i,
+  /^bounce[+-]/i,
+  /^notifications?@/i,
+  /^alerts?@/i,
+  /^newsletter@/i,
+  /^updates?@/i,
+  /^info@accounts\./i,
+  /@accounts\.google\.com$/i,
+  /@notifications\./i,
+  /@mail\.(linkedin|facebook|twitter|instagram|tiktok|amazon|ebay|paypal)\.com$/i,
+];
+
+const AUTOMATED_SUBJECT_PATTERNS = [
+  /security alert/i,
+  /verify your email/i,
+  /confirm your (email|account|subscription)/i,
+  /unsubscribe/i,
+  /newsletter/i,
+  /your (order|receipt|invoice) (has been|was)/i,
+  /password reset/i,
+  /\[automated\]/i,
+];
+
+function isAutomatedEmail(fromEmail: string, subject: string, hasListUnsubscribe: boolean): boolean {
+  if (hasListUnsubscribe) return true;
+  if (AUTOMATED_ADDRESS_PATTERNS.some((p) => p.test(fromEmail))) return true;
+  if (AUTOMATED_SUBJECT_PATTERNS.some((p) => p.test(subject))) return true;
+  return false;
+}
+
 // ── IMAP client factory ───────────────────────────────────────────────────────
 
 function createImapClient() {
@@ -108,6 +145,13 @@ router.post("/gmail/sync", async (req, res) => {
         }
 
         if (!fromEmail || !body.trim()) {
+          skipped++;
+          continue;
+        }
+
+        // Skip automated/marketing emails — List-Unsubscribe header is a reliable signal
+        const hasListUnsubscribe = !!parsed.headers?.get("list-unsubscribe");
+        if (isAutomatedEmail(fromEmail, subject, hasListUnsubscribe)) {
           skipped++;
           continue;
         }
