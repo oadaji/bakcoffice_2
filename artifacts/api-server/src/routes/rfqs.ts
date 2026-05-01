@@ -2,6 +2,19 @@ import { Router, type IRouter } from "express";
 import { db, emailsTable, rfqsTable } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
 import { anthropic } from "@workspace/integrations-anthropic-ai";
+import nodemailer from "nodemailer";
+
+function createMailTransporter() {
+  return nodemailer.createTransport({
+    host: "smtp.gmail.com",
+    port: 465,
+    secure: true,
+    auth: {
+      user: process.env.GMAIL_ADDRESS,
+      pass: process.env.GMAIL_APP_PASSWORD,
+    },
+  });
+}
 
 const router: IRouter = Router();
 
@@ -78,6 +91,61 @@ router.patch("/rfqs/:id", async (req, res) => {
   } catch (err) {
     req.log.error({ err }, "Failed to update RFQ");
     res.status(500).json({ error: "Failed to update RFQ" });
+  }
+});
+
+// POST /api/rfqs/:id/send-followup — send the follow-up draft email to the customer
+router.post("/rfqs/:id/send-followup", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const { draft } = req.body as { draft?: string };
+
+    // Load the RFQ + its source email
+    const rows = await db
+      .select()
+      .from(rfqsTable)
+      .leftJoin(emailsTable, eq(rfqsTable.emailId, emailsTable.id))
+      .where(eq(rfqsTable.id, id));
+
+    if (!rows.length || !rows[0].emails) {
+      res.status(404).json({ error: "RFQ not found" });
+      return;
+    }
+
+    const rfq = rows[0].rfqs;
+    const email = rows[0].emails;
+    const bodyText = draft ?? rfq.followUpDraft ?? "";
+
+    if (!bodyText.trim()) {
+      res.status(400).json({ error: "No draft text to send" });
+      return;
+    }
+
+    if (!email.fromEmail) {
+      res.status(400).json({ error: "No recipient email address on this RFQ" });
+      return;
+    }
+
+    const transporter = createMailTransporter();
+    await transporter.sendMail({
+      from: `OnePort 365 Commercial Team <${process.env.GMAIL_ADDRESS}>`,
+      to: email.fromEmail,
+      subject: `Re: ${email.subject ?? "Your freight enquiry"}`,
+      text: bodyText,
+    });
+
+    // Persist draft changes + mark as replied
+    const [updated] = await db
+      .update(rfqsTable)
+      .set({ status: "replied", followUpDraft: bodyText, updatedAt: new Date() })
+      .where(eq(rfqsTable.id, id))
+      .returning();
+
+    req.log.info({ rfqId: id, to: email.fromEmail }, "Follow-up email sent");
+    res.json({ sent: true, rfq: updated });
+  } catch (err) {
+    req.log.error({ err }, "Failed to send follow-up email");
+    res.status(500).json({ error: "Failed to send email" });
   }
 });
 

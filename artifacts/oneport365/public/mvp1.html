@@ -2818,14 +2818,25 @@ async function archiveRfq(rfqId) {
 
 async function replyRfq(rfqId) {
   const draft = document.getElementById('ep-draft')?.value;
-  await fetch(`/api/rfqs/${rfqId}`, {
-    method: 'PATCH',
-    headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({ status: 'replied', followUpDraft: draft })
-  });
-  const r = rfqData.find(x => x.id === rfqId);
-  if (r) { r.status = 'replied'; if (draft) r.followUpDraft = draft; }
-  renderInboxList();
+  const btn = document.querySelector('[onclick^="replyRfq"]');
+  if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
+  try {
+    const resp = await fetch(`/api/rfqs/${rfqId}/send-followup`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ draft })
+    });
+    if (!resp.ok) { const e = await resp.json(); throw new Error(e.error || 'Send failed'); }
+    const r = rfqData.find(x => x.id === rfqId);
+    if (r) { r.status = 'replied'; if (draft) r.followUpDraft = draft; }
+    const timerEl = document.getElementById('ep-timer');
+    if (timerEl) { timerEl.textContent = '✓ sent'; timerEl.className = 'ep-timer sent'; }
+    renderInboxList();
+  } catch (err) {
+    alert('Could not send email: ' + err.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Reply'; }
+  }
 }
 
 function startEpTimer() {
@@ -2850,17 +2861,24 @@ function startEpTimer() {
 async function epSendNow() {
   clearInterval(epTimerInterval);
   const el = document.getElementById('ep-timer');
-  if (el) { el.textContent = '✓ sent'; el.className = 'ep-timer sent'; }
+  if (el) { el.textContent = 'Sending…'; el.className = 'ep-timer'; }
   if (currentRfqId) {
     const draft = document.getElementById('ep-draft')?.value;
-    await fetch(`/api/rfqs/${currentRfqId}`, {
-      method: 'PATCH',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ status: 'replied', followUpDraft: draft })
-    });
-    const r = rfqData.find(x => x.id === currentRfqId);
-    if (r) { r.status = 'replied'; if (draft) r.followUpDraft = draft; }
-    renderInboxList();
+    try {
+      const resp = await fetch(`/api/rfqs/${currentRfqId}/send-followup`, {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ draft })
+      });
+      if (!resp.ok) { const e = await resp.json(); throw new Error(e.error || 'Send failed'); }
+      const r = rfqData.find(x => x.id === currentRfqId);
+      if (r) { r.status = 'replied'; if (draft) r.followUpDraft = draft; }
+      if (el) { el.textContent = '✓ sent'; el.className = 'ep-timer sent'; }
+      renderInboxList();
+    } catch (err) {
+      if (el) { el.textContent = '✗ failed'; el.style.color = '#dc2626'; }
+      alert('Could not send email: ' + err.message);
+    }
   }
 }
 
