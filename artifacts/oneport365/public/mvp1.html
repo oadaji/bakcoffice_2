@@ -2742,7 +2742,10 @@ function selEmail(rfqId, el) {
   } else if (r.emailType === 'outbound') {
     actionsEl.innerHTML = `<button class="btn btn-sm" onclick="showScreen(2)">View in Deals →</button><button class="btn btn-sm" style="margin-left:auto;color:var(--text3)" onclick="archiveRfq(${rfqId})">Archive</button>`;
   } else {
-    actionsEl.innerHTML = `<button class="btn btn-primary btn-sm" onclick="showScreen(2)">View in Deals →</button><button class="btn btn-sm" onclick="replyRfq(${rfqId})">Reply</button><button class="btn btn-sm" style="margin-left:auto;color:var(--text3)" onclick="archiveRfq(${rfqId})">Archive</button>`;
+    const replyBtn = r.status === 'replied'
+      ? `<button class="btn btn-sm" disabled style="color:var(--accent-dark);background:#dcfce7;border-color:#bbf7d0;cursor:default">✓ Reply sent</button>`
+      : `<button class="btn btn-sm" onclick="replyRfq(${rfqId})">Reply</button>`;
+    actionsEl.innerHTML = `<button class="btn btn-primary btn-sm" onclick="showScreen(2)">View in Deals →</button>${replyBtn}<button class="btn btn-sm" style="margin-left:auto;color:var(--text3)" onclick="archiveRfq(${rfqId})">Archive</button>`;
   }
 
   renderExtraction(r);
@@ -2784,8 +2787,27 @@ function renderExtraction(r) {
     ).join('');
     fw.style.display = draft ? 'block' : 'none';
     if (draft) {
-      document.getElementById('ep-draft').value = draft;
-      startEpTimer();
+      const draftEl = document.getElementById('ep-draft');
+      const timerEl = document.getElementById('ep-timer');
+      const sendRowEl = fw.querySelector('.row');
+      draftEl.value = draft;
+      if (r.status === 'replied') {
+        // Already sent — lock the draft panel
+        draftEl.readOnly = true;
+        draftEl.style.background = '#f3f4f6';
+        draftEl.style.color = 'var(--text3)';
+        draftEl.style.cursor = 'default';
+        if (timerEl) { timerEl.textContent = '✓ sent'; timerEl.className = 'ep-timer sent'; }
+        if (sendRowEl) sendRowEl.style.display = 'none';
+        clearInterval(epTimerInterval);
+      } else {
+        draftEl.readOnly = false;
+        draftEl.style.background = '';
+        draftEl.style.color = '';
+        draftEl.style.cursor = '';
+        if (sendRowEl) sendRowEl.style.display = '';
+        startEpTimer();
+      }
     }
   } else {
     mw.style.display = 'none';
@@ -2829,9 +2851,9 @@ async function replyRfq(rfqId) {
     if (!resp.ok) { const e = await resp.json(); throw new Error(e.error || 'Send failed'); }
     const r = rfqData.find(x => x.id === rfqId);
     if (r) { r.status = 'replied'; if (draft) r.followUpDraft = draft; }
-    const timerEl = document.getElementById('ep-timer');
-    if (timerEl) { timerEl.textContent = '✓ sent'; timerEl.className = 'ep-timer sent'; }
     renderInboxList();
+    // Re-render the extraction panel so the lock state applies immediately
+    selectRfq(rfqId);
   } catch (err) {
     alert('Could not send email: ' + err.message);
   } finally {
@@ -2873,8 +2895,9 @@ async function epSendNow() {
       if (!resp.ok) { const e = await resp.json(); throw new Error(e.error || 'Send failed'); }
       const r = rfqData.find(x => x.id === currentRfqId);
       if (r) { r.status = 'replied'; if (draft) r.followUpDraft = draft; }
-      if (el) { el.textContent = '✓ sent'; el.className = 'ep-timer sent'; }
       renderInboxList();
+      // Re-render extraction panel to lock draft immediately
+      selectRfq(currentRfqId);
     } catch (err) {
       if (el) { el.textContent = '✗ failed'; el.style.color = '#dc2626'; }
       alert('Could not send email: ' + err.message);
