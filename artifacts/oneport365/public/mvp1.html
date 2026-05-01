@@ -2542,6 +2542,10 @@ async function loadInbox() {
     if (!res.ok) throw new Error('Failed to load');
     rfqData = await res.json();
     renderInboxList();
+    // Update Deals badge immediately (not just when tab is clicked)
+    const customerCount = rfqData.filter(r => r.emailType === 'customer-rfq' || r.emailType === 'internal-rfq').length;
+    const dc = document.getElementById('deals-count');
+    if (dc) dc.textContent = customerCount;
     // auto-select first item
     if (rfqData.length) {
       const first = document.querySelector('.email-item');
@@ -3012,8 +3016,12 @@ function dealRowHtml(r, i, extraCls) {
   else if (r.status === 'archived'){ stageCls = 'b-gray'; stageLabel = 'Archived'; }
   else                             { stageCls = 'b-miss'; stageLabel = 'Info needed'; }
   const timeStr = r.email?.receivedAt ? fmtDate(r.email.receivedAt) : '—';
+  // For grouped shipments, show a subtle "shipment N/total" label under the REF
+  const shipLabel = (r.groupTotal && r.groupTotal > 1)
+    ? `<div style="font-size:9px;color:var(--text3);margin-top:1px">shipment ${r.groupIndex ?? 1}/${r.groupTotal}</div>`
+    : '';
   return `<tr class="trow${extraCls?' '+extraCls:''}" onclick="selectRFQ(${i},this)">
-    <td class="tc" style="font-family:monospace;font-size:11px">${escHtml(r.ref || `RFQ-${r.id}`)}</td>
+    <td class="tc" style="font-family:monospace;font-size:11px">${escHtml(r.ref || `RFQ-${r.id}`)}${shipLabel}</td>
     <td class="tc">${escHtml(customer)}</td>
     <td style="font-family:monospace;font-size:11px">${escHtml(route)}</td>
     <td>${escHtml(commodity)}</td>
@@ -3047,60 +3055,10 @@ function renderDealsTable() {
     return;
   }
 
-  // Group by groupId; non-grouped rows rendered individually
-  const processedGroups = new Set();
+  // Every RFQ is its own row — grouped shipments from the same email each get a separate deal row
   let rows = '';
   customerRfqs.forEach((r, i) => {
-    if (r.groupId && (r.groupTotal ?? 1) > 1) {
-      // Skip siblings — they'll be rendered under the group header
-      if (r.groupIndex && r.groupIndex > 1) return;
-      if (processedGroups.has(r.groupId)) return;
-      processedGroups.add(r.groupId);
-
-      const siblings = customerRfqs.filter(x => x.groupId === r.groupId).sort((a,b) => (a.groupIndex??1)-(b.groupIndex??1));
-      const isExpanded = expandedDealGroups.has(r.groupId);
-      const hiddenCount = siblings.length - 1;
-
-      // Header row: first shipment with expand chevron
-      const fields = Array.isArray(r.fields) ? r.fields : [];
-      const polF = fields.find(f => /pol|port.of.load/i.test(f.k));
-      const podF = fields.find(f => /pod|port.of.dis/i.test(f.k));
-      const commF = fields.find(f => /commodity/i.test(f.k));
-      const pol = polF?.v && polF.v !== 'not specified' ? polF.v : '—';
-      const pod = podF?.v && podF.v !== 'not specified' ? podF.v : '—';
-      const commodity = commF?.v && commF.v !== 'not specified' ? commF.v : '—';
-      const route = (pol !== '—' || pod !== '—') ? `${pol} → ${pod}` : '—';
-      const customer = r.email?.fromName || r.email?.fromEmail || '—';
-      let stageCls = 'b-miss', stageLabel = 'Info needed';
-      if (r.status === 'ready')        { stageCls = 'b-ok';   stageLabel = 'Ready'; }
-      else if (r.status === 'replied') { stageCls = 'b-wait'; stageLabel = 'Follow-up sent'; }
-      else if (r.status === 'archived'){ stageCls = 'b-gray'; stageLabel = 'Archived'; }
-      const timeStr = r.email?.receivedAt ? fmtDate(r.email.receivedAt) : '—';
-      const chevron = isExpanded ? '▾' : '▸';
-      const collapseBadge = !isExpanded
-        ? `<span class="group-badge" onclick="event.stopPropagation();toggleDealGroup('${r.groupId}')">+${hiddenCount} more</span>`
-        : '';
-
-      rows += `<tr class="trow trow-group-hd" onclick="selectRFQ(${i},this)">
-        <td class="tc" style="font-family:monospace;font-size:11px">
-          <span class="chev" onclick="event.stopPropagation();toggleDealGroup('${r.groupId}')">${chevron}</span>${escHtml(r.ref||`RFQ-${r.id}`)}
-        </td>
-        <td class="tc">${escHtml(customer)}${collapseBadge}</td>
-        <td style="font-family:monospace;font-size:11px">${escHtml(route)}</td>
-        <td>${escHtml(commodity)}</td>
-        <td><span class="badge ${stageCls}">${stageLabel}</span></td>
-        <td>${escHtml(timeStr)}</td>
-      </tr>`;
-
-      if (isExpanded) {
-        siblings.slice(1).forEach((sib, si) => {
-          const sibIdx = customerRfqs.indexOf(sib);
-          rows += dealRowHtml(sib, sibIdx, 'deal-group-row');
-        });
-      }
-    } else {
-      rows += dealRowHtml(r, i, '');
-    }
+    rows += dealRowHtml(r, i, '');
   });
 
   tbody.innerHTML = rows;
