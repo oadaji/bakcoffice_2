@@ -3582,7 +3582,7 @@ async function searchRates(rfqId) {
               <div class="rate-price">${rate.freightRate ? '$' + Number(rate.freightRate).toLocaleString() : 'TBD'} <span style="font-size:10px;font-weight:400;color:var(--text3)">${rate.currency || 'USD'}</span></div>
               ${rate.containerType ? `<div class="rate-carrier">${rate.containerType}${rate.carrier ? ' · ' + rate.carrier : ''}</div>` : ''}
             </div>
-            ${partner ? `<span class="cat-chip">${escHtml(partner.name)}</span>` : ''}
+            ${rate.carrier ? `<span class="cat-chip">${escHtml(rate.carrier)}</span>` : ''}
           </div>
           <div class="rate-route">${escHtml(rate.pol)} → ${escHtml(rate.pod)}</div>
           ${validTo ? `<div style="font-size:10px;color:var(--text3)">Valid to ${validTo}</div>` : ''}
