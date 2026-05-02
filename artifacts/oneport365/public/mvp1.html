@@ -3794,22 +3794,34 @@ function bodyToHtml(str) {
 }
 
 async function loadInbox() {
+  let data;
   try {
     const res = await fetch('/api/rfqs');
-    if (!res.ok) throw new Error('Failed to load');
-    rfqData = await res.json();
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    data = await res.json();
+  } catch(e) {
+    console.error('loadInbox fetch error', e);
+    document.getElementById('inbox-list').innerHTML =
+      '<div style="padding:16px;color:var(--danger);font-size:11px">Failed to load inbox</div>';
+    return;
+  }
+  rfqData = data;
+  try {
     renderInboxList();
-    // auto-select first item
-    if (rfqData.length) {
+  } catch(e) {
+    console.error('renderInboxList error', e);
+  }
+  // auto-select first item
+  if (rfqData.length) {
+    try {
       const first = document.querySelector('.email-item');
       if (first) {
         const id = parseInt(first.dataset.rfqId, 10);
-        selEmail(id, first);
+        if (id) selEmail(id, first);
       }
+    } catch(e) {
+      console.error('loadInbox auto-select error', e);
     }
-  } catch(e) {
-    document.getElementById('inbox-list').innerHTML =
-      '<div style="padding:16px;color:var(--danger);font-size:11px">Failed to load inbox</div>';
   }
 }
 
@@ -3947,57 +3959,58 @@ function selEmail(rfqId, el) {
 
   // Update processing banner based on type
   const banner = document.querySelector('.processing-bar');
-  if (r.emailType === 'rate-reply') {
-    banner.style.background = '#eff6ff';
-    banner.style.borderColor = '#bfdbfe';
-    banner.querySelector('.processing-bar-text').textContent = 'Rate reply from partner — extracting rates from this email…';
-    banner.querySelector('.processing-badge').textContent = 'Rate reply';
-    banner.querySelector('.processing-badge').style.background = '#2563eb';
-  } else if (r.emailType === 'outbound') {
-    banner.style.background = '#f9fafb';
-    banner.style.borderColor = '#e5e7eb';
-    banner.querySelector('.processing-bar-text').textContent = 'This email was sent by your team to a freight partner.';
-    banner.querySelector('.processing-badge').textContent = 'Sent';
-    banner.querySelector('.processing-badge').style.background = '#6b7280';
-  } else if (r.emailType === 'internal-rfq') {
-    banner.style.background = '#fffbeb';
-    banner.style.borderColor = '#fde68a';
-    banner.querySelector('.processing-bar-text').textContent = 'Internal request — forwarded by OnePort staff on behalf of customer.';
-    banner.querySelector('.processing-badge').textContent = 'Internal';
-    banner.querySelector('.processing-badge').style.background = '#d97706';
-  } else {
-    const isComplete = r.status === 'ready' || r.status === 'replied';
-    banner.style.background = isComplete ? '#f0fdf4' : '#eef6e6';
-    banner.style.borderColor = isComplete ? '#86efac' : '#c8e6a0';
-    const spinner = banner.querySelector('.spinner');
-    if (spinner) spinner.style.display = isComplete ? 'none' : '';
-    if (isComplete) {
-      banner.querySelector('.processing-bar-text').textContent = '✓ Shipment details extracted successfully.';
-      banner.querySelector('.processing-badge').textContent = 'Complete';
-      banner.querySelector('.processing-badge').style.background = '#16a34a';
+  if (banner) {
+    if (r.emailType === 'rate-reply') {
+      banner.style.background = '#eff6ff';
+      banner.style.borderColor = '#bfdbfe';
+      const bt = banner.querySelector('.processing-bar-text'); if (bt) bt.textContent = 'Rate reply from partner — extracting rates from this email…';
+      const bb = banner.querySelector('.processing-badge'); if (bb) { bb.textContent = 'Rate reply'; bb.style.background = '#2563eb'; }
+    } else if (r.emailType === 'outbound') {
+      banner.style.background = '#f9fafb';
+      banner.style.borderColor = '#e5e7eb';
+      const bt = banner.querySelector('.processing-bar-text'); if (bt) bt.textContent = 'This email was sent by your team to a freight partner.';
+      const bb = banner.querySelector('.processing-badge'); if (bb) { bb.textContent = 'Sent'; bb.style.background = '#6b7280'; }
+    } else if (r.emailType === 'internal-rfq') {
+      banner.style.background = '#fffbeb';
+      banner.style.borderColor = '#fde68a';
+      const bt = banner.querySelector('.processing-bar-text'); if (bt) bt.textContent = 'Internal request — forwarded by OnePort staff on behalf of customer.';
+      const bb = banner.querySelector('.processing-badge'); if (bb) { bb.textContent = 'Internal'; bb.style.background = '#d97706'; }
     } else {
-      banner.querySelector('.processing-bar-text').textContent = 'Reading email and pulling out shipment details…';
-      banner.querySelector('.processing-badge').textContent = 'Processing';
-      banner.querySelector('.processing-badge').style.background = 'var(--accent)';
+      const isComplete = r.status === 'ready' || r.status === 'replied';
+      banner.style.background = isComplete ? '#f0fdf4' : '#eef6e6';
+      banner.style.borderColor = isComplete ? '#86efac' : '#c8e6a0';
+      const spinner = banner.querySelector('.spinner');
+      if (spinner) spinner.style.display = isComplete ? 'none' : '';
+      const bt = banner.querySelector('.processing-bar-text');
+      const bb = banner.querySelector('.processing-badge');
+      if (isComplete) {
+        if (bt) bt.textContent = '✓ Shipment details extracted successfully.';
+        if (bb) { bb.textContent = 'Complete'; bb.style.background = '#16a34a'; }
+      } else {
+        if (bt) bt.textContent = 'Reading email and pulling out shipment details…';
+        if (bb) { bb.textContent = 'Processing'; bb.style.background = 'var(--accent)'; }
+      }
     }
   }
 
   // Show/hide action buttons based on type
   const actionsEl = document.querySelector('.detail-actions');
-  if (r.emailType === 'rate-reply') {
-    actionsEl.innerHTML = `<button class="btn btn-sm">Parse rates</button>`;
-  } else if (r.emailType === 'outbound') {
-    actionsEl.innerHTML = `<button class="btn btn-sm" style="margin-left:auto;color:var(--text3)" onclick="archiveRfq(${rfqId})">Archive</button>`;
-  } else {
-    // For grouped emails, all siblings are replied together — check if first sibling is replied
-    const replyRfqId = currentGroupRfqs.length ? currentGroupRfqs[0].id : rfqId;
-    const allReplied = currentGroupRfqs.length
-      ? currentGroupRfqs.every(x => x.status === 'replied')
-      : r.status === 'replied';
-    const replyBtn = allReplied
-      ? `<button class="btn btn-sm" disabled style="color:var(--accent-dark);background:#dcfce7;border-color:#bbf7d0;cursor:default">✓ Reply sent</button>`
-      : `<button class="btn btn-sm" onclick="replyRfq(${replyRfqId})">Reply</button>`;
-    actionsEl.innerHTML = `${replyBtn}<button class="btn btn-sm" style="margin-left:auto;color:var(--text3)" onclick="archiveRfq(${rfqId})">Archive</button><button class="btn btn-sm" style="color:#dc2626;border-color:#fecaca" onclick="deleteRfq(${rfqId})" title="Remove from inbox">Remove</button>`;
+  if (actionsEl) {
+    if (r.emailType === 'rate-reply') {
+      actionsEl.innerHTML = `<button class="btn btn-sm">Parse rates</button>`;
+    } else if (r.emailType === 'outbound') {
+      actionsEl.innerHTML = `<button class="btn btn-sm" style="margin-left:auto;color:var(--text3)" onclick="archiveRfq(${rfqId})">Archive</button>`;
+    } else {
+      // For grouped emails, all siblings are replied together — check if first sibling is replied
+      const replyRfqId = currentGroupRfqs.length ? currentGroupRfqs[0].id : rfqId;
+      const allReplied = currentGroupRfqs.length
+        ? currentGroupRfqs.every(x => x.status === 'replied')
+        : r.status === 'replied';
+      const replyBtn = allReplied
+        ? `<button class="btn btn-sm" disabled style="color:var(--accent-dark);background:#dcfce7;border-color:#bbf7d0;cursor:default">✓ Reply sent</button>`
+        : `<button class="btn btn-sm" onclick="replyRfq(${replyRfqId})">Reply</button>`;
+      actionsEl.innerHTML = `${replyBtn}<button class="btn btn-sm" style="margin-left:auto;color:var(--text3)" onclick="archiveRfq(${rfqId})">Archive</button><button class="btn btn-sm" style="color:#dc2626;border-color:#fecaca" onclick="deleteRfq(${rfqId})" title="Remove from inbox">Remove</button>`;
+    }
   }
 
   // Render extraction panel: for grouped emails show the first RFQ's combined draft
@@ -4046,7 +4059,7 @@ function renderExtraction(r) {
 
   // ── Multi-shipment tabs ──────────────────────────────────────────────────
   const tabsEl = document.getElementById('ep-tabs');
-  if (currentGroupRfqs.length > 1) {
+  if (tabsEl && currentGroupRfqs.length > 1) {
     tabsEl.style.display = 'block';
     tabsEl.innerHTML = currentGroupRfqs.map(sibling => {
       const commField = Array.isArray(sibling.fields) ? sibling.fields.find(f => /commodity/i.test(f.k)) : null;
@@ -4056,7 +4069,7 @@ function renderExtraction(r) {
       const isActive = sibling.id === r.id;
       return `<span class="ep-tab${isActive?' active':''}" onclick="selectGroupRfqTab(${sibling.id})">${escHtml(label)}</span>`;
     }).join('');
-  } else {
+  } else if (tabsEl) {
     tabsEl.style.display = 'none';
     tabsEl.innerHTML = '';
   }
@@ -4100,54 +4113,62 @@ function renderExtraction(r) {
   const mw = document.getElementById('ep-missing-wrap');
   const fw = document.getElementById('ep-followup-wrap');
   if (missing.length) {
-    mw.style.display = 'block';
-    const lbl = mw.querySelector('.ep-section-lbl');
-    if (lbl) lbl.textContent = r.emailType === 'outbound' ? 'Awaiting' : r.emailType === 'rate-reply' ? 'Action needed' : 'Missing info';
-    document.getElementById('ep-missing').innerHTML = missing.map(m =>
-      `<div class="ep-missing-item">⚠ ${escHtml(m)}</div>`
-    ).join('');
-    fw.style.display = draft ? 'block' : 'none';
-    if (draft) {
+    if (mw) {
+      mw.style.display = 'block';
+      const lbl = mw.querySelector('.ep-section-lbl');
+      if (lbl) lbl.textContent = r.emailType === 'outbound' ? 'Awaiting' : r.emailType === 'rate-reply' ? 'Action needed' : 'Missing info';
+    }
+    const missingEl = document.getElementById('ep-missing');
+    if (missingEl) missingEl.innerHTML = missing.map(m => `<div class="ep-missing-item">⚠ ${escHtml(m)}</div>`).join('');
+    if (fw) fw.style.display = draft ? 'block' : 'none';
+    if (draft && fw) {
       const draftEl = document.getElementById('ep-draft');
       const timerEl = document.getElementById('ep-timer');
       const sendRowEl = fw.querySelector('.row');
-      draftEl.value = draft;
+      if (draftEl) {
+        draftEl.value = draft;
+        if (r.status === 'replied') {
+          draftEl.readOnly = true;
+          draftEl.style.background = '#f3f4f6';
+          draftEl.style.color = 'var(--text3)';
+          draftEl.style.cursor = 'default';
+        } else {
+          draftEl.readOnly = false;
+          draftEl.style.background = '';
+          draftEl.style.color = '';
+          draftEl.style.cursor = '';
+        }
+      }
       if (r.status === 'replied') {
-        // Already sent — lock the draft panel
-        draftEl.readOnly = true;
-        draftEl.style.background = '#f3f4f6';
-        draftEl.style.color = 'var(--text3)';
-        draftEl.style.cursor = 'default';
         if (timerEl) { timerEl.textContent = '✓ sent'; timerEl.className = 'ep-timer sent'; }
         if (sendRowEl) sendRowEl.style.display = 'none';
         clearInterval(epTimerInterval);
       } else {
-        draftEl.readOnly = false;
-        draftEl.style.background = '';
-        draftEl.style.color = '';
-        draftEl.style.cursor = '';
         if (sendRowEl) sendRowEl.style.display = '';
         startEpTimer();
       }
     }
   } else {
-    mw.style.display = 'none';
-    fw.style.display = 'none';
+    if (mw) mw.style.display = 'none';
+    if (fw) fw.style.display = 'none';
   }
 
   // Actions
   const aw = document.getElementById('ep-actions-wrap');
-  if (r.emailType === 'rate-reply') {
-    aw.innerHTML = `<button class="btn btn-a btn-sm" style="width:100%">Parse &amp; save rates →</button>`;
-  } else if (r.emailType === 'outbound') {
-    aw.innerHTML = `<button class="btn btn-sm" style="width:100%">View RFQ thread →</button>`;
-  } else if (!missing.length) {
-    aw.innerHTML = `<button class="btn btn-a btn-sm" style="width:100%" onclick="searchRates(${r.id})">Search rates →</button>`;
-  } else {
-    aw.innerHTML = `<button class="btn btn-sm" style="width:100%;color:var(--text3)" disabled>Complete info to get rates</button>`;
-    // Clear any previous rate results when info is incomplete
-    document.getElementById('ep-rates-wrap').style.display = 'none';
-    document.getElementById('ep-rates-list').innerHTML = '';
+  if (aw) {
+    if (r.emailType === 'rate-reply') {
+      aw.innerHTML = `<button class="btn btn-a btn-sm" style="width:100%">Parse &amp; save rates →</button>`;
+    } else if (r.emailType === 'outbound') {
+      aw.innerHTML = `<button class="btn btn-sm" style="width:100%">View RFQ thread →</button>`;
+    } else if (!missing.length) {
+      aw.innerHTML = `<button class="btn btn-a btn-sm" style="width:100%" onclick="searchRates(${r.id})">Search rates →</button>`;
+    } else {
+      aw.innerHTML = `<button class="btn btn-sm" style="width:100%;color:var(--text3)" disabled>Complete info to get rates</button>`;
+      const rw = document.getElementById('ep-rates-wrap');
+      const rl = document.getElementById('ep-rates-list');
+      if (rw) rw.style.display = 'none';
+      if (rl) rl.innerHTML = '';
+    }
   }
 }
 
