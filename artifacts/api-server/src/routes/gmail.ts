@@ -252,4 +252,76 @@ router.post("/gmail/sync", async (req, res) => {
   }
 });
 
+// ── POST /api/gmail/recover ───────────────────────────────────────────────────
+// Fetch a specific email by its Gmail Message-ID and re-ingest it.
+// Used to recover emails accidentally deleted from the local DB.
+router.post("/gmail/recover", async (req, res) => {
+  const { messageId } = req.body as { messageId: string };
+  if (!messageId) {
+    res.status(400).json({ error: "messageId is required" });
+    return;
+  }
+
+  const port = process.env.PORT ?? "8080";
+  const client = createImapClient();
+
+  try {
+    await client.connect();
+
+    // Search INBOX first, then All Mail
+    let uids: number[] = [];
+    let foundFolder = "";
+
+    for (const folder of ["INBOX", "[Gmail]/All Mail"]) {
+      try {
+        await client.mailboxOpen(folder);
+        const found = (await client.search({ header: ["Message-ID", messageId] })) as number[];
+        if (found?.length) { uids = found; foundFolder = folder; break; }
+      } catch { /* folder may not exist */ }
+    }
+
+    if (!uids.length) {
+      await client.logout();
+      res.json({ recovered: 0, message: "Message not found in Gmail" });
+      return;
+    }
+
+    req.log.info({ messageId, foundFolder, uids }, "Recovering email from Gmail");
+
+    let recovered = 0;
+    for await (const msg of client.fetch(uids, { source: true, internalDate: true })) {
+      const parsed = await simpleParser(Readable.from(msg.source));
+      const fromAddr = parsed.from?.value?.[0];
+      const fromEmail = fromAddr?.address ?? "";
+      const fromName = fromAddr?.name ?? fromEmail;
+      const subject = parsed.subject ?? "(no subject)";
+      let body = parsed.text ?? "";
+      if (!body && parsed.html) body = parsed.html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+      const receivedAt = (parsed.date ?? new Date()).toISOString();
+      const parsedMsgId = normaliseMessageId(parsed.messageId);
+      const uid = `gmail:${parsedMsgId ?? msg.uid}`;
+
+      const resp = await fetch(`http://localhost:${port}/api/rfq/ingest`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          uid, fromName, fromEmail, subject, body, receivedAt,
+          emailType: "customer-rfq", requireFreightMatch: true, messageId: parsedMsgId,
+        }),
+      });
+
+      if (resp.ok || resp.status === 422) recovered++;
+      const result = await resp.json() as Record<string, unknown>;
+      req.log.info({ uid, status: resp.status, result }, "Recovery ingest result");
+    }
+
+    await client.logout();
+    res.json({ recovered, folder: foundFolder });
+  } catch (err) {
+    req.log.error({ err }, "Gmail recover failed");
+    try { await client.logout(); } catch {}
+    res.status(500).json({ error: String(err) });
+  }
+});
+
 export { router as gmailRouter };
