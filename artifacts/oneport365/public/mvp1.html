@@ -1119,86 +1119,6 @@ tr.trow.sel td{background:#eef6e6}
 
         </div>
 
-        <!-- BUILD RATE MODAL -->
-        <div id="build-rate-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1100;align-items:center;justify-content:center">
-          <div style="background:#fff;border-radius:14px;width:520px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.25)">
-            <div style="padding:18px 20px;border-bottom:1px solid #e4e8e4;display:flex;align-items:center;justify-content:space-between">
-              <div style="font-size:15px;font-weight:700;color:#1a2e1a">Build Rate</div>
-              <button onclick="closeBuildRate()" style="background:none;border:none;font-size:18px;cursor:pointer;color:#8a9e8a;line-height:1">×</button>
-            </div>
-            <div style="padding:20px">
-
-              <!-- Step 1: RFQ -->
-              <div style="margin-bottom:18px">
-                <div style="font-size:10px;font-weight:700;color:#8a9e8a;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Step 1 — Select RFQ</div>
-                <select id="br-rfq" onchange="brUpdate()" style="width:100%;background:#fff;border:1px solid #d0d8d0;color:#1a2e1a;font-family:Inter,sans-serif;font-size:12px;padding:9px 10px;border-radius:8px;outline:none;box-sizing:border-box">
-                  <option value="">Select open RFQ...</option>
-                  <option value="RFQ-2604-0040">RFQ-2604-0040 — Grace Benson</option>
-                  <option value="RFQ-2604-0039">RFQ-2604-0039 — Kayode · HAM → LOS</option>
-                  <option value="RFQ-2604-0038">RFQ-2604-0038 — Demir Guzel · IST → LOS</option>
-                  <option value="RFQ-2604-0037">RFQ-2604-0037 — Royal Foam · TAO → APP</option>
-                  <option value="RFQ-2604-0033">RFQ-2604-0033 — Adaeze · APP → RTM</option>
-                  <option value="RFQ-2604-0032">RFQ-2604-0032 — Saro Agro · NGB → APP</option>
-                </select>
-              </div>
-
-              <!-- Step 2: Services -->
-              <div style="margin-bottom:18px">
-                <div style="font-size:10px;font-weight:700;color:#8a9e8a;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Step 2 — Services required</div>
-                <div style="display:flex;flex-direction:column;gap:8px">
-                  <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #e4e8e4;border-radius:8px;cursor:pointer;font-size:12px;color:#1a2e1a">
-                    <input type="checkbox" id="br-ocean" onchange="brUpdate()" style="accent-color:#7AB648;width:15px;height:15px">
-                    <span style="font-weight:500">Ocean Freight</span>
-                    <span style="margin-left:auto;font-size:10px;color:#8a9e8a">Base ocean rate from shipping partner</span>
-                  </label>
-                  <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #e4e8e4;border-radius:8px;cursor:pointer;font-size:12px;color:#1a2e1a">
-                    <input type="checkbox" id="br-haulage" onchange="brUpdate()" style="accent-color:#7AB648;width:15px;height:15px">
-                    <span style="font-weight:500">Haulage / Trucking</span>
-                    <span style="margin-left:auto;font-size:10px;color:#8a9e8a">Inland delivery from port</span>
-                  </label>
-                </div>
-              </div>
-
-              <!-- Ocean rate selector -->
-              <div id="br-ocean-section" style="display:none;margin-bottom:18px">
-                <div style="font-size:10px;font-weight:700;color:#8a9e8a;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Ocean Rate</div>
-                <select id="br-ocean-rate" onchange="brUpdate()" style="width:100%;background:#fff;border:1px solid #d0d8d0;color:#1a2e1a;font-family:Inter,sans-serif;font-size:12px;padding:9px 10px;border-radius:8px;outline:none;box-sizing:border-box">
-                  <option value="">Select a rate from database...</option>
-                </select>
-              </div>
-
-              <!-- Haulage selector -->
-              <div id="br-haulage-section" style="display:none;margin-bottom:18px">
-                <div style="font-size:10px;font-weight:700;color:#8a9e8a;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Trucking destination</div>
-                <div style="display:flex;flex-direction:column;gap:6px">
-                  <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#1a2e1a;cursor:pointer"><input type="radio" name="br-truck" value="850000" onchange="brUpdate()" checked style="accent-color:#7AB648"> Lagos <span style="margin-left:auto;font-family:monospace;color:#4a5e4a">₦850,000</span></label>
-                  <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#1a2e1a;cursor:pointer"><input type="radio" name="br-truck" value="1100000" onchange="brUpdate()" style="accent-color:#7AB648"> Ibadan <span style="margin-left:auto;font-family:monospace;color:#4a5e4a">₦1,100,000</span></label>
-                  <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#1a2e1a;cursor:pointer"><input type="radio" name="br-truck" value="1800000" onchange="brUpdate()" style="accent-color:#7AB648"> Kano <span style="margin-left:auto;font-family:monospace;color:#4a5e4a">₦1,800,000</span></label>
-                </div>
-              </div>
-
-              <!-- Rate summary -->
-              <div id="br-summary" style="display:none;background:#f8faf8;border:1px solid #e4e8e4;border-radius:10px;padding:14px;margin-bottom:18px">
-                <div style="font-size:10px;font-weight:700;color:#8a9e8a;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">Rate summary</div>
-                <div id="br-summary-lines"></div>
-                <div style="border-top:1px solid #d0d8d0;margin-top:8px;padding-top:8px">
-                  <div style="display:flex;justify-content:space-between;font-size:11px;color:#4a5e4a;padding:2px 0"><span>Total cost</span><span id="br-total" style="font-family:monospace"></span></div>
-                  <div style="display:flex;justify-content:space-between;font-size:11px;color:#4a5e4a;padding:2px 0"><span>Margin (13%)</span><span id="br-margin" style="font-family:monospace"></span></div>
-                  <div style="display:flex;justify-content:space-between;padding:6px 0 2px;border-top:1px solid #d0d8d0;margin-top:5px">
-                    <span style="font-size:13px;font-weight:700;color:#1a2e1a">Sell price</span>
-                    <span id="br-sell" style="font-family:monospace;font-size:15px;font-weight:700;color:#5a9132"></span>
-                  </div>
-                </div>
-              </div>
-
-              <div style="display:flex;gap:8px;justify-content:flex-end">
-                <button onclick="closeBuildRate()" style="padding:8px 18px;font-size:12px;cursor:pointer;border-radius:7px;border:1px solid #d0d8d0;background:#fff;color:#4a5e4a;font-family:Inter,sans-serif">Cancel</button>
-                <button onclick="confirmBuildRate()" style="padding:8px 18px;font-size:12px;font-weight:500;cursor:pointer;border-radius:7px;border:none;background:#1a6e2e;color:#fff;font-family:Inter,sans-serif">Confirm &amp; Attach Rate</button>
-              </div>
-            </div>
-          </div>
-        </div>
-
         <!-- FEES EDITOR -->
         <div id="fee-editor" style="display:none;margin-top:14px;background:#fff;border:1px solid #e4e8e4;border-radius:10px;padding:16px">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
@@ -1213,6 +1133,243 @@ tr.trow.sel td{background:#eef6e6}
 
         </div><!-- end rates padding wrapper -->
         </div><!-- end rates-sub-rates -->
+
+        <!-- BUILD RATE FULL PAGE -->
+        <div id="rates-sub-build" style="display:none;flex:1;flex-direction:column;overflow-y:auto;background:#f0f4f0">
+          <!-- Top bar -->
+          <div style="background:#fff;border-bottom:1px solid #e4e8e4;padding:12px 20px;display:flex;align-items:center;gap:12px;flex-shrink:0">
+            <button onclick="showRatesSub('rates')" style="display:flex;align-items:center;gap:5px;background:none;border:1px solid #d0d8d0;border-radius:6px;padding:5px 12px;font-size:11px;cursor:pointer;color:#4a5e4a;font-family:Inter,sans-serif">← Back to Rates</button>
+            <div style="flex:1">
+              <div style="font-size:14px;font-weight:700;color:#1a2e1a">Rate Builder</div>
+              <div style="font-size:11px;color:#8a9e8a">Internal profitability analysis — not visible to client</div>
+            </div>
+            <span id="br-profitability-badge" style="font-size:11px;font-weight:600;padding:4px 12px;border-radius:20px;background:#f1f5f9;color:#64748b">No data yet</span>
+            <button onclick="saveBuildRateDraft()" style="padding:7px 16px;font-size:12px;font-weight:500;cursor:pointer;border-radius:7px;border:1px solid #d0d8d0;background:#fff;color:#4a5e4a;font-family:Inter,sans-serif">Save Draft</button>
+            <button onclick="convertToQuote()" style="padding:7px 16px;font-size:12px;font-weight:600;cursor:pointer;border-radius:7px;border:none;background:#1a6e2e;color:#fff;font-family:Inter,sans-serif">Convert to Quote →</button>
+          </div>
+
+          <!-- Two-column body -->
+          <div style="display:grid;grid-template-columns:1fr 340px;gap:16px;padding:20px;min-width:0;box-sizing:border-box;align-items:start">
+
+            <!-- LEFT: Inputs -->
+            <div style="display:flex;flex-direction:column;gap:14px;min-width:0">
+
+              <!-- Card: Shipment Info -->
+              <div style="background:#fff;border:1px solid #e4e8e4;border-radius:10px;padding:16px">
+                <div style="font-size:11px;font-weight:700;color:#1a2e1a;text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">Shipment Info</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                  <div style="grid-column:1/-1">
+                    <label style="font-size:10px;color:#8a9e8a;font-weight:600;display:block;margin-bottom:4px">RFQ / Deal Reference</label>
+                    <select id="br-rfq" onchange="brUpdate()" style="width:100%;background:#fff;border:1px solid #d0d8d0;color:#1a2e1a;font-family:Inter,sans-serif;font-size:12px;padding:8px 10px;border-radius:7px;outline:none;box-sizing:border-box">
+                      <option value="">Select open RFQ...</option>
+                      <option value="RFQ-2604-0040">RFQ-2604-0040 — Grace Benson</option>
+                      <option value="RFQ-2604-0039">RFQ-2604-0039 — Kayode · HAM → LOS</option>
+                      <option value="RFQ-2604-0038">RFQ-2604-0038 — Demir Guzel · IST → LOS</option>
+                      <option value="RFQ-2604-0037">RFQ-2604-0037 — Royal Foam · TAO → APP</option>
+                      <option value="RFQ-2604-0033">RFQ-2604-0033 — Adaeze · APP → RTM</option>
+                      <option value="RFQ-2604-0032">RFQ-2604-0032 — Saro Agro · NGB → APP</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style="font-size:10px;color:#8a9e8a;font-weight:600;display:block;margin-bottom:4px">Origin (POL)</label>
+                    <input id="br-pol" oninput="brUpdate()" placeholder="e.g. Shanghai (CNSHA)" style="width:100%;border:1px solid #d0d8d0;border-radius:7px;padding:8px 10px;font-size:12px;font-family:Inter,sans-serif;color:#1a2e1a;outline:none;box-sizing:border-box">
+                  </div>
+                  <div>
+                    <label style="font-size:10px;color:#8a9e8a;font-weight:600;display:block;margin-bottom:4px">Destination (POD)</label>
+                    <input id="br-pod" oninput="brUpdate()" placeholder="e.g. Apapa (NGAPP)" style="width:100%;border:1px solid #d0d8d0;border-radius:7px;padding:8px 10px;font-size:12px;font-family:Inter,sans-serif;color:#1a2e1a;outline:none;box-sizing:border-box">
+                  </div>
+                  <div>
+                    <label style="font-size:10px;color:#8a9e8a;font-weight:600;display:block;margin-bottom:4px">Container type</label>
+                    <select id="br-ctr" onchange="brUpdate()" style="width:100%;background:#fff;border:1px solid #d0d8d0;color:#1a2e1a;font-family:Inter,sans-serif;font-size:12px;padding:8px 10px;border-radius:7px;outline:none;box-sizing:border-box">
+                      <option value="20FT">20FT</option>
+                      <option value="40FT">40FT</option>
+                      <option value="40HC">40HC</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style="font-size:10px;color:#8a9e8a;font-weight:600;display:block;margin-bottom:4px">Quantity</label>
+                    <input id="br-qty" type="number" min="1" value="1" oninput="brUpdate()" style="width:100%;border:1px solid #d0d8d0;border-radius:7px;padding:8px 10px;font-size:12px;font-family:Inter,sans-serif;color:#1a2e1a;outline:none;box-sizing:border-box">
+                  </div>
+                </div>
+              </div>
+
+              <!-- Card: Services -->
+              <div style="background:#fff;border:1px solid #e4e8e4;border-radius:10px;padding:16px">
+                <div style="font-size:11px;font-weight:700;color:#1a2e1a;text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">Services to include</div>
+                <div style="display:flex;flex-direction:column;gap:8px">
+                  <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #e4e8e4;border-radius:8px;cursor:pointer">
+                    <input type="checkbox" id="br-chk-ocean" onchange="brToggleSections();brUpdate()" style="accent-color:#7AB648;width:14px;height:14px;flex-shrink:0">
+                    <div><div style="font-size:12px;font-weight:500;color:#1a2e1a">Ocean Freight</div><div style="font-size:10px;color:#8a9e8a">Base sea freight from shipping partner / carrier</div></div>
+                  </label>
+                  <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #e4e8e4;border-radius:8px;cursor:pointer">
+                    <input type="checkbox" id="br-chk-origin" onchange="brToggleSections();brUpdate()" style="accent-color:#7AB648;width:14px;height:14px;flex-shrink:0">
+                    <div><div style="font-size:12px;font-weight:500;color:#1a2e1a">Origin Charges</div><div style="font-size:10px;color:#8a9e8a">THC, agency fee, SLC, B/L at origin port</div></div>
+                  </label>
+                  <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #e4e8e4;border-radius:8px;cursor:pointer">
+                    <input type="checkbox" id="br-chk-dest" onchange="brToggleSections();brUpdate()" style="accent-color:#7AB648;width:14px;height:14px;flex-shrink:0">
+                    <div><div style="font-size:12px;font-weight:500;color:#1a2e1a">Destination Charges</div><div style="font-size:10px;color:#8a9e8a">Destination THC, customs clearance, NESS/port levy</div></div>
+                  </label>
+                  <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #e4e8e4;border-radius:8px;cursor:pointer">
+                    <input type="checkbox" id="br-chk-haulage" onchange="brToggleSections();brUpdate()" style="accent-color:#7AB648;width:14px;height:14px;flex-shrink:0">
+                    <div><div style="font-size:12px;font-weight:500;color:#1a2e1a">Haulage / Inland Trucking</div><div style="font-size:10px;color:#8a9e8a">Port to client warehouse delivery</div></div>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Card: Ocean Freight inputs -->
+              <div id="br-sec-ocean" style="display:none;background:#fff;border:1px solid #e4e8e4;border-radius:10px;padding:16px">
+                <div style="font-size:11px;font-weight:700;color:#1a2e1a;text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">Ocean Freight</div>
+                <div style="margin-bottom:10px">
+                  <label style="font-size:10px;color:#8a9e8a;font-weight:600;display:block;margin-bottom:4px">Select from Rate Database</label>
+                  <select id="br-ocean-rate" onchange="brFillOceanFromDB();brUpdate()" style="width:100%;background:#fff;border:1px solid #d0d8d0;color:#1a2e1a;font-family:Inter,sans-serif;font-size:12px;padding:8px 10px;border-radius:7px;outline:none;box-sizing:border-box">
+                    <option value="">— or enter manually below —</option>
+                  </select>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px">
+                  <div>
+                    <label style="font-size:10px;color:#8a9e8a;font-weight:600;display:block;margin-bottom:4px">Carrier</label>
+                    <input id="br-of-carrier" oninput="brUpdate()" placeholder="e.g. MSC" style="width:100%;border:1px solid #d0d8d0;border-radius:6px;padding:7px 8px;font-size:12px;font-family:Inter,sans-serif;color:#1a2e1a;outline:none;box-sizing:border-box">
+                  </div>
+                  <div>
+                    <label style="font-size:10px;color:#8a9e8a;font-weight:600;display:block;margin-bottom:4px">20FT (USD)</label>
+                    <input id="br-of-20" type="number" oninput="brUpdate()" placeholder="0" style="width:100%;border:1px solid #d0d8d0;border-radius:6px;padding:7px 8px;font-size:12px;font-family:Inter,sans-serif;color:#1a2e1a;outline:none;box-sizing:border-box">
+                  </div>
+                  <div>
+                    <label style="font-size:10px;color:#8a9e8a;font-weight:600;display:block;margin-bottom:4px">40FT (USD)</label>
+                    <input id="br-of-40" type="number" oninput="brUpdate()" placeholder="0" style="width:100%;border:1px solid #d0d8d0;border-radius:6px;padding:7px 8px;font-size:12px;font-family:Inter,sans-serif;color:#1a2e1a;outline:none;box-sizing:border-box">
+                  </div>
+                  <div>
+                    <label style="font-size:10px;color:#8a9e8a;font-weight:600;display:block;margin-bottom:4px">40HC (USD)</label>
+                    <input id="br-of-40hc" type="number" oninput="brUpdate()" placeholder="0" style="width:100%;border:1px solid #d0d8d0;border-radius:6px;padding:7px 8px;font-size:12px;font-family:Inter,sans-serif;color:#1a2e1a;outline:none;box-sizing:border-box">
+                  </div>
+                </div>
+              </div>
+
+              <!-- Card: Origin Charges -->
+              <div id="br-sec-origin" style="display:none;background:#fff;border:1px solid #e4e8e4;border-radius:10px;padding:16px">
+                <div style="font-size:11px;font-weight:700;color:#1a2e1a;text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">Origin Charges</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                  <div>
+                    <label style="font-size:10px;color:#8a9e8a;font-weight:600;display:block;margin-bottom:4px">Agency service fee (NGN)</label>
+                    <input id="br-or-agency" type="number" value="120000" oninput="brUpdate()" style="width:100%;border:1px solid #d0d8d0;border-radius:6px;padding:7px 8px;font-size:12px;font-family:Inter,sans-serif;color:#1a2e1a;outline:none;box-sizing:border-box">
+                  </div>
+                  <div>
+                    <label style="font-size:10px;color:#8a9e8a;font-weight:600;display:block;margin-bottom:4px">THC — Terminal Handling (NGN)</label>
+                    <input id="br-or-thc" type="number" value="107000" oninput="brUpdate()" style="width:100%;border:1px solid #d0d8d0;border-radius:6px;padding:7px 8px;font-size:12px;font-family:Inter,sans-serif;color:#1a2e1a;outline:none;box-sizing:border-box">
+                  </div>
+                  <div>
+                    <label style="font-size:10px;color:#8a9e8a;font-weight:600;display:block;margin-bottom:4px">Shipping local charges (NGN)</label>
+                    <input id="br-or-slc" type="number" value="32000" oninput="brUpdate()" style="width:100%;border:1px solid #d0d8d0;border-radius:6px;padding:7px 8px;font-size:12px;font-family:Inter,sans-serif;color:#1a2e1a;outline:none;box-sizing:border-box">
+                  </div>
+                  <div>
+                    <label style="font-size:10px;color:#8a9e8a;font-weight:600;display:block;margin-bottom:4px">B/L release fee (USD)</label>
+                    <input id="br-or-bl" type="number" value="85" oninput="brUpdate()" style="width:100%;border:1px solid #d0d8d0;border-radius:6px;padding:7px 8px;font-size:12px;font-family:Inter,sans-serif;color:#1a2e1a;outline:none;box-sizing:border-box">
+                  </div>
+                </div>
+              </div>
+
+              <!-- Card: Destination Charges -->
+              <div id="br-sec-dest" style="display:none;background:#fff;border:1px solid #e4e8e4;border-radius:10px;padding:16px">
+                <div style="font-size:11px;font-weight:700;color:#1a2e1a;text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">Destination Charges</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+                  <div>
+                    <label style="font-size:10px;color:#8a9e8a;font-weight:600;display:block;margin-bottom:4px">Destination THC (NGN)</label>
+                    <input id="br-de-dthc" type="number" value="45000" oninput="brUpdate()" style="width:100%;border:1px solid #d0d8d0;border-radius:6px;padding:7px 8px;font-size:12px;font-family:Inter,sans-serif;color:#1a2e1a;outline:none;box-sizing:border-box">
+                  </div>
+                  <div>
+                    <label style="font-size:10px;color:#8a9e8a;font-weight:600;display:block;margin-bottom:4px">Customs clearance (NGN)</label>
+                    <input id="br-de-customs" type="number" value="80000" oninput="brUpdate()" style="width:100%;border:1px solid #d0d8d0;border-radius:6px;padding:7px 8px;font-size:12px;font-family:Inter,sans-serif;color:#1a2e1a;outline:none;box-sizing:border-box">
+                  </div>
+                  <div>
+                    <label style="font-size:10px;color:#8a9e8a;font-weight:600;display:block;margin-bottom:4px">Port levy / NESS (NGN)</label>
+                    <input id="br-de-ness" type="number" value="25000" oninput="brUpdate()" style="width:100%;border:1px solid #d0d8d0;border-radius:6px;padding:7px 8px;font-size:12px;font-family:Inter,sans-serif;color:#1a2e1a;outline:none;box-sizing:border-box">
+                  </div>
+                </div>
+              </div>
+
+              <!-- Card: Haulage -->
+              <div id="br-sec-haulage" style="display:none;background:#fff;border:1px solid #e4e8e4;border-radius:10px;padding:16px">
+                <div style="font-size:11px;font-weight:700;color:#1a2e1a;text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">Haulage / Trucking</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:end">
+                  <div>
+                    <label style="font-size:10px;color:#8a9e8a;font-weight:600;display:block;margin-bottom:6px">Preset destination</label>
+                    <div style="display:flex;flex-direction:column;gap:5px">
+                      <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#1a2e1a;cursor:pointer"><input type="radio" name="br-truck" value="850000" onchange="brPickTruck(850000)" checked style="accent-color:#7AB648"> Lagos <span style="margin-left:auto;font-size:11px;font-family:monospace;color:#4a5e4a">₦850,000</span></label>
+                      <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#1a2e1a;cursor:pointer"><input type="radio" name="br-truck" value="1100000" onchange="brPickTruck(1100000)" style="accent-color:#7AB648"> Ibadan <span style="margin-left:auto;font-size:11px;font-family:monospace;color:#4a5e4a">₦1,100,000</span></label>
+                      <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#1a2e1a;cursor:pointer"><input type="radio" name="br-truck" value="1800000" onchange="brPickTruck(1800000)" style="accent-color:#7AB648"> Kano <span style="margin-left:auto;font-size:11px;font-family:monospace;color:#4a5e4a">₦1,800,000</span></label>
+                      <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#1a2e1a;cursor:pointer"><input type="radio" name="br-truck" value="custom" onchange="brPickTruck('custom')" style="accent-color:#7AB648"> Custom amount</label>
+                    </div>
+                  </div>
+                  <div>
+                    <label style="font-size:10px;color:#8a9e8a;font-weight:600;display:block;margin-bottom:4px">Trucking rate (NGN)</label>
+                    <input id="br-ha-custom" type="number" value="850000" oninput="brUpdate()" style="width:100%;border:1px solid #d0d8d0;border-radius:6px;padding:7px 8px;font-size:12px;font-family:Inter,sans-serif;color:#1a2e1a;outline:none;box-sizing:border-box">
+                  </div>
+                </div>
+              </div>
+
+              <!-- Card: Notes -->
+              <div style="background:#fff;border:1px solid #e4e8e4;border-radius:10px;padding:16px">
+                <div style="font-size:11px;font-weight:700;color:#1a2e1a;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Notes &amp; Assumptions</div>
+                <textarea id="br-notes" rows="3" placeholder="e.g. Rate valid until 2026-06-30 · Assumes Lagos delivery · Excludes NAFDAC inspection..." style="width:100%;border:1px solid #d0d8d0;border-radius:7px;padding:9px 10px;font-size:12px;font-family:Inter,sans-serif;color:#1a2e1a;outline:none;resize:vertical;box-sizing:border-box;background:#fafcfa"></textarea>
+              </div>
+
+            </div><!-- end left -->
+
+            <!-- RIGHT: Profitability Analysis (sticky) -->
+            <div style="position:sticky;top:20px;display:flex;flex-direction:column;gap:12px">
+
+              <!-- FX rate input -->
+              <div style="background:#fff;border:1px solid #e4e8e4;border-radius:10px;padding:14px">
+                <div style="font-size:10px;font-weight:700;color:#8a9e8a;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Exchange Rate</div>
+                <div style="display:flex;align-items:center;gap:8px">
+                  <span style="font-size:11px;color:#4a5e4a;white-space:nowrap">USD 1 =</span>
+                  <input id="br-fx" type="number" value="1600" oninput="brUpdate()" style="flex:1;border:1px solid #d0d8d0;border-radius:6px;padding:6px 8px;font-size:12px;font-family:Inter,sans-serif;color:#1a2e1a;outline:none;box-sizing:border-box">
+                  <span style="font-size:11px;color:#4a5e4a">NGN</span>
+                </div>
+              </div>
+
+              <!-- Margin target -->
+              <div style="background:#fff;border:1px solid #e4e8e4;border-radius:10px;padding:14px">
+                <div style="font-size:10px;font-weight:700;color:#8a9e8a;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Target Margin</div>
+                <div style="display:flex;align-items:center;gap:8px">
+                  <input id="br-margin-pct" type="number" value="13" min="0" max="100" oninput="brUpdate()" style="width:64px;border:1px solid #d0d8d0;border-radius:6px;padding:6px 8px;font-size:14px;font-weight:600;font-family:Inter,sans-serif;color:#1a2e1a;outline:none;text-align:center">
+                  <span style="font-size:18px;color:#8a9e8a">%</span>
+                  <span style="font-size:10px;color:#8a9e8a;margin-left:4px">on total cost</span>
+                </div>
+              </div>
+
+              <!-- Cost breakdown -->
+              <div style="background:#fff;border:1px solid #e4e8e4;border-radius:10px;padding:14px">
+                <div style="font-size:10px;font-weight:700;color:#8a9e8a;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">Cost Breakdown <span style="font-size:9px;font-weight:400;text-transform:none">(USD equiv.)</span></div>
+                <div id="br-breakdown-lines" style="font-size:12px;color:#4a5e4a">
+                  <div style="color:#d0d8d0;font-size:11px;text-align:center;padding:12px 0">Select services to see breakdown</div>
+                </div>
+                <div style="border-top:1px solid #e4e8e4;margin-top:8px;padding-top:8px">
+                  <div style="display:flex;justify-content:space-between;font-size:11px;color:#4a5e4a;padding:2px 0"><span>Total cost</span><span id="br-total-cost" style="font-family:monospace;font-weight:600">—</span></div>
+                  <div style="display:flex;justify-content:space-between;font-size:11px;color:#4a5e4a;padding:2px 0"><span id="br-margin-label">Margin</span><span id="br-margin-amt" style="font-family:monospace">—</span></div>
+                </div>
+              </div>
+
+              <!-- Sell price -->
+              <div style="background:#f0f4f0;border:2px solid #7AB648;border-radius:12px;padding:16px;text-align:center">
+                <div style="font-size:11px;color:#5a9132;font-weight:600;margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em">Suggested Sell Price</div>
+                <div id="br-sell-price" style="font-size:28px;font-weight:800;color:#1a6e2e;font-family:monospace">—</div>
+                <div id="br-sell-sub" style="font-size:10px;color:#8a9e8a;margin-top:4px">per container (USD)</div>
+              </div>
+
+              <!-- Profitability metrics -->
+              <div id="br-metrics" style="display:none;background:#fff;border:1px solid #e4e8e4;border-radius:10px;padding:14px">
+                <div style="font-size:10px;font-weight:700;color:#8a9e8a;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">Analysis</div>
+                <div style="display:flex;flex-direction:column;gap:6px;font-size:11px;color:#4a5e4a">
+                  <div style="display:flex;justify-content:space-between"><span>Break-even price</span><span id="br-breakeven" style="font-family:monospace"></span></div>
+                  <div style="display:flex;justify-content:space-between"><span>Gross margin $</span><span id="br-gross" style="font-family:monospace;color:#5a9132"></span></div>
+                  <div style="display:flex;justify-content:space-between"><span>Qty × margin</span><span id="br-total-margin" style="font-family:monospace;font-weight:600;color:#5a9132"></span></div>
+                </div>
+              </div>
+
+            </div><!-- end right -->
+          </div><!-- end grid -->
+        </div><!-- end rates-sub-build -->
 
         <!-- OUTREACH SUB-PANEL — email inbox style -->
         <div id="rates-sub-outreach" style="display:none;flex:1;min-height:0;overflow:hidden">
@@ -2314,11 +2471,11 @@ function editRate(){
 function showAddRate(){ openRateModal(null); }
 
 // ---- Build Rate modal ----
-function showBuildRate(){
-  const m=document.getElementById('build-rate-modal'); if(!m) return;
-  // Populate ocean rate dropdown from DB_RATES
-  const sel=document.getElementById('br-ocean-rate');
-  sel.innerHTML='<option value="">Select a rate from database...</option>';
+function showBuildRate(){ showRatesSub('build'); }
+
+function brInitOceanDropdown(){
+  const sel=document.getElementById('br-ocean-rate'); if(!sel) return;
+  sel.innerHTML='<option value="">— or enter manually below —</option>';
   DB_RATES.forEach(d=>{
     const r=d.rate;
     const pol=r.originPortCode||shortPort(r.pol);
@@ -2327,79 +2484,149 @@ function showBuildRate(){
     const vu=r.validTo?r.validTo.split('T')[0]:null;
     const expired=!vu||vu<today;
     const c20=Number(r.charge20ft||r.freightRate||0);
-    const label=`${r.carrier||'?'} · ${pol}→${pod}${c20?' · $'+c20.toLocaleString():''}${expired?' [Expired]':''}`;
+    const label=`${r.carrier||'?'} · ${pol} → ${pod}${c20?' · $'+c20.toLocaleString():''}${expired?' [Expired]':''}`;
     const opt=document.createElement('option');
     opt.value=r.id; opt.textContent=label;
     sel.appendChild(opt);
   });
-  // Reset state
-  document.getElementById('br-rfq').value='';
-  document.getElementById('br-ocean').checked=false;
-  document.getElementById('br-haulage').checked=false;
-  document.getElementById('br-ocean-section').style.display='none';
-  document.getElementById('br-haulage-section').style.display='none';
-  document.getElementById('br-summary').style.display='none';
-  m.style.display='flex';
 }
 
-function closeBuildRate(){
-  const m=document.getElementById('build-rate-modal'); if(m) m.style.display='none';
+function brToggleSections(){
+  const s=id=>document.getElementById(id);
+  s('br-sec-ocean').style.display  = s('br-chk-ocean').checked   ? 'block':'none';
+  s('br-sec-origin').style.display = s('br-chk-origin').checked  ? 'block':'none';
+  s('br-sec-dest').style.display   = s('br-chk-dest').checked    ? 'block':'none';
+  s('br-sec-haulage').style.display= s('br-chk-haulage').checked ? 'block':'none';
+}
+
+function brPickTruck(val){
+  const inp=document.getElementById('br-ha-custom');
+  if(val!=='custom' && inp) inp.value=val;
+  brUpdate();
+}
+
+function brFillOceanFromDB(){
+  const rateId=Number(document.getElementById('br-ocean-rate').value);
+  if(!rateId) return;
+  const d=DB_RATES.find(x=>x.rate.id===rateId); if(!d) return;
+  const r=d.rate;
+  const _s=id=>document.getElementById(id);
+  _s('br-of-carrier').value=r.carrier||'';
+  _s('br-of-20').value=Number(r.charge20ft||r.freightRate||0)||'';
+  _s('br-of-40').value=Number(r.charge40ft||0)||'';
+  _s('br-of-40hc').value=Number(r.charge40hc||0)||'';
+  if(!_s('br-pol').value) _s('br-pol').value=r.originPortCode||shortPort(r.pol)||'';
+  if(!_s('br-pod').value) _s('br-pod').value=r.destinationPortCode||shortPort(r.pod)||'';
+  brUpdate();
 }
 
 function brUpdate(){
-  const wantOcean=document.getElementById('br-ocean').checked;
-  const wantHaulage=document.getElementById('br-haulage').checked;
-  document.getElementById('br-ocean-section').style.display=wantOcean?'block':'none';
-  document.getElementById('br-haulage-section').style.display=wantHaulage?'block':'none';
+  const _n=id=>{const e=document.getElementById(id);return e?Number(e.value)||0:0;};
+  const _c=id=>{const e=document.getElementById(id);return e?e.checked:false;};
+  const FX=_n('br-fx')||1600;
+  const qty=_n('br-qty')||1;
+  const marginPct=_n('br-margin-pct')||13;
+  const ctr=document.getElementById('br-ctr')?.value||'20FT';
 
   const lines=[];
   let totalUSD=0;
-  const FX=1600;
 
-  if(wantOcean){
-    const rateId=Number(document.getElementById('br-ocean-rate').value);
-    if(rateId){
-      const d=DB_RATES.find(x=>x.rate.id===rateId);
-      if(d){
-        const r=d.rate;
-        const c20=Number(r.charge20ft||r.freightRate||0);
-        const c40=Number(r.charge40ft||0);
-        const c40hc=Number(r.charge40hc||0);
-        if(c20) lines.push(['20FT ocean freight',fmtUSD(c20)]);
-        if(c40) lines.push(['40FT ocean freight',fmtUSD(c40)]);
-        if(c40hc) lines.push(['40HC ocean freight',fmtUSD(c40hc)]);
-        totalUSD+=c20||c40||c40hc;
-      }
-    }
+  // Ocean freight
+  if(_c('br-chk-ocean')){
+    const of20=_n('br-of-20'), of40=_n('br-of-40'), of40hc=_n('br-of-40hc');
+    let oceanUSD=0;
+    if(ctr==='20FT'&&of20){oceanUSD=of20;lines.push(['Ocean freight (20FT)',fmtUSD(of20)]);}
+    else if(ctr==='40FT'&&of40){oceanUSD=of40;lines.push(['Ocean freight (40FT)',fmtUSD(of40)]);}
+    else if(ctr==='40HC'&&of40hc){oceanUSD=of40hc;lines.push(['Ocean freight (40HC)',fmtUSD(of40hc)]);}
+    else if(of20){oceanUSD=of20;lines.push(['Ocean freight',fmtUSD(of20)]);}
+    totalUSD+=oceanUSD;
   }
 
-  if(wantHaulage){
-    const truckVal=Number(document.querySelector('input[name="br-truck"]:checked')?.value||850000);
-    lines.push(['Haulage / Trucking',fmtNGN(truckVal)]);
-    totalUSD+=Math.round(truckVal/FX);
+  // Origin charges
+  if(_c('br-chk-origin')){
+    const agency=_n('br-or-agency'), thc=_n('br-or-thc'), slc=_n('br-or-slc'), bl=_n('br-or-bl');
+    const ngnTotal=agency+thc+slc;
+    if(ngnTotal) lines.push(['Origin charges (NGN)',fmtNGN(ngnTotal)]);
+    if(bl) lines.push(['B/L release',fmtUSD(bl)]);
+    totalUSD+=Math.round(ngnTotal/FX)+bl;
   }
 
-  const hasData=lines.length>0;
-  document.getElementById('br-summary').style.display=hasData?'block':'none';
-  if(hasData){
-    document.getElementById('br-summary-lines').innerHTML=lines.map(([k,v])=>`<div class="fee-row"><span>${k}</span><span class="fee-val">${v}</span></div>`).join('');
-    const margin=Math.round(totalUSD*0.13);
-    document.getElementById('br-total').textContent=fmtUSD(totalUSD)+' (USD equiv.)';
-    document.getElementById('br-margin').textContent=fmtUSD(margin);
-    document.getElementById('br-sell').textContent=fmtUSD(totalUSD+margin);
+  // Destination charges
+  if(_c('br-chk-dest')){
+    const dthc=_n('br-de-dthc'), customs=_n('br-de-customs'), ness=_n('br-de-ness');
+    const ngnDest=dthc+customs+ness;
+    if(ngnDest) lines.push(['Destination charges (NGN)',fmtNGN(ngnDest)]);
+    totalUSD+=Math.round(ngnDest/FX);
+  }
+
+  // Haulage
+  if(_c('br-chk-haulage')){
+    const truckNGN=_n('br-ha-custom');
+    if(truckNGN){ lines.push(['Haulage / Trucking',fmtNGN(truckNGN)]); totalUSD+=Math.round(truckNGN/FX); }
+  }
+
+  const breakdownEl=document.getElementById('br-breakdown-lines');
+  const totalEl=document.getElementById('br-total-cost');
+  const marginEl=document.getElementById('br-margin-amt');
+  const marginLabelEl=document.getElementById('br-margin-label');
+  const sellEl=document.getElementById('br-sell-price');
+  const badge=document.getElementById('br-profitability-badge');
+  const metricsEl=document.getElementById('br-metrics');
+
+  if(!lines.length){
+    if(breakdownEl) breakdownEl.innerHTML='<div style="color:#d0d8d0;font-size:11px;text-align:center;padding:12px 0">Select services to see breakdown</div>';
+    if(totalEl) totalEl.textContent='—';
+    if(marginEl) marginEl.textContent='—';
+    if(sellEl) sellEl.textContent='—';
+    if(badge){badge.textContent='No data yet';badge.style.background='#f1f5f9';badge.style.color='#64748b';}
+    if(metricsEl) metricsEl.style.display='none';
+    return;
+  }
+
+  if(breakdownEl) breakdownEl.innerHTML=lines.map(([k,v])=>`<div class="fee-row"><span>${k}</span><span class="fee-val">${v}</span></div>`).join('');
+  const marginAmt=Math.round(totalUSD*(marginPct/100));
+  const sellPrice=totalUSD+marginAmt;
+  if(totalEl) totalEl.textContent=fmtUSD(totalUSD)+' (per ctr)';
+  if(marginLabelEl) marginLabelEl.textContent=`Margin (${marginPct}%)`;
+  if(marginEl) marginEl.textContent=fmtUSD(marginAmt);
+  if(sellEl) sellEl.textContent=fmtUSD(sellPrice * qty);
+  const sub=document.getElementById('br-sell-sub');
+  if(sub) sub.textContent=qty>1?`${qty} × ${fmtUSD(sellPrice)} per container`:'per container (USD)';
+
+  // Profitability badge
+  let badgeText, badgeBg, badgeColor;
+  if(marginPct>=15){badgeText='Profitable ✓';badgeBg='#dcfce7';badgeColor='#166534';}
+  else if(marginPct>=10){badgeText='Acceptable';badgeBg='#fef9c3';badgeColor='#854d0e';}
+  else if(marginPct>=5){badgeText='Low margin';badgeBg='#ffedd5';badgeColor='#9a3412';}
+  else{badgeText='Not viable';badgeBg='#fee2e2';badgeColor='#991b1b';}
+  if(badge){badge.textContent=badgeText;badge.style.background=badgeBg;badge.style.color=badgeColor;}
+
+  // Metrics
+  if(metricsEl){
+    metricsEl.style.display='block';
+    const beEl=document.getElementById('br-breakeven');
+    const grEl=document.getElementById('br-gross');
+    const tmEl=document.getElementById('br-total-margin');
+    if(beEl) beEl.textContent=fmtUSD(totalUSD);
+    if(grEl) grEl.textContent=fmtUSD(marginAmt);
+    if(tmEl) tmEl.textContent=fmtUSD(marginAmt*qty)+(qty>1?` (${qty} ctrs)`:'');
   }
 }
 
-function confirmBuildRate(){
-  const rfq=document.getElementById('br-rfq').value;
-  if(!rfq){ alert('Please select an RFQ.'); return; }
-  const wantOcean=document.getElementById('br-ocean').checked;
-  const wantHaulage=document.getElementById('br-haulage').checked;
-  if(!wantOcean&&!wantHaulage){ alert('Select at least one service.'); return; }
-  const sell=document.getElementById('br-sell').textContent;
-  closeBuildRate();
-  const c=document.getElementById('attach-confirm');
-  if(c){ c.style.display='block'; c.textContent=`Rate built (${sell}) and attached to ${rfq}`; setTimeout(()=>c.style.display='none',4000); }
+function saveBuildRateDraft(){
+  const rfq=document.getElementById('br-rfq')?.value;
+  const sell=document.getElementById('br-sell-price')?.textContent;
+  if(sell==='—'||!sell){alert('Complete the rate builder before saving.');return;}
+  const msg=rfq?`Draft saved for ${rfq} — Sell price: ${sell}`:`Draft saved — Sell price: ${sell}`;
+  alert(msg);
+}
+
+function convertToQuote(){
+  const rfq=document.getElementById('br-rfq')?.value;
+  const sell=document.getElementById('br-sell-price')?.textContent;
+  if(sell==='—'||!sell){alert('Complete the rate builder before converting to a quote.');return;}
+  if(!rfq){alert('Select an RFQ to attach this quote to.');return;}
+  alert(`Quote prepared for ${rfq}\nSell price: ${sell}\n\n(Quote generation coming soon — this will create a client-facing PDF quote)`);
 }
 
 // ---- Add / Edit Rate modal ----
@@ -2869,19 +3096,25 @@ function showScreen(n) {
 function showRatesSub(tab) {
   const rPanel = document.getElementById('rates-sub-rates');
   const oPanel = document.getElementById('rates-sub-outreach');
+  const bPanel = document.getElementById('rates-sub-build');
   const rTab = document.getElementById('sub-rates');
   const oTab = document.getElementById('sub-outreach');
+  // hide all
+  rPanel.style.display = 'none';
+  oPanel.style.display = 'none';
+  if(bPanel) bPanel.style.display = 'none';
+  // reset tab styles
+  [rTab, oTab].forEach(t=>{ if(t){t.style.color='#8a9e8a';t.style.borderBottomColor='transparent';t.style.fontWeight='500';} });
   if(tab === 'rates') {
     rPanel.style.display = 'flex';
-    oPanel.style.display = 'none';
     rTab.style.color = '#5a9132'; rTab.style.borderBottomColor = '#7AB648'; rTab.style.fontWeight = '600';
-    oTab.style.color = '#8a9e8a'; oTab.style.borderBottomColor = 'transparent'; oTab.style.fontWeight = '500';
     loadDBRates();
+  } else if(tab === 'build') {
+    if(bPanel) bPanel.style.display = 'flex';
+    brInitOceanDropdown();
   } else {
-    rPanel.style.display = 'none';
     oPanel.style.display = 'flex';
     oTab.style.color = '#5a9132'; oTab.style.borderBottomColor = '#7AB648'; oTab.style.fontWeight = '600';
-    rTab.style.color = '#8a9e8a'; rTab.style.borderBottomColor = 'transparent'; rTab.style.fontWeight = '500';
     renderOutreach();
   }
 }
