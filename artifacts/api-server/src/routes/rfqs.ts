@@ -542,21 +542,32 @@ ${cleanBody}
 IMPORTANT: Detect whether the email contains MORE THAN ONE distinct shipment request.
 Signals for multiple shipments: different commodities described separately, different origins/destinations, phrases like "also", "another one", "second item", "one more thing", customer asking about separate pricing, different quantities with different descriptions.
 
+FREIGHT MODE DETECTION — classify each shipment as:
+- "ocean": mentions 20FT / 40FT / 40HC / FCL / LCL / container / TEU / vessel / shipping line / bill of lading / B/L
+- "air": mentions airway bill / AWB / air freight / kg / CBM for air / airline / flight / air cargo / chargeable weight
+- "unknown": insufficient signals
+
+PORT / AIRPORT RESOLUTION — when a city or location is named, identify the primary commercial port/airport and include its LOCODE/IATA code in parentheses:
+- Ocean examples: Hamburg → Hamburg (DEHAM), Lagos/Apapa → Apapa (NGAPP), Rotterdam → Rotterdam (NLRTM), Shanghai → Shanghai (CNSHA), Qingdao → Qingdao (CNTAO), Dubai/Jebel Ali → Jebel Ali (AEJEA), Antwerp → Antwerp (BEANR), Istanbul → Ambarlı (TRIST), Tema/Accra → Tema (GHTEM), Mombasa → Mombasa (KEMBA), Abidjan → Abidjan (CIABJ), Durban → Durban (ZADUR), Cape Town → Cape Town (ZACPT), Port Said → Port Said (EGPSD), Busan → Busan (KRPUS), Singapore → Singapore (SGSIN), Ningbo → Ningbo (CNNGB), Shenzhen/Yantian → Yantian (CNYTN)
+- Air examples: Lagos → Lagos (LOS), Dubai → Dubai (DXB), London → Heathrow (LHR), Frankfurt → Frankfurt (FRA), Hong Kong → Hong Kong (HKG), Shanghai → Pudong (PVG), Nairobi → Nairobi (NBO)
+
 Return ONLY a JSON object with this exact structure — even for a single shipment:
 {
   "shipments": [
     {
-      "label": "<short commodity/route label e.g. 'Cashew nuts · Apapa → Jebel Ali'>",
+      "label": "<short commodity/route label e.g. 'Cashew nuts · Apapa (NGAPP) → Jebel Ali (AEJEA)'>",
+      "freightMode": "ocean" | "air" | "unknown",
       "fields": [
         {"k": "Customer", "v": "<name or 'not specified'>", "ok": true/false},
         {"k": "Company", "v": "<company or 'not specified'>", "ok": true/false},
-        {"k": "POL", "v": "<port of loading with country code if known, or 'not specified'>", "ok": true/false},
-        {"k": "POD", "v": "<port of discharge, or 'not specified'>", "ok": true/false},
+        {"k": "Freight Mode", "v": "Ocean Freight" | "Air Freight" | "Not specified", "ok": true/false},
+        {"k": "POL", "v": "<nearest port/airport with LOCODE/IATA in brackets, e.g. 'Apapa (NGAPP)' or 'not specified'>", "ok": true/false},
+        {"k": "POD", "v": "<nearest port/airport with LOCODE/IATA in brackets, e.g. 'Rotterdam (NLRTM)' or 'not specified'>", "ok": true/false},
         {"k": "Commodity", "v": "<cargo description, or 'not specified'>", "ok": true/false},
-        {"k": "Container", "v": "<type × qty e.g. 20FT × 2, or 'not specified'>", "ok": true/false},
+        {"k": "Container", "v": "<for ocean: type × qty e.g. '20FT × 2'; for air: weight e.g. '1,200 kg / 8.4 CBM'; or 'not specified'>", "ok": true/false},
         {"k": "Cargo class", "v": "<GC or DG Class X.X, or 'not specified'>", "ok": true/false},
         {"k": "Incoterm", "v": "<FOB/EXW/CIF/DDP/etc or 'not specified'>", "ok": true/false},
-        {"k": "Quantity", "v": "<container count or weight/volume, or 'not specified'>", "ok": true/false}
+        {"k": "Quantity", "v": "<container count, pallet count, or weight/volume, or 'not specified'>", "ok": true/false}
       ],
       "missing": ["<question to ask for missing field 1>", ...],
       "draft": null,
@@ -568,7 +579,8 @@ Return ONLY a JSON object with this exact structure — even for a single shipme
 
 Rules:
 - ok=true if the value is actually specified in the email; ok=false if inferred or missing
-- missing[] lists only truly missing critical fields (POL, POD, commodity, container type, incoterm)
+- missing[] lists only truly missing critical fields (POL, POD, commodity, freight mode, container/weight, incoterm)
+- Always resolve city names to the closest commercial port or airport — include the LOCODE (ocean) or IATA code (air) in parentheses
 - If all critical fields are present for a shipment, missing=[] and status="ready" for that shipment
 - combinedDraft should be a warm, professional follow-up from "Commercial Team · OnePort 365"
 - For multiple shipments, combinedDraft must use clearly labelled sections (e.g. "Re: Shipment 1 — Cashew nuts:")

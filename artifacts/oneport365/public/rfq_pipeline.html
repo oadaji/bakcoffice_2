@@ -883,8 +883,14 @@ async function extractRFQ(){
   sbStatus(1,'extracting…',false);
   out(`<div class="lln"><span class="spinner"></span>Parsing RFQ fields…</div>`);
   try{
-    const txt=await ai(`Extract freight RFQ fields. Return ONLY valid JSON no markdown:
-{"customer_name":string|null,"company":string|null,"commodity":string|null,"pol":string|null,"pods":string|null,"container_types":string|null,"cargo_type":"GC"|"DG"|"Reefer"|"Mixed"|null,"incoterm":string|null,"service_type":string|null,"missing":[string]}
+    const txt=await ai(`Extract freight RFQ fields from this email. Return ONLY valid JSON no markdown:
+{"customer_name":string|null,"company":string|null,"commodity":string|null,"freight_mode":"ocean"|"air"|"unknown","pol":string|null,"pol_code":string|null,"pods":string|null,"pod_code":string|null,"container_types":string|null,"cargo_weight_kg":number|null,"cargo_cbm":number|null,"cargo_type":"GC"|"DG"|"Reefer"|"Mixed"|null,"incoterm":string|null,"service_type":string|null,"missing":[string]}
+
+Rules:
+- freight_mode: "ocean" if email mentions 20FT/40FT/40HC/FCL/LCL/container/TEU/vessel/bill of lading; "air" if mentions AWB/airway bill/air freight/kg/CBM for air/airline; else "unknown"
+- pol/pods: resolve city name to nearest port or airport with LOCODE/IATA in parentheses e.g. "Apapa (NGAPP)", "Hamburg (DEHAM)", "Lagos (LOS)", "Dubai (DXB)"
+- pol_code/pod_code: just the 5-char LOCODE or IATA code e.g. "NGAPP", "DEHAM", "LOS"
+- container_types: for ocean e.g. "20FT × 2"; for air leave null and use cargo_weight_kg + cargo_cbm instead
 Email:\n${raw}`);
     S.rfq=JSON.parse(txt.replace(/\`\`\`json|\`\`\`/g,'').trim());
     const r=S.rfq;
@@ -906,11 +912,31 @@ function renderExtracted(r){
   if (podEl) podEl.value = r.pods || '';
   if (ctnEl) ctnEl.value = r.container_types || '';
 
-  const flds=[['Customer',r.customer_name],['Company',r.company],['Commodity',r.commodity],['POL',r.pol],['POD(s)',r.pods],['Container',r.container_types],['Cargo',r.cargo_type],['Incoterm',r.incoterm],['Service',r.service_type]];
-  const pills=flds.filter(f=>f[1]).map(f=>`<span class="pill"><b>${f[0]}</b> ${f[1]}</span>`).join('');
+  // Freight mode badge
+  const mode = r.freight_mode || 'unknown';
+  const modeLabel = mode==='ocean' ? '🚢 Ocean Freight' : mode==='air' ? '✈ Air Freight' : '? Mode unknown';
+  const modeBg    = mode==='ocean' ? '#dcfce7' : mode==='air' ? '#e0f2fe' : '#f1f5f9';
+  const modeColor = mode==='ocean' ? '#1a6e2e' : mode==='air' ? '#0369a1' : '#64748b';
+  const modeBadgeHtml = `<div style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;background:${modeBg};border-radius:6px;font-size:11px;font-weight:700;color:${modeColor};margin-bottom:8px">${modeLabel}</div>`;
+
+  // Build air vs ocean specific pills
+  const airInfoPills = (mode==='air' && (r.cargo_weight_kg||r.cargo_cbm))
+    ? [['Weight', r.cargo_weight_kg ? r.cargo_weight_kg+'kg' : null], ['Volume', r.cargo_cbm ? r.cargo_cbm+' CBM' : null]].filter(f=>f[1])
+    : [];
+
+  const flds=[['Customer',r.customer_name],['Company',r.company],['Commodity',r.commodity],['POL',r.pol],['POD(s)',r.pods],
+    ...(mode==='air' ? airInfoPills : [['Container',r.container_types]]),
+    ['Cargo',r.cargo_type],['Incoterm',r.incoterm],['Service',r.service_type]];
+
+  const pills=flds.filter(f=>f[1]).map(([k,v])=>{
+    // highlight port codes
+    const disp = (k==='POL'||k==='POD(s)') ? v.replace(/\(([A-Z]{2,5})\)/g,'(<b>$1</b>)') : v;
+    return `<span class="pill"><b>${k}</b> ${disp}</span>`;
+  }).join('');
   const miss=r.missing?.length?`<div class="warn-ln" style="margin-top:6px">Missing: ${r.missing.join(', ')}</div>`:'';
   document.getElementById('obadge').textContent=`${flds.filter(f=>f[1]).length} fields`;
   out(`<div>
+    ${modeBadgeHtml}
     <div class="slbl" style="margin-bottom:6px">Fields extracted</div>
     <div style="line-height:2.2">${pills}</div>
     ${miss}

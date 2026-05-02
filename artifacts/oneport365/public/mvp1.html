@@ -1156,7 +1156,14 @@ tr.trow.sel td{background:#eef6e6}
 
               <!-- Card: Shipment Info -->
               <div style="background:#fff;border:1px solid #e4e8e4;border-radius:10px;padding:16px">
-                <div style="font-size:11px;font-weight:700;color:#1a2e1a;text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">Shipment Info</div>
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+                  <div style="font-size:11px;font-weight:700;color:#1a2e1a;text-transform:uppercase;letter-spacing:.06em">Shipment Info</div>
+                  <!-- Freight mode toggle -->
+                  <div style="display:flex;gap:2px;background:#f0f4f0;border-radius:7px;padding:3px">
+                    <button id="br-mode-ocean" onclick="brSetMode('ocean')" style="padding:4px 12px;font-size:11px;font-weight:600;border:none;border-radius:5px;cursor:pointer;background:#1a6e2e;color:#fff;font-family:Inter,sans-serif;transition:all .15s">🚢 Ocean</button>
+                    <button id="br-mode-air" onclick="brSetMode('air')" style="padding:4px 12px;font-size:11px;font-weight:600;border:none;border-radius:5px;cursor:pointer;background:transparent;color:#8a9e8a;font-family:Inter,sans-serif;transition:all .15s">✈ Air</button>
+                  </div>
+                </div>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
                   <div style="grid-column:1/-1">
                     <label style="font-size:10px;color:#8a9e8a;font-weight:600;display:block;margin-bottom:4px">RFQ / Deal Reference</label>
@@ -1171,14 +1178,17 @@ tr.trow.sel td{background:#eef6e6}
                     </select>
                   </div>
                   <div>
-                    <label style="font-size:10px;color:#8a9e8a;font-weight:600;display:block;margin-bottom:4px">Origin (POL)</label>
-                    <input id="br-pol" oninput="brUpdate()" placeholder="e.g. Shanghai (CNSHA)" style="width:100%;border:1px solid #d0d8d0;border-radius:7px;padding:8px 10px;font-size:12px;font-family:Inter,sans-serif;color:#1a2e1a;outline:none;box-sizing:border-box">
+                    <label style="font-size:10px;color:#8a9e8a;font-weight:600;display:block;margin-bottom:4px" id="br-pol-lbl">Origin Port (POL)</label>
+                    <input id="br-pol" oninput="brPortInput('br-pol','br-pol-suggest',this.value);brUpdate()" placeholder="e.g. Shanghai or Hamburg" style="width:100%;border:1px solid #d0d8d0;border-radius:7px;padding:8px 10px;font-size:12px;font-family:Inter,sans-serif;color:#1a2e1a;outline:none;box-sizing:border-box">
+                    <div id="br-pol-suggest" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px"></div>
                   </div>
                   <div>
-                    <label style="font-size:10px;color:#8a9e8a;font-weight:600;display:block;margin-bottom:4px">Destination (POD)</label>
-                    <input id="br-pod" oninput="brUpdate()" placeholder="e.g. Apapa (NGAPP)" style="width:100%;border:1px solid #d0d8d0;border-radius:7px;padding:8px 10px;font-size:12px;font-family:Inter,sans-serif;color:#1a2e1a;outline:none;box-sizing:border-box">
+                    <label style="font-size:10px;color:#8a9e8a;font-weight:600;display:block;margin-bottom:4px" id="br-pod-lbl">Destination Port (POD)</label>
+                    <input id="br-pod" oninput="brPortInput('br-pod','br-pod-suggest',this.value);brUpdate()" placeholder="e.g. Apapa or Rotterdam" style="width:100%;border:1px solid #d0d8d0;border-radius:7px;padding:8px 10px;font-size:12px;font-family:Inter,sans-serif;color:#1a2e1a;outline:none;box-sizing:border-box">
+                    <div id="br-pod-suggest" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px"></div>
                   </div>
-                  <div>
+                  <!-- Ocean: container type + qty -->
+                  <div id="br-ocean-ctr-wrap">
                     <label style="font-size:10px;color:#8a9e8a;font-weight:600;display:block;margin-bottom:4px">Container type</label>
                     <select id="br-ctr" onchange="brUpdate()" style="width:100%;background:#fff;border:1px solid #d0d8d0;color:#1a2e1a;font-family:Inter,sans-serif;font-size:12px;padding:8px 10px;border-radius:7px;outline:none;box-sizing:border-box">
                       <option value="20FT">20FT</option>
@@ -1187,8 +1197,25 @@ tr.trow.sel td{background:#eef6e6}
                     </select>
                   </div>
                   <div>
-                    <label style="font-size:10px;color:#8a9e8a;font-weight:600;display:block;margin-bottom:4px">Quantity</label>
+                    <label style="font-size:10px;color:#8a9e8a;font-weight:600;display:block;margin-bottom:4px" id="br-qty-lbl">Quantity</label>
                     <input id="br-qty" type="number" min="1" value="1" oninput="brUpdate()" style="width:100%;border:1px solid #d0d8d0;border-radius:7px;padding:8px 10px;font-size:12px;font-family:Inter,sans-serif;color:#1a2e1a;outline:none;box-sizing:border-box">
+                  </div>
+                  <!-- Air: weight + CBM (hidden by default) -->
+                  <div id="br-air-wrap" style="display:none;grid-column:1/-1;display:none">
+                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+                      <div>
+                        <label style="font-size:10px;color:#8a9e8a;font-weight:600;display:block;margin-bottom:4px">Gross weight (kg)</label>
+                        <input id="br-air-kg" type="number" oninput="brUpdate()" placeholder="0" style="width:100%;border:1px solid #d0d8d0;border-radius:6px;padding:7px 8px;font-size:12px;font-family:Inter,sans-serif;color:#1a2e1a;outline:none;box-sizing:border-box">
+                      </div>
+                      <div>
+                        <label style="font-size:10px;color:#8a9e8a;font-weight:600;display:block;margin-bottom:4px">Volume (CBM)</label>
+                        <input id="br-air-cbm" type="number" step="0.01" oninput="brUpdate()" placeholder="0.00" style="width:100%;border:1px solid #d0d8d0;border-radius:6px;padding:7px 8px;font-size:12px;font-family:Inter,sans-serif;color:#1a2e1a;outline:none;box-sizing:border-box">
+                      </div>
+                      <div>
+                        <label style="font-size:10px;color:#8a9e8a;font-weight:600;display:block;margin-bottom:4px">Chargeable wt (kg)</label>
+                        <input id="br-air-chg" type="number" oninput="brUpdate()" placeholder="auto" style="width:100%;border:1px solid #d0d8d0;border-radius:6px;padding:7px 8px;font-size:12px;font-family:Inter,sans-serif;color:#1a2e1a;outline:none;box-sizing:border-box;background:#fafcfa">
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1199,7 +1226,7 @@ tr.trow.sel td{background:#eef6e6}
                 <div style="display:flex;flex-direction:column;gap:8px">
                   <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #e4e8e4;border-radius:8px;cursor:pointer">
                     <input type="checkbox" id="br-chk-ocean" onchange="brToggleSections();brUpdate()" style="accent-color:#7AB648;width:14px;height:14px;flex-shrink:0">
-                    <div><div style="font-size:12px;font-weight:500;color:#1a2e1a">Ocean Freight</div><div style="font-size:10px;color:#8a9e8a">Base sea freight from shipping partner / carrier</div></div>
+                    <div><div id="br-svc-ocean-lbl" style="font-size:12px;font-weight:500;color:#1a2e1a">Ocean Freight</div><div id="br-svc-ocean-sub" style="font-size:10px;color:#8a9e8a">Base sea freight from shipping partner / carrier</div></div>
                   </label>
                   <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #e4e8e4;border-radius:8px;cursor:pointer">
                     <input type="checkbox" id="br-chk-origin" onchange="brToggleSections();brUpdate()" style="accent-color:#7AB648;width:14px;height:14px;flex-shrink:0">
@@ -2226,6 +2253,173 @@ function shortPort(s){if(!s)return'';return s.split(',')[0].trim();}
 function fmtUSD(n){return '$'+Number(n).toLocaleString();}
 function fmtNGN(n){return '\u20A6'+Number(n).toLocaleString();}
 
+// ── PORT / AIRPORT LOOKUP DATABASE ──────────────────────────────────────────
+const PORT_DB = [
+  // Nigeria
+  {k:['apapa','lagos port','ngapp'],code:'NGAPP',name:'Apapa, Lagos',country:'NG'},
+  {k:['tin can','tincan','ngtcn'],code:'NGTCN',name:'Tin Can Island, Lagos',country:'NG'},
+  {k:['onne','ngone','port harcourt port'],code:'NGONE',name:'Onne, Port Harcourt',country:'NG'},
+  {k:['warri','ngwri'],code:'NGWRI',name:'Warri',country:'NG'},
+  // China
+  {k:['shanghai','cnsha'],code:'CNSHA',name:'Shanghai',country:'CN'},
+  {k:['shenzhen','yantian','cnytn'],code:'CNYTN',name:'Yantian, Shenzhen',country:'CN'},
+  {k:['qingdao','cntao'],code:'CNTAO',name:'Qingdao',country:'CN'},
+  {k:['ningbo','cnngb'],code:'CNNGB',name:'Ningbo',country:'CN'},
+  {k:['guangzhou','nansha'],code:'CNNSA',name:'Nansha, Guangzhou',country:'CN'},
+  {k:['tianjin','cntxg'],code:'CNTXG',name:'Tianjin',country:'CN'},
+  {k:['xiamen','cnxmn'],code:'CNXMN',name:'Xiamen',country:'CN'},
+  {k:['dalian','cndlc'],code:'CNDLC',name:'Dalian',country:'CN'},
+  // Germany
+  {k:['hamburg','deham'],code:'DEHAM',name:'Hamburg',country:'DE'},
+  {k:['bremerhaven','bremen','debrv'],code:'DEBRV',name:'Bremerhaven',country:'DE'},
+  // Netherlands
+  {k:['rotterdam','nlrtm'],code:'NLRTM',name:'Rotterdam',country:'NL'},
+  // Belgium
+  {k:['antwerp','beanr'],code:'BEANR',name:'Antwerp',country:'BE'},
+  // UK
+  {k:['felixstowe','gbfxt'],code:'GBFXT',name:'Felixstowe',country:'GB'},
+  {k:['southampton','gbsou'],code:'GBSOU',name:'Southampton',country:'GB'},
+  {k:['london gateway','tilbury','gblgp'],code:'GBLGP',name:'London Gateway',country:'GB'},
+  // Turkey
+  {k:['istanbul','ambarli','ambarlı','trist'],code:'TRIST',name:'Ambarlı, Istanbul',country:'TR'},
+  {k:['mersin','trmer'],code:'TRMER',name:'Mersin',country:'TR'},
+  {k:['izmir','trizm'],code:'TRIZM',name:'İzmir',country:'TR'},
+  // UAE
+  {k:['jebel ali','dubai','aejea'],code:'AEJEA',name:'Jebel Ali, Dubai',country:'AE'},
+  // Egypt
+  {k:['port said','egpsd'],code:'EGPSD',name:'Port Said',country:'EG'},
+  {k:['alexandria','egaly'],code:'EGALY',name:'Alexandria',country:'EG'},
+  // South Africa
+  {k:['durban','zadur'],code:'ZADUR',name:'Durban',country:'ZA'},
+  {k:['cape town','zacpt'],code:'ZACPT',name:'Cape Town',country:'ZA'},
+  // West Africa
+  {k:['tema','accra','ghtem'],code:'GHTEM',name:'Tema, Accra',country:'GH'},
+  {k:['mombasa','kemba'],code:'KEMBA',name:'Mombasa',country:'KE'},
+  {k:['abidjan','ciabj'],code:'CIABJ',name:'Abidjan',country:'CI'},
+  {k:['lomé','lome','tglfe'],code:'TGLFE',name:'Lomé',country:'TG'},
+  {k:['dakar','sndkr'],code:'SNDKR',name:'Dakar',country:'SN'},
+  {k:['casablanca','macas'],code:'MACAS',name:'Casablanca',country:'MA'},
+  {k:['tanger med','tangier','matnj'],code:'MATNJ',name:'Tanger Med',country:'MA'},
+  {k:['dar es salaam','tzdrs'],code:'TZDRS',name:'Dar es Salaam',country:'TZ'},
+  // France
+  {k:['le havre','havre','frleh'],code:'FRLEH',name:'Le Havre',country:'FR'},
+  {k:['marseille','frmrs'],code:'FRMRS',name:'Marseille',country:'FR'},
+  // Spain
+  {k:['algeciras','esalg'],code:'ESALG',name:'Algeciras',country:'ES'},
+  {k:['valencia','esvlc'],code:'ESVLC',name:'Valencia',country:'ES'},
+  {k:['barcelona','esbcn'],code:'ESBCN',name:'Barcelona',country:'ES'},
+  // Italy
+  {k:['genoa','genova','itgoa'],code:'ITGOA',name:'Genoa',country:'IT'},
+  {k:['la spezia','itlsp'],code:'ITLSP',name:'La Spezia',country:'IT'},
+  {k:['naples','napoli','itnap'],code:'ITNAP',name:'Naples',country:'IT'},
+  // Greece
+  {k:['piraeus','athens','grpir'],code:'GRPIR',name:'Piraeus',country:'GR'},
+  // Singapore
+  {k:['singapore','sgsin'],code:'SGSIN',name:'Singapore',country:'SG'},
+  // Malaysia
+  {k:['port klang','klang','mypkg'],code:'MYPKG',name:'Port Klang',country:'MY'},
+  // India
+  {k:['nhava sheva','jnpt','mumbai','injai'],code:'INJAI',name:'JNPT / Nhava Sheva',country:'IN'},
+  {k:['chennai','madras','inmaa'],code:'INMAA',name:'Chennai',country:'IN'},
+  {k:['mundra','inmun'],code:'INMUN',name:'Mundra',country:'IN'},
+  // Pakistan
+  {k:['karachi','pkkar'],code:'PKKAR',name:'Karachi',country:'PK'},
+  // Sri Lanka
+  {k:['colombo','lkcmb'],code:'LKCMB',name:'Colombo',country:'LK'},
+  // Vietnam
+  {k:['ho chi minh','saigon','vnsgn'],code:'VNSGN',name:'Ho Chi Minh City',country:'VN'},
+  {k:['haiphong','vnhph'],code:'VNHPH',name:'Hai Phong',country:'VN'},
+  // Thailand
+  {k:['laem chabang','bangkok','thlch'],code:'THLCH',name:'Laem Chabang',country:'TH'},
+  // Indonesia
+  {k:['tanjung priok','jakarta','idjkt'],code:'IDJKT',name:'Tanjung Priok, Jakarta',country:'ID'},
+  // Hong Kong
+  {k:['hong kong','hkhkg'],code:'HKHKG',name:'Hong Kong',country:'HK'},
+  // Taiwan
+  {k:['kaohsiung','twkhh'],code:'TWKHH',name:'Kaohsiung',country:'TW'},
+  // South Korea
+  {k:['busan','pusan','krpus'],code:'KRPUS',name:'Busan',country:'KR'},
+  // Japan
+  {k:['yokohama','tokyo','jpyok'],code:'JPYOK',name:'Yokohama',country:'JP'},
+  {k:['osaka','kobe','jposa'],code:'JPOSA',name:'Osaka',country:'JP'},
+  // Middle East
+  {k:['jeddah','sajed'],code:'SAJED',name:'Jeddah',country:'SA'},
+  {k:['dammam','sazul'],code:'SAZUL',name:'Dammam',country:'SA'},
+  {k:['haifa','ilhfa'],code:'ILHFA',name:'Haifa',country:'IL'},
+  // Americas
+  {k:['santos','brssz'],code:'BRSSZ',name:'Santos',country:'BR'},
+  {k:['buenos aires','arbue'],code:'ARBUE',name:'Buenos Aires',country:'AR'},
+  {k:['new york','newark','usnyc'],code:'USNYC',name:'New York / Newark',country:'US'},
+  {k:['long beach','los angeles','uslgb'],code:'USLGB',name:'Long Beach / LA',country:'US'},
+  {k:['houston','ushou'],code:'USHOU',name:'Houston',country:'US'},
+  {k:['savannah','ussav'],code:'USSAV',name:'Savannah',country:'US'},
+];
+
+const AIRPORT_DB = [
+  {k:['lagos','los','murtala'],code:'LOS',name:'Lagos Murtala Muhammed',country:'NG'},
+  {k:['abuja','abv'],code:'ABV',name:'Abuja Nnamdi Azikiwe',country:'NG'},
+  {k:['kano','kan'],code:'KAN',name:'Kano Mallam Aminu',country:'NG'},
+  {k:['dubai','dxb'],code:'DXB',name:'Dubai International',country:'AE'},
+  {k:['london','heathrow','lhr'],code:'LHR',name:'London Heathrow',country:'GB'},
+  {k:['frankfurt','fra'],code:'FRA',name:'Frankfurt Airport',country:'DE'},
+  {k:['paris','cdg','charles de gaulle'],code:'CDG',name:'Paris Charles de Gaulle',country:'FR'},
+  {k:['amsterdam','schiphol','ams'],code:'AMS',name:'Amsterdam Schiphol',country:'NL'},
+  {k:['new york','jfk'],code:'JFK',name:'New York JFK',country:'US'},
+  {k:['hong kong','hkg'],code:'HKG',name:'Hong Kong International',country:'HK'},
+  {k:['shanghai','pudong','pvg'],code:'PVG',name:'Shanghai Pudong',country:'CN'},
+  {k:['beijing','pek'],code:'PEK',name:'Beijing Capital',country:'CN'},
+  {k:['singapore','changi','sin'],code:'SIN',name:'Singapore Changi',country:'SG'},
+  {k:['istanbul','ist'],code:'IST',name:'Istanbul Airport',country:'TR'},
+  {k:['nairobi','nbo','jkia'],code:'NBO',name:'Nairobi Jomo Kenyatta',country:'KE'},
+  {k:['accra','acc','kotoka'],code:'ACC',name:'Accra Kotoka',country:'GH'},
+  {k:['johannesburg','jnb','tambo'],code:'JNB',name:'Johannesburg OR Tambo',country:'ZA'},
+  {k:['cairo','cai'],code:'CAI',name:'Cairo International',country:'EG'},
+  {k:['addis ababa','add','bole'],code:'ADD',name:'Addis Ababa Bole',country:'ET'},
+  {k:['doha','doh','hamad'],code:'DOH',name:'Doha Hamad International',country:'QA'},
+  {k:['guangzhou','can'],code:'CAN',name:'Guangzhou Baiyun',country:'CN'},
+  {k:['kuala lumpur','kul'],code:'KUL',name:'Kuala Lumpur International',country:'MY'},
+  {k:['mumbai','bom'],code:'BOM',name:'Mumbai Chhatrapati Shivaji',country:'IN'},
+];
+
+// Look up port or airport by fuzzy keyword match
+function resolvePort(text, mode) {
+  if(!text) return null;
+  const t = text.toLowerCase().trim();
+  const db = (mode === 'air') ? AIRPORT_DB : PORT_DB;
+  return db.find(p => p.k.some(kw => t.includes(kw))) || null;
+}
+
+// Return suggestion chips for a typed port string (both ocean and air)
+function portSuggest(text) {
+  if(!text || text.length < 2) return [];
+  const t = text.toLowerCase().trim();
+  const hits = [];
+  for(const p of PORT_DB) {
+    if(p.k.some(kw => kw.includes(t) || t.includes(kw))) { hits.push({...p, mode:'ocean'}); if(hits.length>=4) break; }
+  }
+  return hits;
+}
+
+// Show autocomplete suggestion bar under a port input
+function brPortInput(inputId, suggestId, val) {
+  const el = document.getElementById(suggestId);
+  if(!el) return;
+  if(!val || val.length < 2) { el.innerHTML=''; return; }
+  const hits = portSuggest(val);
+  if(!hits.length) { el.innerHTML=''; return; }
+  el.innerHTML = hits.map(p =>
+    `<span onclick="brPickPort('${inputId}','${escAttr(p.name+' ('+p.code+')')}','${suggestId}')" style="display:inline-flex;align-items:center;gap:4px;background:#f0f4f0;border:1px solid #c8d8c8;border-radius:4px;padding:3px 8px;font-size:10px;cursor:pointer;color:#1a6e2e;white-space:nowrap" title="${p.country}">
+      🚢 ${p.name} <span style="font-family:monospace;color:#5a9132">${p.code}</span>
+    </span>`
+  ).join('');
+}
+function escAttr(s){ return s.replace(/'/g,"\\'"); }
+function brPickPort(inputId, val, suggestId){
+  const el=document.getElementById(inputId); if(el) el.value=val;
+  const sg=document.getElementById(suggestId); if(sg) sg.innerHTML='';
+  brUpdate();
+}
+
 function filterRateType(type){
   activeRateType=type;
   const tabMap={'ocean':'contract','inhaulage':'spot','other':'local'};
@@ -2471,7 +2665,56 @@ function editRate(){
 function showAddRate(){ openRateModal(null); }
 
 // ---- Build Rate modal ----
+let BR_MODE = 'ocean'; // 'ocean' | 'air'
+
 function showBuildRate(){ showRatesSub('build'); }
+
+function brSetMode(mode) {
+  BR_MODE = mode;
+  const oceanBtn = document.getElementById('br-mode-ocean');
+  const airBtn   = document.getElementById('br-mode-air');
+  if(oceanBtn){ oceanBtn.style.background = mode==='ocean'?'#1a6e2e':'transparent'; oceanBtn.style.color = mode==='ocean'?'#fff':'#8a9e8a'; }
+  if(airBtn)  { airBtn.style.background   = mode==='air'  ?'#0369a1':'transparent'; airBtn.style.color   = mode==='air'  ?'#fff':'#8a9e8a'; }
+
+  const polLbl  = document.getElementById('br-pol-lbl');
+  const podLbl  = document.getElementById('br-pod-lbl');
+  const ctrWrap = document.getElementById('br-ocean-ctr-wrap');
+  const airWrap = document.getElementById('br-air-wrap');
+  const qtyLbl  = document.getElementById('br-qty-lbl');
+  const svcOceanLbl = document.getElementById('br-svc-ocean-lbl');
+  const svcOceanSub = document.getElementById('br-svc-ocean-sub');
+  const secOcean    = document.getElementById('br-sec-ocean');
+  const secHaulage  = document.getElementById('br-sec-haulage');
+  const chkHaulage  = document.getElementById('br-chk-haulage');
+
+  if(mode === 'air') {
+    if(polLbl) polLbl.textContent = 'Origin Airport';
+    if(podLbl) podLbl.textContent = 'Destination Airport';
+    if(ctrWrap) ctrWrap.style.display = 'none';
+    if(airWrap) airWrap.style.display = 'block';
+    if(qtyLbl) qtyLbl.textContent = 'Number of shipments';
+    if(svcOceanLbl) svcOceanLbl.textContent = 'Air Freight Rate';
+    if(svcOceanSub) svcOceanSub.textContent = 'Rate per kg / chargeable weight from airline or GSSA';
+    // hide haulage for air (usually not bundled)
+    if(chkHaulage && chkHaulage.checked){ chkHaulage.checked=false; brToggleSections(); }
+  } else {
+    if(polLbl) polLbl.textContent = 'Origin Port (POL)';
+    if(podLbl) podLbl.textContent = 'Destination Port (POD)';
+    if(ctrWrap) ctrWrap.style.display = '';
+    if(airWrap) airWrap.style.display = 'none';
+    if(qtyLbl) qtyLbl.textContent = 'Quantity';
+    if(svcOceanLbl) svcOceanLbl.textContent = 'Ocean Freight';
+    if(svcOceanSub) svcOceanSub.textContent = 'Base sea freight from shipping partner / carrier';
+    if(secOcean && !document.getElementById('br-chk-ocean')?.checked) { if(secOcean) secOcean.style.display='none'; }
+  }
+
+  // Refresh port suggest labels
+  const polVal = document.getElementById('br-pol')?.value || '';
+  const podVal = document.getElementById('br-pod')?.value || '';
+  if(polVal) brPortInput('br-pol','br-pol-suggest', polVal);
+  if(podVal) brPortInput('br-pod','br-pod-suggest', podVal);
+  brUpdate();
+}
 
 function brInitOceanDropdown(){
   const sel=document.getElementById('br-ocean-rate'); if(!sel) return;
@@ -3826,13 +4069,32 @@ function renderExtraction(r) {
     else epTitle.textContent = 'Extracted details';
   }
 
-  // Fields
-  document.getElementById('ep-fields').innerHTML = fields.map(f =>
-    `<div class="ep-field">
+  // Fields — detect and surface freight mode prominently
+  const freightModeField = fields.find(f => f.k === 'Freight Mode');
+  const otherFields = fields.filter(f => f.k !== 'Freight Mode');
+  let modeBadge = '';
+  if (freightModeField) {
+    const isAir = freightModeField.v.toLowerCase().includes('air');
+    const isOcean = freightModeField.v.toLowerCase().includes('ocean');
+    const modeColor = isAir ? '#0369a1' : isOcean ? '#1a6e2e' : '#64748b';
+    const modeBg    = isAir ? '#e0f2fe' : isOcean ? '#dcfce7'  : '#f1f5f9';
+    const modeIcon  = isAir ? '✈' : isOcean ? '🚢' : '?';
+    modeBadge = `<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;padding:7px 10px;background:${modeBg};border-radius:8px;border:1px solid ${modeColor}22">
+      <span style="font-size:14px">${modeIcon}</span>
+      <span style="font-size:12px;font-weight:700;color:${modeColor}">${freightModeField.v}</span>
+      ${freightModeField.ok ? '<span style="font-size:10px;color:'+modeColor+';margin-left:auto">detected ✓</span>' : '<span style="font-size:10px;color:#8a9e8a;margin-left:auto">inferred</span>'}
+    </div>`;
+  }
+  document.getElementById('ep-fields').innerHTML = modeBadge + otherFields.map(f => {
+    // highlight port codes in POL/POD values
+    const val = (f.k === 'POL' || f.k === 'POD')
+      ? escHtml(f.v).replace(/\(([A-Z]{2,5})\)/g, '(<span style="font-family:monospace;color:#1a6e2e;font-weight:700">$1</span>)')
+      : escHtml(f.v);
+    return `<div class="ep-field">
       <span class="ep-key">${escHtml(f.k)}</span>
-      <span class="ep-val ${f.ok?'':'miss'}">${f.ok?'<span class="ep-ok">✓</span>':''} ${escHtml(f.v)}</span>
-    </div>`
-  ).join('');
+      <span class="ep-val ${f.ok?'':'miss'}">${f.ok?'<span class="ep-ok">✓</span>':''} ${val}</span>
+    </div>`;
+  }).join('');
 
   // Missing / action needed
   const mw = document.getElementById('ep-missing-wrap');
