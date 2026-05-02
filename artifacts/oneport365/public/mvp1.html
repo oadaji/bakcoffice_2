@@ -113,6 +113,50 @@ html,body{height:100%;background:#f0f4f0;color:#1a1a1a;font-family:'Inter',sans-
 .ep-draft:focus{border-color:var(--accent);background:#fff}
 .ep-timer{font-size:10px;color:var(--warn);background:#fffbeb;padding:2px 7px;border-radius:4px;font-weight:500}
 .ep-timer.sent{color:#166534;background:#dcfce7}
+
+/* RATES PANEL */
+.rate-card{background:#fff;border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:7px}
+.rate-card-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px}
+.rate-price{font-size:15px;font-weight:700;color:var(--accent-dark)}
+.rate-carrier{font-size:10px;color:var(--text3);margin-top:1px}
+.rate-route{font-size:10px;color:var(--text2);margin-bottom:3px;line-height:1.4}
+.rate-actions{display:flex;gap:6px;margin-top:8px}
+.rate-no-results{text-align:center;padding:16px 8px;color:var(--text3);font-size:11px}
+
+/* PARTNERS MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;display:flex;align-items:center;justify-content:center}
+.modal-box{background:#fff;border-radius:14px;box-shadow:0 8px 40px rgba(0,0,0,.2);width:660px;max-width:96vw;max-height:88vh;display:flex;flex-direction:column;overflow:hidden}
+.modal-hd{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.modal-title{font-size:15px;font-weight:600;color:var(--text)}
+.modal-body{flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:0}
+.modal-close{background:none;border:none;font-size:18px;cursor:pointer;color:var(--text3);padding:2px 6px;border-radius:4px}
+.modal-close:hover{background:#f3f4f6;color:var(--text)}
+.partner-row{display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)}
+.partner-row:last-child{border-bottom:none}
+.partner-info{flex:1;min-width:0}
+.partner-name{font-size:13px;font-weight:600;color:var(--text)}
+.partner-email{font-size:11px;color:var(--text3);margin-top:2px}
+.partner-cats{margin-top:5px;display:flex;flex-wrap:wrap;gap:3px}
+.cat-chip{font-size:10px;padding:2px 8px;border-radius:10px;background:#dbeafe;color:#1e40af;font-weight:500}
+.cat-chip.air{background:#ede9fe;color:#6d28d9}
+.cat-chip.lcl{background:#dcfce7;color:#166534}
+.cat-chip.roro{background:#fef3c7;color:#92400e}
+.cat-chip.reefer{background:#dbeafe;color:#1e3a8a}
+.cat-chip.dg{background:#fee2e2;color:#991b1b}
+.modal-add-form{margin-top:16px;padding-top:16px;border-top:1px solid var(--border)}
+.modal-add-title{font-size:12px;font-weight:600;color:var(--text2);margin-bottom:10px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.form-field{display:flex;flex-direction:column;gap:3px}
+.form-label{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.04em}
+.form-input{border:1px solid var(--border2);border-radius:6px;padding:6px 9px;font-size:12px;font-family:Inter,sans-serif;color:var(--text);outline:none;background:#fff}
+.form-input:focus{border-color:var(--accent)}
+.cat-toggle{display:flex;flex-wrap:wrap;gap:5px;margin-top:2px}
+.cat-toggle-btn{font-size:10px;padding:3px 9px;border-radius:10px;border:1px solid var(--border2);background:#f8faf8;cursor:pointer;color:var(--text2);font-weight:500;transition:all .12s}
+.cat-toggle-btn.on{background:#dbeafe;color:#1e40af;border-color:#bfdbfe}
+.rates-add-form{margin-top:14px;padding-top:14px;border-top:1px solid var(--border)}
+.partner-modal-tabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:12px;flex-shrink:0}
+.pm-tab{padding:8px 16px;font-size:12px;font-weight:500;color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .12s}
+.pm-tab.active{color:var(--accent-dark);border-bottom-color:var(--accent);font-weight:600}
 .ep-tab{display:inline-flex;align-items:center;height:32px;padding:0 11px;font-size:11px;font-weight:500;color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;margin-right:2px;white-space:nowrap;transition:color .12s}
 .ep-tab.active{color:var(--accent-dark);font-weight:600;border-bottom-color:var(--accent)}
 .ep-tab:hover:not(.active){color:var(--text2)}
@@ -325,6 +369,7 @@ tr.trow.sel td{background:#eef6e6}
     <div class="nav-item" id="st2" onclick="showScreen(2)">Deals <span class="nav-badge" id="deals-count">0</span></div>
     <div class="nav-right">
       <div class="t-status"><div class="t-status-dot"></div>monitoring sales@oneport365.com</div>
+      <button onclick="openPartnersModal()" style="display:flex;align-items:center;gap:5px;padding:4px 12px;font-size:11px;font-weight:500;font-family:Inter,sans-serif;cursor:pointer;border-radius:20px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:rgba(255,255,255,.85);white-space:nowrap;transition:all .15s" onmouseover="this.style.background='rgba(255,255,255,.15)'" onmouseout="this.style.background='rgba(255,255,255,.08)'">⚡ Partners</button>
       <div class="user-chip" onclick="toggleUserMenu()" style="position:relative">
         <div class="user-avatar">OA</div>
         <span style="font-size:11px;color:rgba(255,255,255,.85)">Okpanachi Adaji</span>
@@ -413,6 +458,11 @@ tr.trow.sel td{background:#eef6e6}
         <div id="ep-tabs" style="display:none;padding:0 14px;border-bottom:1px solid var(--border);flex-shrink:0;overflow-x:auto;white-space:nowrap"></div>
         <div class="ep-body">
           <div id="ep-fields"></div>
+          <div id="ep-rates-wrap" style="display:none;margin-top:4px">
+            <span class="ep-section-lbl" style="color:var(--info)">Rates</span>
+            <div id="ep-rates-list"></div>
+            <div id="ep-rates-actions" style="margin-top:8px"></div>
+          </div>
           <div id="ep-missing-wrap">
             <span class="ep-section-lbl missing-lbl">Missing Info</span>
             <div id="ep-missing"></div>
@@ -437,6 +487,116 @@ tr.trow.sel td{background:#eef6e6}
 
       </div><!-- end s1 inner wrapper -->
     </div><!-- end s1 -->
+
+  <!-- PARTNERS / RATES MODAL -->
+  <div id="partners-modal" class="modal-overlay" style="display:none" onclick="closePartnersModalOnBg(event)">
+    <div class="modal-box" onclick="event.stopPropagation()">
+      <div class="modal-hd">
+        <span class="modal-title">⚡ Partners &amp; Rates</span>
+        <button class="modal-close" onclick="closePartnersModal()">✕</button>
+      </div>
+      <!-- Tabs -->
+      <div class="partner-modal-tabs" style="padding:0 20px;flex-shrink:0">
+        <div class="pm-tab active" id="pm-tab-partners" onclick="switchPmTab('partners')">Partners</div>
+        <div class="pm-tab" id="pm-tab-rates" onclick="switchPmTab('rates')">Rate Database</div>
+      </div>
+      <!-- Tab: Partners -->
+      <div class="modal-body" id="pm-body-partners">
+        <div id="partners-list"><div style="text-align:center;padding:24px;color:var(--text3);font-size:12px">Loading…</div></div>
+        <div class="modal-add-form">
+          <div class="modal-add-title">Add Partner</div>
+          <form id="add-partner-form" onsubmit="submitAddPartner(event)">
+            <div class="form-grid" style="margin-bottom:8px">
+              <div class="form-field">
+                <label class="form-label">Name</label>
+                <input class="form-input" name="name" required placeholder="e.g. Hapag-Lloyd Nigeria"/>
+              </div>
+              <div class="form-field">
+                <label class="form-label">Email</label>
+                <input class="form-input" name="email" type="email" required placeholder="rates@partner.com"/>
+              </div>
+            </div>
+            <div class="form-field" style="margin-bottom:8px">
+              <label class="form-label">Service categories (select all that apply)</label>
+              <div class="cat-toggle" id="new-partner-cats">
+                <button type="button" class="cat-toggle-btn" data-cat="FCL" onclick="toggleCat(this)">FCL</button>
+                <button type="button" class="cat-toggle-btn" data-cat="LCL" onclick="toggleCat(this)">LCL</button>
+                <button type="button" class="cat-toggle-btn" data-cat="AIR" onclick="toggleCat(this)">AIR</button>
+                <button type="button" class="cat-toggle-btn" data-cat="RORO" onclick="toggleCat(this)">RORO</button>
+                <button type="button" class="cat-toggle-btn" data-cat="REEFER" onclick="toggleCat(this)">REEFER</button>
+                <button type="button" class="cat-toggle-btn" data-cat="DG" onclick="toggleCat(this)">DG</button>
+                <button type="button" class="cat-toggle-btn" data-cat="BREAKBULK" onclick="toggleCat(this)">BREAKBULK</button>
+              </div>
+            </div>
+            <div class="form-field" style="margin-bottom:10px">
+              <label class="form-label">Tradelane tags (optional, comma separated)</label>
+              <input class="form-input" name="tradelanes" placeholder="e.g. WAF, EAF, NGAPP-CNTAO"/>
+            </div>
+            <div class="form-field" style="margin-bottom:10px">
+              <label class="form-label">Notes</label>
+              <input class="form-input" name="notes" placeholder="Any notes about this partner"/>
+            </div>
+            <button type="submit" class="btn btn-a btn-sm" style="width:100%">Add Partner</button>
+          </form>
+        </div>
+      </div>
+      <!-- Tab: Rates -->
+      <div class="modal-body" id="pm-body-rates" style="display:none">
+        <div id="rates-db-list"><div style="text-align:center;padding:24px;color:var(--text3);font-size:12px">Loading…</div></div>
+        <div class="rates-add-form">
+          <div class="modal-add-title">Add Rate</div>
+          <form id="add-rate-form" onsubmit="submitAddRate(event)">
+            <div class="form-grid" style="margin-bottom:8px">
+              <div class="form-field">
+                <label class="form-label">POL (Port of Loading)</label>
+                <input class="form-input" name="pol" required placeholder="e.g. Apapa, Lagos, NG"/>
+              </div>
+              <div class="form-field">
+                <label class="form-label">POD (Port of Discharge)</label>
+                <input class="form-input" name="pod" required placeholder="e.g. Rotterdam, NL"/>
+              </div>
+            </div>
+            <div class="form-grid" style="margin-bottom:8px">
+              <div class="form-field">
+                <label class="form-label">Container type</label>
+                <select class="form-input" name="containerType">
+                  <option value="">Any</option>
+                  <option value="20FT">20FT</option>
+                  <option value="40FT">40FT</option>
+                  <option value="40HC">40HC</option>
+                  <option value="LCL">LCL</option>
+                  <option value="AIR">AIR</option>
+                </select>
+              </div>
+              <div class="form-field">
+                <label class="form-label">Freight rate (USD)</label>
+                <input class="form-input" name="freightRate" type="number" placeholder="e.g. 1850"/>
+              </div>
+            </div>
+            <div class="form-grid" style="margin-bottom:8px">
+              <div class="form-field">
+                <label class="form-label">Carrier</label>
+                <input class="form-input" name="carrier" placeholder="e.g. MSC, Hapag-Lloyd"/>
+              </div>
+              <div class="form-field">
+                <label class="form-label">Valid until</label>
+                <input class="form-input" name="validTo" type="date"/>
+              </div>
+            </div>
+            <div class="form-field" style="margin-bottom:8px">
+              <label class="form-label">Partner (optional)</label>
+              <select class="form-input" name="partnerId" id="rate-partner-select"><option value="">None</option></select>
+            </div>
+            <div class="form-field" style="margin-bottom:10px">
+              <label class="form-label">Notes</label>
+              <input class="form-input" name="notes" placeholder="e.g. incl. BAF, port-to-port only"/>
+            </div>
+            <button type="submit" class="btn btn-a btn-sm" style="width:100%">Add Rate</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
 
     <!-- SCREEN 2: DEALS -->
     <div class="screen" id="s2" style="flex-direction:column;overflow-y:auto;overflow-x:hidden;align-items:stretch;justify-content:flex-start">
@@ -2866,9 +3026,12 @@ function renderExtraction(r) {
   } else if (r.emailType === 'outbound') {
     aw.innerHTML = `<button class="btn btn-sm" style="width:100%">View RFQ thread →</button>`;
   } else if (!missing.length) {
-    aw.innerHTML = `<button class="btn btn-a btn-sm" style="width:100%">Get rates →</button>`;
+    aw.innerHTML = `<button class="btn btn-a btn-sm" style="width:100%" onclick="searchRates(${r.id})">Search rates →</button>`;
   } else {
     aw.innerHTML = `<button class="btn btn-sm" style="width:100%;color:var(--text3)" disabled>Complete info to get rates</button>`;
+    // Clear any previous rate results when info is incomplete
+    document.getElementById('ep-rates-wrap').style.display = 'none';
+    document.getElementById('ep-rates-list').innerHTML = '';
   }
 }
 
@@ -3361,6 +3524,286 @@ function downloadQuotePDF() {
 document.addEventListener('DOMContentLoaded', () => {
   selEmail(0, document.querySelector('.email-item.sel'));
 });
+
+// ── RATE SEARCH ────────────────────────────────────────────────────────────
+
+function rfqFieldVal(rfqId, key) {
+  const r = rfqData.find(x => x.id === rfqId);
+  if (!r) return '';
+  const fields = Array.isArray(r.fields) ? r.fields : [];
+  const f = fields.find(f => f.k.toLowerCase() === key.toLowerCase());
+  return f ? f.v : '';
+}
+
+async function searchRates(rfqId) {
+  const wrap = document.getElementById('ep-rates-wrap');
+  const list = document.getElementById('ep-rates-list');
+  const actions = document.getElementById('ep-rates-actions');
+  const aw = document.getElementById('ep-actions-wrap');
+
+  const pol = rfqFieldVal(rfqId, 'POL');
+  const pod = rfqFieldVal(rfqId, 'POD');
+  const container = rfqFieldVal(rfqId, 'Container');
+
+  wrap.style.display = 'block';
+  list.innerHTML = '<div style="text-align:center;padding:12px;color:var(--text3);font-size:11px">Searching rates…</div>';
+  actions.innerHTML = '';
+  aw.innerHTML = '<button class="btn btn-sm" style="width:100%;color:var(--text3)" disabled>Searching…</button>';
+
+  try {
+    const params = new URLSearchParams();
+    if (pol) params.set('pol', pol);
+    if (pod) params.set('pod', pod);
+    if (container) params.set('container', container.replace(/×\s*\d+/,'').trim());
+    const resp = await fetch('/api/rates?' + params);
+    const results = await resp.json();
+
+    if (!Array.isArray(results) || !results.length) {
+      list.innerHTML = `<div class="rate-no-results">No rates on file for this lane.</div>`;
+      actions.innerHTML = '';
+      aw.innerHTML = `<button class="btn btn-a btn-sm" style="width:100%;background:#f59e0b;border-color:#f59e0b" onclick="emailPartners(${rfqId})">📧 Request rates from partners</button>`;
+    } else {
+      list.innerHTML = results.map(({ rate, partner }) => {
+        const validTo = rate.validTo ? new Date(rate.validTo).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'2-digit' }) : null;
+        const catClass = (rate.containerType || '').toLowerCase().replace('ft','').trim();
+        return `<div class="rate-card">
+          <div class="rate-card-hd">
+            <div>
+              <div class="rate-price">${rate.freightRate ? '$' + Number(rate.freightRate).toLocaleString() : 'TBD'} <span style="font-size:10px;font-weight:400;color:var(--text3)">${rate.currency || 'USD'}</span></div>
+              ${rate.containerType ? `<div class="rate-carrier">${rate.containerType}${rate.carrier ? ' · ' + rate.carrier : ''}</div>` : ''}
+            </div>
+            ${partner ? `<span class="cat-chip">${escHtml(partner.name)}</span>` : ''}
+          </div>
+          <div class="rate-route">${escHtml(rate.pol)} → ${escHtml(rate.pod)}</div>
+          ${validTo ? `<div style="font-size:10px;color:var(--text3)">Valid to ${validTo}</div>` : ''}
+          ${rate.notes ? `<div style="font-size:10px;color:var(--text2);margin-top:3px;font-style:italic">${escHtml(rate.notes)}</div>` : ''}
+        </div>`;
+      }).join('');
+      aw.innerHTML = `<button class="btn btn-a btn-sm" style="width:100%" onclick="generateQuote(${rfqId})">Generate quote →</button>`;
+    }
+  } catch (err) {
+    list.innerHTML = `<div class="rate-no-results" style="color:var(--danger)">Error fetching rates</div>`;
+    aw.innerHTML = `<button class="btn btn-a btn-sm" style="width:100%" onclick="searchRates(${rfqId})">Retry →</button>`;
+  }
+}
+
+async function emailPartners(rfqId) {
+  const btn = event.target;
+  btn.disabled = true;
+  btn.textContent = 'Sending…';
+  try {
+    const resp = await fetch(`/api/rfqs/${rfqId}/request-rates`, { method: 'POST', headers: {'Content-Type':'application/json'} });
+    const result = await resp.json();
+    if (!resp.ok) {
+      alert(result.error || 'Failed to email partners');
+      btn.disabled = false;
+      btn.textContent = '📧 Request rates from partners';
+      return;
+    }
+    btn.style.background = '#16a34a';
+    btn.style.borderColor = '#16a34a';
+    btn.textContent = `✓ Emailed ${result.sent} partner${result.sent === 1 ? '' : 's'}`;
+    document.getElementById('ep-rates-list').innerHTML =
+      `<div class="rate-no-results" style="color:var(--accent-dark)">Rate request sent to ${result.sent} partner${result.sent===1?'':'s'}.<br>Waiting for responses.</div>`;
+  } catch (err) {
+    alert('Could not send: ' + err.message);
+    btn.disabled = false;
+    btn.textContent = '📧 Request rates from partners';
+  }
+}
+
+function generateQuote(rfqId) {
+  // Navigate to the Quote screen pre-loaded with this RFQ
+  const customerRfqs = rfqData.filter(x => x.emailType === 'customer-rfq' || x.emailType === 'internal-rfq');
+  const idx = customerRfqs.findIndex(x => x.id === rfqId);
+  if (idx >= 0) currentRFQIndex = idx;
+  showScreen(4);
+  if (typeof openQuote === 'function') openQuote(rfqId);
+}
+
+// ── PARTNERS MODAL ─────────────────────────────────────────────────────────
+
+let pmCurrentTab = 'partners';
+
+function openPartnersModal() {
+  document.getElementById('partners-modal').style.display = 'flex';
+  switchPmTab(pmCurrentTab);
+}
+
+function closePartnersModal() {
+  document.getElementById('partners-modal').style.display = 'none';
+}
+
+function closePartnersModalOnBg(e) {
+  if (e.target === document.getElementById('partners-modal')) closePartnersModal();
+}
+
+function switchPmTab(tab) {
+  pmCurrentTab = tab;
+  document.getElementById('pm-body-partners').style.display = tab === 'partners' ? 'flex' : 'none';
+  document.getElementById('pm-body-rates').style.display = tab === 'rates' ? 'flex' : 'none';
+  document.getElementById('pm-tab-partners').className = 'pm-tab' + (tab === 'partners' ? ' active' : '');
+  document.getElementById('pm-tab-rates').className = 'pm-tab' + (tab === 'rates' ? ' active' : '');
+  if (tab === 'partners') loadPartners();
+  else loadRatesDb();
+}
+
+const CAT_COLORS = { FCL:'', LCL:'lcl', AIR:'air', RORO:'roro', REEFER:'reefer', DG:'dg', BREAKBULK:'' };
+
+function catChip(cat) {
+  const cls = CAT_COLORS[cat] || '';
+  return `<span class="cat-chip ${cls}">${escHtml(cat)}</span>`;
+}
+
+async function loadPartners() {
+  const list = document.getElementById('partners-list');
+  try {
+    const resp = await fetch('/api/partners');
+    const partners = await resp.json();
+    const active = partners.filter(p => p.active);
+    if (!active.length) {
+      list.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text3);font-size:12px">No partners yet. Add your first partner below.</div>';
+      return;
+    }
+    list.innerHTML = active.map(p => `
+      <div class="partner-row" id="pr-${p.id}">
+        <div class="partner-info">
+          <div class="partner-name">${escHtml(p.name)}</div>
+          <div class="partner-email">${escHtml(p.email)}</div>
+          <div class="partner-cats">${((p.categories||[]).map(c=>catChip(c))).join('')}</div>
+          ${p.tradelanes && p.tradelanes.length ? `<div style="font-size:10px;color:var(--text3);margin-top:3px">${(p.tradelanes||[]).map(t=>`<span style="background:#f3f4f6;padding:1px 6px;border-radius:8px;margin-right:3px">${escHtml(t)}</span>`).join('')}</div>` : ''}
+          ${p.notes ? `<div style="font-size:11px;color:var(--text3);margin-top:4px;font-style:italic">${escHtml(p.notes)}</div>` : ''}
+        </div>
+        <button onclick="deactivatePartner(${p.id})" class="btn btn-sm" style="color:var(--danger);border-color:#fecaca;flex-shrink:0" title="Remove partner">Remove</button>
+      </div>`).join('');
+  } catch (err) {
+    list.innerHTML = '<div style="text-align:center;padding:24px;color:var(--danger);font-size:12px">Error loading partners</div>';
+  }
+}
+
+function toggleCat(btn) {
+  btn.classList.toggle('on');
+}
+
+async function submitAddPartner(e) {
+  e.preventDefault();
+  const form = e.target;
+  const btn = form.querySelector('button[type=submit]');
+  btn.disabled = true; btn.textContent = 'Adding…';
+  const cats = [...document.querySelectorAll('#new-partner-cats .cat-toggle-btn.on')].map(b => b.dataset.cat);
+  const tradelanes = (form.tradelanes.value || '').split(',').map(s=>s.trim()).filter(Boolean);
+  try {
+    const resp = await fetch('/api/partners', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        name: form.name.value,
+        email: form.email.value,
+        categories: cats,
+        tradelanes,
+        notes: form.notes.value || undefined,
+      })
+    });
+    if (!resp.ok) { const e = await resp.json(); throw new Error(e.error); }
+    form.reset();
+    document.querySelectorAll('#new-partner-cats .cat-toggle-btn').forEach(b => b.classList.remove('on'));
+    await loadPartners();
+    // Also refresh partner select in rates form
+    await populateRatePartnerSelect();
+  } catch (err) {
+    alert('Could not add partner: ' + err.message);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Add Partner';
+  }
+}
+
+async function deactivatePartner(id) {
+  if (!confirm('Remove this partner? They will no longer receive rate requests.')) return;
+  await fetch('/api/partners/' + id, { method: 'DELETE' });
+  await loadPartners();
+}
+
+// ── RATES DATABASE ─────────────────────────────────────────────────────────
+
+async function loadRatesDb() {
+  const list = document.getElementById('rates-db-list');
+  try {
+    const resp = await fetch('/api/rates');
+    const results = await resp.json();
+    await populateRatePartnerSelect();
+    if (!results.length) {
+      list.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text3);font-size:12px">No rates on file yet. Add rates below.</div>';
+      return;
+    }
+    list.innerHTML = `<table style="width:100%;font-size:12px;border-collapse:collapse">
+      <thead><tr>
+        <th style="text-align:left;padding:6px 8px;color:var(--text3);font-size:10px;font-weight:600;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.04em">POL → POD</th>
+        <th style="text-align:left;padding:6px 8px;color:var(--text3);font-size:10px;font-weight:600;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.04em">Type</th>
+        <th style="text-align:right;padding:6px 8px;color:var(--text3);font-size:10px;font-weight:600;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.04em">Rate</th>
+        <th style="text-align:left;padding:6px 8px;color:var(--text3);font-size:10px;font-weight:600;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.04em">Carrier</th>
+        <th style="padding:6px 8px;border-bottom:1px solid var(--border)"></th>
+      </tr></thead>
+      <tbody>` +
+      results.map(({rate}) => `<tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:7px 8px;color:var(--text)">${escHtml(rate.pol)} → ${escHtml(rate.pod)}</td>
+        <td style="padding:7px 8px;color:var(--text2)">${rate.containerType || '—'}</td>
+        <td style="padding:7px 8px;text-align:right;font-weight:600;color:var(--accent-dark)">${rate.freightRate ? '$'+Number(rate.freightRate).toLocaleString() : '—'}</td>
+        <td style="padding:7px 8px;color:var(--text3)">${rate.carrier || '—'}</td>
+        <td style="padding:7px 8px;text-align:right"><button onclick="deleteRate(${rate.id})" style="font-size:10px;color:var(--danger);background:none;border:none;cursor:pointer;padding:2px 6px">✕</button></td>
+      </tr>`).join('') +
+      '</tbody></table>';
+  } catch (err) {
+    list.innerHTML = '<div style="text-align:center;padding:24px;color:var(--danger);font-size:12px">Error loading rates</div>';
+  }
+}
+
+async function populateRatePartnerSelect() {
+  const sel = document.getElementById('rate-partner-select');
+  if (!sel) return;
+  try {
+    const resp = await fetch('/api/partners');
+    const partners = await resp.json();
+    sel.innerHTML = '<option value="">None</option>' +
+      partners.filter(p => p.active).map(p => `<option value="${p.id}">${escHtml(p.name)}</option>`).join('');
+  } catch {}
+}
+
+async function submitAddRate(e) {
+  e.preventDefault();
+  const form = e.target;
+  const btn = form.querySelector('button[type=submit]');
+  btn.disabled = true; btn.textContent = 'Adding…';
+  try {
+    const body = {
+      pol: form.pol.value,
+      pod: form.pod.value,
+      containerType: form.containerType.value || undefined,
+      freightRate: form.freightRate.value || undefined,
+      carrier: form.carrier.value || undefined,
+      validTo: form.validTo.value || undefined,
+      partnerId: form.partnerId.value ? parseInt(form.partnerId.value) : undefined,
+      notes: form.notes.value || undefined,
+    };
+    const resp = await fetch('/api/rates', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(body)
+    });
+    if (!resp.ok) { const err = await resp.json(); throw new Error(err.error); }
+    form.reset();
+    await loadRatesDb();
+  } catch (err) {
+    alert('Could not add rate: ' + err.message);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Add Rate';
+  }
+}
+
+async function deleteRate(id) {
+  if (!confirm('Delete this rate?')) return;
+  await fetch('/api/rates/' + id, { method: 'DELETE' });
+  await loadRatesDb();
+}
 
 
 </script>
