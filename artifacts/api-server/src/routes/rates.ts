@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db, ratesTable, partnersTable, rfqsTable, emailsTable } from "@workspace/db";
-import { eq, and, ilike, or, inArray } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import nodemailer from "nodemailer";
 
 const router: IRouter = Router();
@@ -15,7 +15,6 @@ function createMailTransporter() {
   });
 }
 
-// Fuzzy match a stored pol/pod against a query string (case-insensitive keyword overlap)
 function locationsMatch(stored: string, query: string): boolean {
   if (!stored || !query) return false;
   const normalize = (s: string) =>
@@ -37,17 +36,13 @@ router.get("/rates", async (req, res) => {
     };
 
     const allRates = await db
-      .select({
-        rate: ratesTable,
-        partner: partnersTable,
-      })
+      .select({ rate: ratesTable, partner: partnersTable })
       .from(ratesTable)
       .leftJoin(partnersTable, eq(ratesTable.partnerId, partnersTable.id));
 
-    // Filter in JS for fuzzy location matching
     const matched = allRates.filter(({ rate }) => {
-      const polMatch = !pol || locationsMatch(rate.pol, pol);
-      const podMatch = !pod || locationsMatch(rate.pod, pod);
+      const polMatch = !pol || locationsMatch(rate.pol, pol) || (rate.originPortCode ? locationsMatch(rate.originPortCode, pol) : false);
+      const podMatch = !pod || locationsMatch(rate.pod, pod) || (rate.destinationPortCode ? locationsMatch(rate.destinationPortCode, pod) : false);
       const containerMatch =
         !container ||
         !rate.containerType ||
@@ -65,23 +60,9 @@ router.get("/rates", async (req, res) => {
 // POST /api/rates — add a rate record
 router.post("/rates", async (req, res) => {
   try {
-    const {
-      pol, pod, containerType, commodity, freightRate, currency = "USD",
-      carrier, validFrom, validTo, partnerId, notes, breakdown = {},
-    } = req.body as {
-      pol: string;
-      pod: string;
-      containerType?: string;
-      commodity?: string;
-      freightRate?: string;
-      currency?: string;
-      carrier?: string;
-      validFrom?: string;
-      validTo?: string;
-      partnerId?: number;
-      notes?: string;
-      breakdown?: Record<string, unknown>;
-    };
+    const b = req.body as Record<string, unknown>;
+    const pol = (b.pol as string | undefined)?.trim();
+    const pod = (b.pod as string | undefined)?.trim();
     if (!pol || !pod) {
       res.status(400).json({ error: "pol and pod are required" });
       return;
@@ -89,18 +70,46 @@ router.post("/rates", async (req, res) => {
     const [rate] = await db
       .insert(ratesTable)
       .values({
+        // Route
+        originPortCode: (b.originPortCode as string) ?? null,
+        destinationPortCode: (b.destinationPortCode as string) ?? null,
         pol,
         pod,
-        containerType: containerType ?? null,
-        commodity: commodity ?? null,
-        freightRate: freightRate ?? null,
-        currency,
-        carrier: carrier ?? null,
-        validFrom: validFrom ? new Date(validFrom) : null,
-        validTo: validTo ? new Date(validTo) : null,
-        partnerId: partnerId ?? null,
-        notes: notes ?? null,
-        breakdown,
+        // Carrier
+        carrier: (b.carrier as string) ?? null,
+        scac: (b.scac as string) ?? null,
+        isAgentRate: Boolean(b.isAgentRate ?? false),
+        // Classification
+        cargoType: (b.cargoType as string) ?? null,
+        rateType: (b.rateType as string) ?? null,
+        inclusionType: (b.inclusionType as string) ?? null,
+        commodityType: (b.commodityType as string) ?? null,
+        commodityTypeField: (b.commodityTypeField as string) ?? null,
+        // Charges
+        charge20ft: (b.charge20ft as string) ?? null,
+        charge40ft: (b.charge40ft as string) ?? null,
+        charge40hc: (b.charge40hc as string) ?? null,
+        // Legacy
+        containerType: (b.containerType as string) ?? null,
+        freightRate: (b.freightRate as string) ?? null,
+        commodity: (b.commodity as string) ?? null,
+        currency: (b.currency as string) ?? "USD",
+        // Dates
+        validFrom: b.validFrom ? new Date(b.validFrom as string) : null,
+        validTo: b.validTo ? new Date(b.validTo as string) : null,
+        sailingDate: b.sailingDate ? new Date(b.sailingDate as string) : null,
+        // Days
+        freeTime: b.freeTime ? Number(b.freeTime) : null,
+        transitTime: b.transitTime ? Number(b.transitTime) : null,
+        demurrageDays: b.demurrageDays ? Number(b.demurrageDays) : null,
+        detentionDays: b.detentionDays ? Number(b.detentionDays) : null,
+        // Market
+        avgMarketRate20ft: (b.avgMarketRate20ft as string) ?? null,
+        avgMarketRate40ft: (b.avgMarketRate40ft as string) ?? null,
+        // Meta
+        partnerId: b.partnerId ? Number(b.partnerId) : null,
+        notes: (b.notes as string) ?? null,
+        breakdown: (b.breakdown as Record<string, unknown>) ?? {},
       })
       .returning();
     res.status(201).json(rate);
@@ -114,27 +123,31 @@ router.post("/rates", async (req, res) => {
 router.put("/rates/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
-    const {
-      pol, pod, containerType, commodity, freightRate, currency,
-      carrier, validFrom, validTo, partnerId, notes, breakdown,
-    } = req.body as Record<string, unknown>;
+    const b = req.body as Record<string, unknown>;
+
+    const patch: Record<string, unknown> = {};
+    const str = (k: string) => { if (b[k] !== undefined) patch[k] = (b[k] as string) ?? null; };
+    const num = (k: string) => { if (b[k] !== undefined) patch[k] = b[k] ? Number(b[k]) : null; };
+    const dt  = (k: string) => { if (b[k] !== undefined) patch[k] = b[k] ? new Date(b[k] as string) : null; };
+
+    str("originPortCode"); str("destinationPortCode");
+    str("pol"); str("pod");
+    str("carrier"); str("scac");
+    str("cargoType"); str("rateType"); str("inclusionType");
+    str("commodityType"); str("commodityTypeField");
+    str("charge20ft"); str("charge40ft"); str("charge40hc");
+    str("containerType"); str("freightRate"); str("commodity"); str("currency");
+    str("notes");
+    str("avgMarketRate20ft"); str("avgMarketRate40ft");
+    dt("validFrom"); dt("validTo"); dt("sailingDate");
+    num("freeTime"); num("transitTime"); num("demurrageDays"); num("detentionDays");
+    if (b.partnerId !== undefined) patch.partnerId = b.partnerId ? Number(b.partnerId) : null;
+    if (b.isAgentRate !== undefined) patch.isAgentRate = Boolean(b.isAgentRate);
+    if (b.breakdown !== undefined) patch.breakdown = b.breakdown as Record<string, unknown>;
 
     const updated = await db
       .update(ratesTable)
-      .set({
-        ...(pol !== undefined && { pol: pol as string }),
-        ...(pod !== undefined && { pod: pod as string }),
-        ...(containerType !== undefined && { containerType: (containerType as string) ?? null }),
-        ...(commodity !== undefined && { commodity: (commodity as string) ?? null }),
-        ...(freightRate !== undefined && { freightRate: (freightRate as string) ?? null }),
-        ...(currency !== undefined && { currency: currency as string }),
-        ...(carrier !== undefined && { carrier: (carrier as string) ?? null }),
-        ...(validFrom !== undefined && { validFrom: validFrom ? new Date(validFrom as string) : null }),
-        ...(validTo !== undefined && { validTo: validTo ? new Date(validTo as string) : null }),
-        ...(partnerId !== undefined && { partnerId: (partnerId as number) ?? null }),
-        ...(notes !== undefined && { notes: (notes as string) ?? null }),
-        ...(breakdown !== undefined && { breakdown: breakdown as Record<string, unknown> }),
-      })
+      .set(patch)
       .where(eq(ratesTable.id, id))
       .returning();
 
@@ -179,7 +192,6 @@ router.post("/rfqs/:id/request-rates", async (req, res) => {
     const rfq = rows[0].rfqs;
     const email = rows[0].emails;
 
-    // Extract key fields from the RFQ
     const fields = (rfq.fields as Array<{ k: string; v: string; ok: boolean }>) ?? [];
     const getField = (key: string) =>
       fields.find((f) => f.k.toLowerCase() === key.toLowerCase())?.v ?? "";
@@ -192,7 +204,6 @@ router.post("/rfqs/:id/request-rates", async (req, res) => {
     const incoterm = getField("Incoterm");
     const quantity = getField("Quantity");
 
-    // Determine which partner categories are relevant
     const relevantCategories: string[] = [];
     const containerLower = container.toLowerCase();
     if (containerLower.includes("lcl")) relevantCategories.push("LCL");
@@ -204,13 +215,11 @@ router.post("/rfqs/:id/request-rates", async (req, res) => {
     if (commodity.toLowerCase().match(/dangerous|hazardous|dg|class\s*\d/i))
       relevantCategories.push("DG");
 
-    // Fetch active partners
     const allPartners = await db
       .select()
       .from(partnersTable)
       .where(eq(partnersTable.active, true));
 
-    // Filter by category overlap
     const targetPartners = allPartners.filter((p) => {
       const cats = (p.categories as string[]) ?? [];
       return (
