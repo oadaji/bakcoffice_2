@@ -355,20 +355,83 @@ router.post("/rfq/ingest", async (req, res) => {
       return;
     }
 
-    // Check if email already exists by uid — skip Claude if so
+    // Check if email already exists by uid
     const existing = await db
       .select()
       .from(emailsTable)
       .where(eq(emailsTable.uid, uid));
 
     if (existing.length) {
-      // Already ingested — return the existing RFQ without re-running Claude
-      const existingRfq = await db
+      const existingEmail = existing[0];
+
+      // Rejected emails: always skip — UID is kept to prevent re-ingest
+      if (existingEmail.emailType === "rejected") {
+        res.setHeader("x-was-new", "false");
+        res.json({ email: existingEmail });
+        return;
+      }
+
+      // Check whether an RFQ was actually created for this email
+      const existingRfqs = await db
         .select()
         .from(rfqsTable)
-        .where(eq(rfqsTable.emailId, existing[0].id));
-      res.setHeader("x-was-new", "false");
-      res.json({ ...(existingRfq[0] ?? {}), email: existing[0] });
+        .where(eq(rfqsTable.emailId, existingEmail.id));
+
+      if (existingRfqs.length) {
+        // Fully processed — return existing RFQ without re-running Claude
+        res.setHeader("x-was-new", "false");
+        res.json({ ...existingRfqs[0], email: existingEmail });
+        return;
+      }
+
+      // Orphaned email: exists in DB but no RFQ was ever created.
+      // Fall through to Claude extraction using the stored body.
+      req.log.info({ emailId: existingEmail.id, uid }, "Reprocessing orphaned email — no RFQ found");
+      const multiExtraction = await extractWithClaude(
+        {
+          fromName: existingEmail.fromName ?? fromEmail,
+          fromEmail: existingEmail.fromEmail ?? fromEmail,
+          subject: existingEmail.subject ?? subject,
+          body: existingEmail.body ?? body,
+        },
+        existingEmail.emailType ?? emailType,
+      );
+      const { shipments: orphanShipments, combinedDraft: orphanDraft } = multiExtraction;
+      if (requireFreightMatch) {
+        const ROUTE_KEYS = new Set(["POL", "POD"]);
+        const hasRoute = orphanShipments.some((s) => s.fields.some((f) => ROUTE_KEYS.has(f.k) && f.ok));
+        if (!hasRoute) {
+          await db.update(emailsTable).set({ emailType: "rejected" }).where(eq(emailsTable.id, existingEmail.id));
+          res.setHeader("x-was-new", "false");
+          res.status(422).json({ rejected: true, reason: "no_freight_fields" });
+          return;
+        }
+      }
+      const isOrphanGroup = orphanShipments.length > 1;
+      const orphanGroupId = isOrphanGroup ? randomUUID() : null;
+      const createdOrphanRfqs = [];
+      for (let idx = 0; idx < orphanShipments.length; idx++) {
+        const s = orphanShipments[idx];
+        const [rfq] = await db
+          .insert(rfqsTable)
+          .values({
+            emailId: existingEmail.id,
+            ref: generateRef(),
+            emailType: existingEmail.emailType ?? emailType,
+            status: s.status,
+            fields: s.fields,
+            missingFields: s.missing,
+            followUpDraft: isOrphanGroup ? (idx === 0 ? orphanDraft ?? null : null) : (orphanDraft ?? s.draft ?? null),
+            groupId: orphanGroupId,
+            groupIndex: isOrphanGroup ? idx + 1 : null,
+            groupTotal: isOrphanGroup ? orphanShipments.length : null,
+            sourceMessageId: existingEmail.messageId ?? null,
+          })
+          .returning();
+        createdOrphanRfqs.push(rfq);
+      }
+      res.setHeader("x-was-new", "true");
+      res.json({ ...createdOrphanRfqs[0], email: existingEmail, groupTotal: orphanShipments.length });
       return;
     }
 
@@ -479,6 +542,86 @@ router.post("/rfq/extract", async (req, res) => {
   } catch (err) {
     req.log.error({ err }, "Failed to extract RFQ");
     res.status(500).json({ error: "Failed to extract RFQ" });
+  }
+});
+
+// POST /api/rfq/repair-orphans — re-process emails that have no linked RFQ
+// Also re-evaluates rejected emails to catch false negatives from the freight filter.
+router.post("/rfq/repair-orphans", async (req, res) => {
+  try {
+    const port = process.env.PORT ?? "8080";
+
+    const { emailIds } = req.body as { emailIds?: number[] };
+
+    // Build a targeted query:
+    // - Always include genuine orphans (email_type = customer-rfq or rate-reply, no RFQ)
+    // - Optionally include specific email IDs requested by the caller
+    // - DO NOT bulk re-process rejected emails (too many marketing/spam rejections)
+    const { rows: orphanRows } = await db.execute<{
+      id: number; uid: string; from_name: string; from_email: string;
+      subject: string; body: string; email_type: string; received_at: Date; message_id: string | null;
+    }>(
+      `SELECT e.id, e.uid, e.from_name, e.from_email, e.subject, e.body, e.email_type, e.received_at, e.message_id
+       FROM emails e
+       LEFT JOIN rfqs r ON r.email_id = e.id
+       WHERE r.id IS NULL
+         AND (
+           e.email_type IN ('customer-rfq', 'rate-reply')
+           ${emailIds?.length ? `OR e.id = ANY(ARRAY[${emailIds.map(Number).join(",")}]::int[])` : ""}
+         )
+       ORDER BY
+         CASE e.email_type WHEN 'customer-rfq' THEN 0 WHEN 'rate-reply' THEN 1 ELSE 2 END,
+         e.received_at DESC
+       LIMIT 20`
+    );
+
+    let repaired = 0;
+    let skipped = 0;
+    const errors: string[] = [];
+
+    for (const row of orphanRows) {
+      try {
+        // For rejected emails, reset to customer-rfq so the ingest route will try again
+        if (row.email_type === "rejected") {
+          await db.update(emailsTable).set({ emailType: "customer-rfq" }).where(eq(emailsTable.id, row.id));
+        }
+
+        const ingestResp = await fetch(`http://localhost:${port}/api/rfq/ingest`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            uid: row.uid,
+            fromName: row.from_name,
+            fromEmail: row.from_email,
+            subject: row.subject,
+            body: row.body,
+            receivedAt: row.received_at,
+            emailType: "customer-rfq",
+            requireFreightMatch: true,
+            messageId: row.message_id,
+          }),
+        });
+
+        if (ingestResp.ok) {
+          const wasNew = ingestResp.headers.get("x-was-new") === "true";
+          if (wasNew) repaired++;
+          else skipped++;
+        } else if (ingestResp.status === 422) {
+          skipped++;
+        } else {
+          const errText = await ingestResp.text();
+          errors.push(`email ${row.id}: ${errText}`);
+        }
+      } catch (e) {
+        errors.push(`email ${row.id}: ${String(e)}`);
+      }
+    }
+
+    req.log.info({ repaired, skipped, total: orphanRows.length }, "Orphan repair complete");
+    res.json({ repaired, skipped, total: orphanRows.length, errors: errors.length ? errors : undefined });
+  } catch (err) {
+    req.log.error({ err }, "Failed to repair orphans");
+    res.status(500).json({ error: "Failed to repair orphans" });
   }
 });
 

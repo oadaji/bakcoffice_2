@@ -3847,7 +3847,8 @@ async function syncGmail() {
     if (!res.ok) throw new Error(data.error || 'Sync failed');
     const { synced, skipped } = data;
     lbl.textContent = synced > 0 ? `+${synced} new` : 'Up to date';
-    if (synced > 0) await loadInbox();
+    // Always refresh inbox so any emails processed in a prior cycle also appear
+    await loadInbox();
     setTimeout(() => { lbl.textContent = 'Sync Gmail'; btn.disabled = false; btn.style.opacity = '1'; }, 3000);
   } catch(e) {
     lbl.textContent = 'Error';
