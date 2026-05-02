@@ -73,11 +73,12 @@ router.delete("/rfqs/:id", async (req, res) => {
     }
     const rfq = rows[0];
     await db.delete(rfqsTable).where(eq(rfqsTable.id, id));
-    // Delete source email only if no other RFQs still reference it
+    // Mark the source email as 'rejected' (not deleted) so its UID is remembered
+    // and Gmail sync won't re-process it on the next cycle.
     if (rfq.emailId) {
       const others = await db.select({ id: rfqsTable.id }).from(rfqsTable).where(eq(rfqsTable.emailId, rfq.emailId));
       if (!others.length) {
-        await db.delete(emailsTable).where(eq(emailsTable.id, rfq.emailId));
+        await db.update(emailsTable).set({ emailType: "rejected" }).where(eq(emailsTable.id, rfq.emailId));
       }
     }
     req.log.info({ rfqId: id }, "RFQ deleted");
@@ -404,7 +405,9 @@ router.post("/rfq/ingest", async (req, res) => {
         s.fields.some((f) => ROUTE_KEYS.has(f.k) && f.ok)
       );
       if (!hasRouteField) {
-        await db.delete(emailsTable).where(eq(emailsTable.id, email.id));
+        // Keep the email row (UID preserved) so the next sync cycle skips it without re-calling Claude.
+        // Mark it 'rejected' so it never surfaces in the inbox.
+        await db.update(emailsTable).set({ emailType: "rejected" }).where(eq(emailsTable.id, email.id));
         res.status(422).json({ rejected: true, reason: "no_freight_fields" });
         return;
       }
