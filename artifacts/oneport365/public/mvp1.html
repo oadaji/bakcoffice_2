@@ -1050,9 +1050,9 @@ tr.trow.sel td{background:#eef6e6}
         </div>
 
         <!-- TABLE + DETAIL SIDE BY SIDE -->
-        <div style="display:grid;grid-template-columns:1fr 300px;gap:12px;flex-shrink:0">
+        <div style="display:grid;grid-template-columns:1fr 300px;gap:12px;flex-shrink:0;min-width:0;overflow:hidden">
 
-          <div style="background:#fff;border:1px solid #e4e8e4;border-radius:10px;overflow:hidden">
+          <div style="background:#fff;border:1px solid #e4e8e4;border-radius:10px;overflow:hidden;min-width:0">
             <div style="padding:10px 16px;border-bottom:1px solid #e4e8e4;display:flex;align-items:center;justify-content:space-between">
               <span style="font-size:12px;font-weight:600;color:#1a2e1a">Showing <span id="rate-count">8</span> rates</span>
               <span style="font-size:10px;color:#8a9e8a">Click any row to see full breakdown</span>
@@ -1084,16 +1084,14 @@ tr.trow.sel td{background:#eef6e6}
               <div style="font-size:32px;color:#d0d8d0">$</div>
               <div>Select a rate<br>to see breakdown</div>
             </div>
-            <div id="rate-detail-content" style="display:none">
-              <div style="padding:12px 14px;border-bottom:1px solid #e4e8e4;background:#f8faf8;display:flex;align-items:flex-start;justify-content:space-between">
-                <div>
-                  <div id="rd-title" style="font-size:12px;font-weight:700;color:#5a9132"></div>
-                  <div id="rd-source" style="font-size:10px;color:#8a9e8a;margin-top:2px"></div>
-                </div>
-                <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;margin-left:8px">
+            <div id="rate-detail-content" style="display:none;flex-direction:column;overflow-y:auto;max-height:560px">
+              <div style="padding:10px 12px;border-bottom:1px solid #e4e8e4;background:#f8faf8">
+                <div id="rd-title" style="font-size:12px;font-weight:700;color:#5a9132;margin-bottom:2px"></div>
+                <div id="rd-source" style="font-size:10px;color:#8a9e8a;margin-bottom:7px;line-height:1.4;word-break:break-word"></div>
+                <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap">
                   <span id="rd-status-badge"></span>
-                  <button onclick="editRate()" style="padding:4px 10px;font-size:11px;cursor:pointer;border-radius:6px;border:1px solid #d0d8d0;background:#fff;color:#4a5e4a;font-family:Inter,sans-serif;white-space:nowrap">Edit</button>
-                  <button id="rd-delete-btn" onclick="deleteCurrentRate()" style="display:none;padding:4px 10px;font-size:11px;cursor:pointer;border-radius:6px;border:1px solid #fecaca;background:#fff;color:#dc2626;font-family:Inter,sans-serif;white-space:nowrap">Delete</button>
+                  <button onclick="editRate()" style="padding:3px 9px;font-size:11px;cursor:pointer;border-radius:5px;border:1px solid #d0d8d0;background:#fff;color:#4a5e4a;font-family:Inter,sans-serif">Edit</button>
+                  <button id="rd-delete-btn" onclick="deleteCurrentRate()" style="display:none;padding:3px 9px;font-size:11px;cursor:pointer;border-radius:5px;border:1px solid #fecaca;background:#fff;color:#dc2626;font-family:Inter,sans-serif">Delete</button>
                 </div>
               </div>
               <div style="padding:12px 14px">
