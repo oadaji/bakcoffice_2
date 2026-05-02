@@ -336,9 +336,17 @@ tr.trow.sel td{background:#eef6e6}
 <script>
 (function() {
   const CORRECT = 'X#9mK$vL2@nQ7pR!';
+  const SK = 'op365_auth';
+  // Auto-unlock if already authenticated this session
+  if (sessionStorage.getItem(SK) === '1') {
+    document.addEventListener('DOMContentLoaded', function() {
+      document.getElementById('pw-gate').classList.add('hidden');
+    });
+  }
   window.checkPassword = function() {
     const val = document.getElementById('pw-input').value;
     if (val === CORRECT) {
+      sessionStorage.setItem(SK, '1');
       document.getElementById('pw-gate').classList.add('hidden');
     } else {
       const inp = document.getElementById('pw-input');
@@ -353,7 +361,7 @@ tr.trow.sel td{background:#eef6e6}
   };
   document.addEventListener('DOMContentLoaded', function() {
     const inp = document.getElementById('pw-input');
-    if (inp) inp.focus();
+    if (inp && !sessionStorage.getItem(SK)) inp.focus();
   });
 })();
 </script>
