@@ -2259,6 +2259,24 @@ function showScreen(n) {
   if(n===5) setTimeout(()=>showSettingsTab('criteria'), 50);
 }
 
+function showRFQSub(tab) {
+  const ePanel = document.getElementById('rfq-sub-email');
+  const wPanel = document.getElementById('rfq-sub-whatsapp');
+  const eTab   = document.getElementById('sub-email');
+  const wTab   = document.getElementById('sub-whatsapp');
+  if (tab === 'email') {
+    if (ePanel) ePanel.style.display = 'flex';
+    if (wPanel) wPanel.style.display = 'none';
+    if (eTab) { eTab.style.color = '#5a9132'; eTab.style.borderBottomColor = '#7AB648'; eTab.style.fontWeight = '600'; }
+    if (wTab) { wTab.style.color = '#8a9e8a'; wTab.style.borderBottomColor = 'transparent'; wTab.style.fontWeight = '500'; }
+  } else {
+    if (ePanel) ePanel.style.display = 'none';
+    if (wPanel) wPanel.style.display = 'flex';
+    if (wTab) { wTab.style.color = '#5a9132'; wTab.style.borderBottomColor = '#7AB648'; wTab.style.fontWeight = '600'; }
+    if (eTab) { eTab.style.color = '#8a9e8a'; eTab.style.borderBottomColor = 'transparent'; eTab.style.fontWeight = '500'; }
+  }
+}
+
 function showRatesSub(tab) {
   const rPanel = document.getElementById('rates-sub-rates');
   const oPanel = document.getElementById('rates-sub-outreach');
