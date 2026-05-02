@@ -2274,6 +2274,12 @@ function showRFQSub(tab) {
     if (wPanel) wPanel.style.display = 'flex';
     if (wTab) { wTab.style.color = '#5a9132'; wTab.style.borderBottomColor = '#7AB648'; wTab.style.fontWeight = '600'; }
     if (eTab) { eTab.style.color = '#8a9e8a'; eTab.style.borderBottomColor = 'transparent'; eTab.style.fontWeight = '500'; }
+    // Auto-select first WA conversation if none is selected yet
+    const firstWA = document.querySelector('#rfq-sub-whatsapp .email-item');
+    if (firstWA && !document.querySelector('#rfq-sub-whatsapp .email-item.sel')) {
+      selWA(0, firstWA);
+      firstWA.classList.add('sel');
+    }
   }
 }
 
@@ -2585,7 +2591,7 @@ let waTimerInterval = null, waTimerSecs = 300, currentWA = 0;
 
 function selWA(i, el) {
   if(!el) return;
-  document.querySelectorAll('#s4 .email-item').forEach(e=>e.classList.remove('sel'));
+  document.querySelectorAll('#rfq-sub-whatsapp .email-item').forEach(e=>e.classList.remove('sel'));
   el.classList.add('sel');
   currentWA = i;
   const c = WA_CONVOS[i];
