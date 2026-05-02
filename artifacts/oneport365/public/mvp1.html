@@ -499,6 +499,73 @@ tr.trow.sel td{background:#eef6e6}
     </div><!-- end s1 -->
 
   <!-- PARTNERS / RATES MODAL -->
+  <!-- ADD / EDIT RATE MODAL -->
+  <div id="rate-form-modal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeRateModal()">
+    <div class="modal-box" style="width:560px">
+      <div class="modal-hd">
+        <span class="modal-title" id="rate-modal-title">Add Rate</span>
+        <button class="modal-close" onclick="closeRateModal()">✕</button>
+      </div>
+      <div class="modal-body" style="gap:10px">
+        <input type="hidden" id="rfm-id"/>
+        <div class="form-grid">
+          <div class="form-field">
+            <label class="form-label">Origin (POL) *</label>
+            <input class="form-input" id="rfm-pol" placeholder="e.g. Apapa, Lagos, NG"/>
+          </div>
+          <div class="form-field">
+            <label class="form-label">Destination (POD) *</label>
+            <input class="form-input" id="rfm-pod" placeholder="e.g. Rotterdam, NL"/>
+          </div>
+          <div class="form-field">
+            <label class="form-label">Container type</label>
+            <select class="form-input" id="rfm-ctr">
+              <option value="">Select…</option>
+              <option>20FT</option><option>40FT</option><option>40HC</option><option>LCL</option><option>AIR</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label class="form-label">Carrier</label>
+            <input class="form-input" id="rfm-carrier" placeholder="e.g. MSC, Hapag-Lloyd"/>
+          </div>
+          <div class="form-field">
+            <label class="form-label">Ocean freight (USD)</label>
+            <input class="form-input" id="rfm-rate" type="number" min="0" placeholder="e.g. 1850"/>
+          </div>
+          <div class="form-field">
+            <label class="form-label">Free days</label>
+            <input class="form-input" id="rfm-freedays" type="number" min="0" placeholder="14"/>
+          </div>
+          <div class="form-field">
+            <label class="form-label">BAF surcharge (USD)</label>
+            <input class="form-input" id="rfm-baf" type="number" min="0" placeholder="0"/>
+          </div>
+          <div class="form-field">
+            <label class="form-label">CAF surcharge (USD)</label>
+            <input class="form-input" id="rfm-caf" type="number" min="0" placeholder="0"/>
+          </div>
+          <div class="form-field">
+            <label class="form-label">Valid from</label>
+            <input class="form-input" id="rfm-from" type="date"/>
+          </div>
+          <div class="form-field">
+            <label class="form-label">Valid until</label>
+            <input class="form-input" id="rfm-to" type="date"/>
+          </div>
+        </div>
+        <div class="form-field">
+          <label class="form-label">Notes</label>
+          <input class="form-input" id="rfm-notes" placeholder="e.g. Port-to-port, incl. BAF &amp; CAF"/>
+        </div>
+        <div id="rfm-error" style="display:none;margin-top:4px;padding:7px 10px;background:#fee2e2;border:1px solid #fecaca;border-radius:6px;font-size:11px;color:#dc2626"></div>
+      </div>
+      <div style="padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;flex-shrink:0">
+        <button class="btn btn-sm" onclick="closeRateModal()">Cancel</button>
+        <button class="btn btn-primary btn-sm" onclick="saveRateForm()" id="rfm-save-btn">Save rate</button>
+      </div>
+    </div>
+  </div>
+
   <div id="partners-modal" class="modal-overlay" style="display:none" onclick="closePartnersModalOnBg(event)">
     <div class="modal-box" onclick="event.stopPropagation()">
       <div class="modal-hd">
@@ -933,6 +1000,7 @@ tr.trow.sel td{background:#eef6e6}
                 <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;margin-left:8px">
                   <span id="rd-status-badge"></span>
                   <button onclick="editRate()" style="padding:4px 10px;font-size:11px;cursor:pointer;border-radius:6px;border:1px solid #d0d8d0;background:#fff;color:#4a5e4a;font-family:Inter,sans-serif;white-space:nowrap">Edit</button>
+                  <button id="rd-delete-btn" onclick="deleteCurrentRate()" style="display:none;padding:4px 10px;font-size:11px;cursor:pointer;border-radius:6px;border:1px solid #fecaca;background:#fff;color:#dc2626;font-family:Inter,sans-serif;white-space:nowrap">Delete</button>
                 </div>
               </div>
               <div style="padding:12px 14px">
@@ -1836,8 +1904,10 @@ let STD_FEES = {
 };
 
 let activeRateType='ocean', selectedRateId=null;
+let DB_RATES = [];
 function todayStr(){return new Date().toISOString().split('T')[0];}
 function isValid(r){return r.validUntil>=todayStr();}
+function shortPort(s){if(!s)return'';return s.split(',')[0].trim();}
 function fmtUSD(n){return '$'+Number(n).toLocaleString();}
 function fmtNGN(n){return '\u20A6'+Number(n).toLocaleString();}
 
@@ -1856,77 +1926,299 @@ function filterRateType(type){
 }
 function filterRates(){renderRatesTable();}
 function clearRateFilters(){
-  ['rf-pol','rf-pod','rf-ctr','rf-cargo','rf-carrier','rf-valid'].forEach(id=>document.getElementById(id).value='');
+  ['rf-ctr','rf-valid'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  const polSel=document.getElementById('rf-pol'); if(polSel) polSel.value='';
+  const podSel=document.getElementById('rf-pod'); if(podSel) podSel.value='';
+  const carrierSel=document.getElementById('rf-carrier'); if(carrierSel) carrierSel.value='';
   renderRatesTable();
 }
-function renderRatesTable(){
-  const pol=document.getElementById('rf-pol')?.value||'';
-  const pod=document.getElementById('rf-pod')?.value||'';
-  const ctr=document.getElementById('rf-ctr')?.value||'';
-  const cargo=document.getElementById('rf-cargo')?.value||'';
-  const carrier=document.getElementById('rf-carrier')?.value||'';
-  const valid=document.getElementById('rf-valid')?.value||'';
-  const filtered=RATES_DATA.filter(r=>{
-    if(r.type!==activeRateType) return false;
-    if(pol&&!r.pol.includes(pol.split(' ')[0])) return false;
-    if(pod&&!r.pod.includes(pod.split(' ')[0])) return false;
-    if(ctr&&r.size!==ctr) return false;
-    if(cargo&&r.cargo!==cargo) return false;
-    if(carrier&&r.carrier!==carrier) return false;
-    if(valid==='valid'&&!isValid(r)) return false;
-    if(valid==='expired'&&isValid(r)) return false;
-    return true;
-  });
-  const el=document.getElementById('rate-count'); if(el) el.textContent=filtered.length;
-  const tbody=document.getElementById('rates-tbody'); if(!tbody) return;
-  tbody.innerHTML=filtered.map(r=>{
-    const v=isValid(r), total=r.ocean+r.baf+r.caf+(r.ebs||0);
-    return `<tr style="cursor:pointer;${r.id===selectedRateId?'background:#eef6e6':''}" onclick="selectRate('${r.id}',this)">
-      <td style="padding:9px 12px;border-bottom:1px solid #e4e8e4"><span style="font-size:9px;padding:2px 7px;border-radius:10px;font-weight:600;text-transform:uppercase;background:${r.type==='contract'?'#fef3c7':r.type==='spot'?'#dbeafe':'#f3f4f6'};color:${r.type==='contract'?'#92400e':r.type==='spot'?'#1e40af':'#4b5563'}">${r.type}</span></td>
-      <td style="padding:9px 12px;border-bottom:1px solid #e4e8e4;font-size:11px;font-weight:500;color:#1a2e1a">${r.pol.split(' ')[0]}</td>
-      <td style="padding:9px 12px;border-bottom:1px solid #e4e8e4;font-size:11px;font-weight:500;color:#1a2e1a">${r.pod.split(' ')[0]}</td>
-      <td style="padding:9px 12px;border-bottom:1px solid #e4e8e4">${carrierLogo(r.carrier)}</td>
-      <td style="padding:9px 12px;border-bottom:1px solid #e4e8e4;font-family:monospace;font-size:11px">${r.size}</td>
-      <td style="padding:9px 12px;border-bottom:1px solid #e4e8e4;font-family:monospace;font-size:11px;color:#5a9132;font-weight:600">${fmtUSD(total)}</td>
-      <td style="padding:9px 12px;border-bottom:1px solid #e4e8e4;font-size:11px">${r.freeDays}d</td>
-      <td style="padding:9px 12px;border-bottom:1px solid #e4e8e4;font-family:monospace;font-size:11px;color:${v?'#4a5e4a':'#dc2626'}">${r.validUntil}</td>
-      <td style="padding:9px 12px;border-bottom:1px solid #e4e8e4;font-size:10px;color:#8a9e8a">${r.linkedRFQ||'-'}</td>
-      <td style="padding:9px 12px;border-bottom:1px solid #e4e8e4"><span style="font-size:10px;padding:2px 8px;border-radius:10px;font-weight:500;background:${v?'#dcfce7':'#fee2e2'};color:${v?'#166534':'#991b1b'}">${v?'Valid':'Expired'}</span></td>
-    </tr>`;
-  }).join('');
+
+async function loadDBRates(){
+  try {
+    const res = await fetch('/api/rates');
+    if(!res.ok) throw new Error('fetch failed');
+    DB_RATES = await res.json();
+    rebuildRateFilters();
+    renderRatesTable();
+    // Update Ocean Freight tab count
+    const badge = document.querySelector('#rtt-contract span:last-child');
+    if(badge && /^\d+$/.test(badge.textContent.trim())) badge.textContent = DB_RATES.length;
+  } catch(e) {
+    console.error('Failed to load rates', e);
+    renderRatesTable();
+  }
 }
-function selectRate(id,row){
-  document.querySelectorAll('#rates-tbody tr').forEach(r=>r.classList.remove('tr-sel'));
-  row.classList.add('tr-sel'); selectedRateId=id;
-  const r=RATES_DATA.find(x=>x.id===id); if(!r) return;
+
+function rebuildRateFilters(){
+  const pols     = [...new Set(DB_RATES.map(d=>d.rate.pol).filter(Boolean))].sort();
+  const pods     = [...new Set(DB_RATES.map(d=>d.rate.pod).filter(Boolean))].sort();
+  const carriers = [...new Set(DB_RATES.map(d=>d.rate.carrier).filter(Boolean))].sort();
+  const polSel = document.getElementById('rf-pol');
+  const podSel = document.getElementById('rf-pod');
+  const crrSel = document.getElementById('rf-carrier');
+  if(polSel){
+    const cur=polSel.value;
+    polSel.innerHTML='<option value="">All origins</option>'+pols.map(p=>`<option value="${p}"${p===cur?' selected':''}>${shortPort(p)}</option>`).join('');
+  }
+  if(podSel){
+    const cur=podSel.value;
+    podSel.innerHTML='<option value="">All destinations</option>'+pods.map(p=>`<option value="${p}"${p===cur?' selected':''}>${shortPort(p)}</option>`).join('');
+  }
+  if(crrSel){
+    const cur=crrSel.value;
+    crrSel.innerHTML='<option value="">All carriers</option>'+carriers.map(c=>`<option value="${c}"${c===cur?' selected':''}>${c}</option>`).join('');
+  }
+}
+
+function renderRatesTable(){
+  const pol    = document.getElementById('rf-pol')?.value||'';
+  const pod    = document.getElementById('rf-pod')?.value||'';
+  const ctr    = document.getElementById('rf-ctr')?.value||'';
+  const carrier= document.getElementById('rf-carrier')?.value||'';
+  const valid  = document.getElementById('rf-valid')?.value||'';
+  const today  = todayStr();
+  const tbody  = document.getElementById('rates-tbody'); if(!tbody) return;
+  const countEl= document.getElementById('rate-count');
+
+  if(activeRateType==='ocean'){
+    const filtered = DB_RATES.filter(d=>{
+      const r=d.rate;
+      if(pol && r.pol!==pol) return false;
+      if(pod && r.pod!==pod) return false;
+      if(ctr && r.containerType!==ctr) return false;
+      if(carrier && r.carrier!==carrier) return false;
+      const vu = r.validTo ? r.validTo.split('T')[0] : null;
+      if(valid==='valid'  && (!vu||vu<today)) return false;
+      if(valid==='expired'&& (!vu||vu>=today)) return false;
+      return true;
+    });
+    if(countEl) countEl.textContent = filtered.length;
+    if(!filtered.length){
+      tbody.innerHTML=`<tr><td colspan="10" style="text-align:center;padding:28px;color:#8a9e8a;font-size:12px">${DB_RATES.length?'No rates match the selected filters.':'Loading rates…'}</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = filtered.map(d=>{
+      const r=d.rate;
+      const vu = r.validTo ? r.validTo.split('T')[0] : null;
+      const isExp = !vu || vu<today;
+      const bd = (r.breakdown&&typeof r.breakdown==='object') ? r.breakdown : {};
+      const base=Number(r.freightRate||0), baf=Number(bd.baf||0), caf=Number(bd.caf||0), ebs=Number(bd.ebs||0);
+      const total=base+baf+caf+ebs;
+      const fd=Number(bd.freeDays||14);
+      const isSel=r.id===selectedRateId;
+      return `<tr class="trow${isSel?' tr-sel':''}" onclick="selectDBRateById(${r.id},this)" style="cursor:pointer">
+        <td style="padding:9px 12px;border-bottom:1px solid #e4e8e4"><span style="font-size:9px;padding:2px 7px;border-radius:10px;font-weight:600;text-transform:uppercase;background:#dbeafe;color:#1e40af">OCEAN</span></td>
+        <td style="padding:9px 12px;border-bottom:1px solid #e4e8e4;font-size:11px;font-weight:500;color:#1a2e1a">${shortPort(r.pol)}</td>
+        <td style="padding:9px 12px;border-bottom:1px solid #e4e8e4;font-size:11px;font-weight:500;color:#1a2e1a">${shortPort(r.pod)}</td>
+        <td style="padding:9px 12px;border-bottom:1px solid #e4e8e4">${carrierLogo(r.carrier||'—')}</td>
+        <td style="padding:9px 12px;border-bottom:1px solid #e4e8e4;font-family:monospace;font-size:11px">${r.containerType||'—'}</td>
+        <td style="padding:9px 12px;border-bottom:1px solid #e4e8e4;font-family:monospace;font-size:11px;color:#5a9132;font-weight:600">${total>0?fmtUSD(total):base>0?fmtUSD(base):'—'}</td>
+        <td style="padding:9px 12px;border-bottom:1px solid #e4e8e4;font-size:11px">${fd}d</td>
+        <td style="padding:9px 12px;border-bottom:1px solid #e4e8e4;font-family:monospace;font-size:11px;color:${isExp?'#dc2626':'#4a5e4a'}">${vu||'—'}</td>
+        <td style="padding:9px 12px;border-bottom:1px solid #e4e8e4;font-size:10px;color:#8a9e8a">${d.partner?.name||'—'}</td>
+        <td style="padding:9px 12px;border-bottom:1px solid #e4e8e4"><span style="font-size:10px;padding:2px 8px;border-radius:10px;font-weight:500;background:${isExp?'#fee2e2':'#dcfce7'};color:${isExp?'#991b1b':'#166534'}">${isExp?'Expired':'Valid'}</span></td>
+      </tr>`;
+    }).join('');
+  } else {
+    // Static demo data for In-Haulage / Other Charges tabs
+    const filtered=RATES_DATA.filter(r=>{
+      if(r.type!==activeRateType) return false;
+      if(ctr && r.size!==ctr) return false;
+      if(valid==='valid'&&!isValid(r)) return false;
+      if(valid==='expired'&&isValid(r)) return false;
+      return true;
+    });
+    if(countEl) countEl.textContent=filtered.length;
+    tbody.innerHTML=filtered.map(r=>{
+      const v=isValid(r), total=r.ocean+r.baf+r.caf+(r.ebs||0);
+      return `<tr class="trow${r.id===selectedRateId?' tr-sel':''}" onclick="selectRate('${r.id}',this)" style="cursor:pointer">
+        <td style="padding:9px 12px;border-bottom:1px solid #e4e8e4"><span style="font-size:9px;padding:2px 7px;border-radius:10px;font-weight:600;text-transform:uppercase;background:${r.type==='inhaulage'?'#ede9fe':'#f3f4f6'};color:${r.type==='inhaulage'?'#6d28d9':'#4b5563'}">${r.type}</span></td>
+        <td style="padding:9px 12px;border-bottom:1px solid #e4e8e4;font-size:11px;font-weight:500;color:#1a2e1a">${r.pol.split(' ')[0]}</td>
+        <td style="padding:9px 12px;border-bottom:1px solid #e4e8e4;font-size:11px;font-weight:500;color:#1a2e1a">${r.pod.split(' ')[0]}</td>
+        <td style="padding:9px 12px;border-bottom:1px solid #e4e8e4">${carrierLogo(r.carrier)}</td>
+        <td style="padding:9px 12px;border-bottom:1px solid #e4e8e4;font-family:monospace;font-size:11px">${r.size}</td>
+        <td style="padding:9px 12px;border-bottom:1px solid #e4e8e4;font-family:monospace;font-size:11px;color:#5a9132;font-weight:600">${fmtUSD(total)}</td>
+        <td style="padding:9px 12px;border-bottom:1px solid #e4e8e4;font-size:11px">${r.freeDays}d</td>
+        <td style="padding:9px 12px;border-bottom:1px solid #e4e8e4;font-family:monospace;font-size:11px;color:${v?'#4a5e4a':'#dc2626'}">${r.validUntil}</td>
+        <td style="padding:9px 12px;border-bottom:1px solid #e4e8e4;font-size:10px;color:#8a9e8a">${r.linkedRFQ||'—'}</td>
+        <td style="padding:9px 12px;border-bottom:1px solid #e4e8e4"><span style="font-size:10px;padding:2px 8px;border-radius:10px;font-weight:500;background:${v?'#dcfce7':'#fee2e2'};color:${v?'#166534':'#991b1b'}">${v?'Valid':'Expired'}</span></td>
+      </tr>`;
+    }).join('');
+  }
+}
+// ---- Rate detail helpers ----
+function _showRateDetail(title, sourceStr, valid, ocean, baf, caf, ebs, originObj, destObj, isDBRate){
   document.getElementById('rate-detail-empty').style.display='none';
   const c=document.getElementById('rate-detail-content'); c.style.display='flex';
-  document.getElementById('rd-title').innerHTML = `${carrierLogo(r.carrier)} <span style="margin-left:6px">${r.pol.split(' ')[0]} → ${r.pod.split(' ')[0]} · ${r.size}</span>`;
-  document.getElementById('rd-source').textContent=r.source;
-  document.getElementById('rd-status-badge').innerHTML=`<span class="badge ${isValid(r)?'b-ok':'b-miss'}">${isValid(r)?'Valid':'Expired'}</span>`;
-  const oceanTotal=r.ocean+r.baf+r.caf+(r.ebs||0);
-  document.getElementById('rd-ocean').innerHTML=[['Base rate',fmtUSD(r.ocean)],['BAF surcharge',fmtUSD(r.baf)],['CAF surcharge',fmtUSD(r.caf)],['EBS surcharge',r.ebs>0?fmtUSD(r.ebs):'—']].map(([k,v])=>`<div class="fee-row"><span>${k}</span><span class="fee-val">${v}</span></div>`).join('');
+  const deleteBtn=document.getElementById('rd-delete-btn');
+  if(deleteBtn) deleteBtn.style.display = isDBRate?'inline-block':'none';
+  document.getElementById('rd-title').innerHTML=title;
+  document.getElementById('rd-source').textContent=sourceStr;
+  document.getElementById('rd-status-badge').innerHTML=`<span class="badge ${valid?'b-ok':'b-miss'}">${valid?'Valid':'Expired'}</span>`;
+  const oceanTotal=ocean+baf+caf+(ebs||0);
+  document.getElementById('rd-ocean').innerHTML=[['Base rate',fmtUSD(ocean)],['BAF surcharge',baf>0?fmtUSD(baf):'—'],['CAF surcharge',caf>0?fmtUSD(caf):'—'],['EBS surcharge',ebs>0?fmtUSD(ebs):'—']].map(([k,v])=>`<div class="fee-row"><span>${k}</span><span class="fee-val">${v}</span></div>`).join('');
   document.getElementById('rd-ocean-total').textContent=fmtUSD(oceanTotal);
-  const originNGN=(r.origin.agency||0)+(r.origin.thc||0)+(r.origin.slc||0);
-  document.getElementById('rd-origin').innerHTML=[['Agency service fee',r.origin.agency>0?fmtNGN(r.origin.agency):'—'],['THC',r.origin.thc>0?fmtNGN(r.origin.thc):'—'],['Shipping local charges',r.origin.slc>0?fmtNGN(r.origin.slc):'—'],['B/L release',fmtUSD(r.origin.bl)]].map(([k,v])=>`<div class="fee-row"><span>${k}</span><span class="fee-val">${v}</span></div>`).join('');
-  document.getElementById('rd-origin-total').textContent=fmtNGN(originNGN)+' + '+fmtUSD(r.origin.bl);
-  const destNGN=(r.dest.dthc||0)+(r.dest.customs||0)+(r.dest.ness||0)+(r.dest.truck||0);
-  document.getElementById('rd-dest').innerHTML=[['Destination THC',r.dest.dthc>0?fmtNGN(r.dest.dthc):'—'],['Customs clearance',r.dest.customs>0?fmtNGN(r.dest.customs):'—'],['Port levy / NESS',r.dest.ness>0?fmtNGN(r.dest.ness):'—'],['Trucking (est.)',r.dest.truck>0?fmtNGN(r.dest.truck):'—']].map(([k,v])=>`<div class="fee-row"><span>${k}</span><span class="fee-val">${v}</span></div>`).join('');
+  const originNGN=(originObj.agency||0)+(originObj.thc||0)+(originObj.slc||0);
+  document.getElementById('rd-origin').innerHTML=[['Agency service fee',originObj.agency>0?fmtNGN(originObj.agency):'—'],['THC',originObj.thc>0?fmtNGN(originObj.thc):'—'],['Shipping local charges',originObj.slc>0?fmtNGN(originObj.slc):'—'],['B/L release',fmtUSD(originObj.bl||85)]].map(([k,v])=>`<div class="fee-row"><span>${k}</span><span class="fee-val">${v}</span></div>`).join('');
+  document.getElementById('rd-origin-total').textContent=fmtNGN(originNGN)+' + '+fmtUSD(originObj.bl||85);
+  const destNGN=(destObj.dthc||0)+(destObj.customs||0)+(destObj.ness||0)+(destObj.truck||0);
+  document.getElementById('rd-dest').innerHTML=[['Destination THC',destObj.dthc>0?fmtNGN(destObj.dthc):'—'],['Customs clearance',destObj.customs>0?fmtNGN(destObj.customs):'—'],['Port levy / NESS',destObj.ness>0?fmtNGN(destObj.ness):'—'],['Trucking (est.)',destObj.truck>0?fmtNGN(destObj.truck):'—']].map(([k,v])=>`<div class="fee-row"><span>${k}</span><span class="fee-val">${v}</span></div>`).join('');
   document.getElementById('rd-dest-total').textContent=fmtNGN(destNGN);
-  const FX=1600, originUSD=Math.round((originNGN+(r.dest.truck||0))/FX), destUSD=Math.round(((r.dest.dthc||0)+(r.dest.customs||0)+(r.dest.ness||0))/FX);
-  const totalCost=oceanTotal+r.origin.bl+originUSD+destUSD, margin=Math.round(totalCost*0.13);
+  const FX=1600;
+  const originUSD=Math.round((originNGN+(destObj.truck||0))/FX);
+  const destUSD=Math.round(((destObj.dthc||0)+(destObj.customs||0)+(destObj.ness||0))/FX);
+  const totalCost=oceanTotal+(originObj.bl||85)+originUSD+destUSD, margin=Math.round(totalCost*0.13);
   document.getElementById('rd-total-cost').textContent=fmtUSD(totalCost)+' (USD equiv.)';
   document.getElementById('rd-margin').textContent=fmtUSD(margin);
   document.getElementById('rd-sell').textContent=fmtUSD(totalCost+margin);
 }
+
+function selectRate(id,row){
+  document.querySelectorAll('#rates-tbody tr').forEach(r=>r.classList.remove('tr-sel'));
+  if(row) row.classList.add('tr-sel');
+  selectedRateId=id;
+  const r=RATES_DATA.find(x=>x.id===id); if(!r) return;
+  const title=`${carrierLogo(r.carrier)} <span style="margin-left:6px">${r.pol.split(' ')[0]} → ${r.pod.split(' ')[0]} · ${r.size}</span>`;
+  _showRateDetail(title, r.source, isValid(r), r.ocean, r.baf, r.caf, r.ebs||0, r.origin, r.dest, false);
+}
+
+function selectDBRateById(id,row){
+  const d=DB_RATES.find(x=>x.rate.id===id);
+  if(d) selectDBRate(d,row);
+}
+
+function selectDBRate(d,row){
+  document.querySelectorAll('#rates-tbody tr').forEach(r=>r.classList.remove('tr-sel'));
+  if(row) row.classList.add('tr-sel');
+  selectedRateId=d.rate.id;
+  const r=d.rate;
+  const today=todayStr();
+  const vu=r.validTo?r.validTo.split('T')[0]:null;
+  const valid=!!(vu&&vu>=today);
+  const bd=(r.breakdown&&typeof r.breakdown==='object')?r.breakdown:{};
+  const base=Number(r.freightRate||0);
+  const baf=Number(bd.baf||0), caf=Number(bd.caf||0), ebs=Number(bd.ebs||0);
+  const agency=Number(bd.agency||STD_FEES.origin.find(f=>f.key==='agency')?.value||120000);
+  const thc   =Number(bd.thc   ||STD_FEES.origin.find(f=>f.key==='thc')?.value   ||107000);
+  const slc   =Number(bd.slc   ||STD_FEES.origin.find(f=>f.key==='slc')?.value   ||32000);
+  const bl    =Number(bd.bl    ||85);
+  const dthc  =Number(bd.dthc  ||STD_FEES.destination.find(f=>f.key==='dthc')?.value   ||45000);
+  const customs=Number(bd.customs||STD_FEES.destination.find(f=>f.key==='customs')?.value||80000);
+  const ness  =Number(bd.ness  ||STD_FEES.destination.find(f=>f.key==='ness')?.value    ||25000);
+  const truck =Number(bd.truck ||STD_FEES.inland.find(f=>f.key==='truck')?.value        ||850000);
+  const partnerLine=d.partner?.name?d.partner.name:'';
+  const notesLine=r.notes||'';
+  const sourceStr=[partnerLine,notesLine].filter(Boolean).join(' · ')||'Rate from DB';
+  const title=`${carrierLogo(r.carrier||'—')} <span style="margin-left:6px">${shortPort(r.pol)} → ${shortPort(r.pod)} · ${r.containerType||'—'}</span>`;
+  _showRateDetail(title, sourceStr, valid, base, baf, caf, ebs,
+    {agency,thc,slc,bl},
+    {dthc,customs,ness,truck},
+    true);
+}
+
 function attachRateToRFQ(){
   const sel=document.getElementById('rd-attach-rfq').value; if(!sel) return;
   const c=document.getElementById('attach-confirm'); c.style.display='block';
   c.textContent=`✓ Rate attached to ${sel.split(' · ')[0]}`;
   setTimeout(()=>c.style.display='none',3000);
 }
-function editRate(){alert('Rate editor — connect to database in production build');}
-function showAddRate(){alert('Add rate form — connect to database in production build');}
+
+function editRate(){
+  if(typeof selectedRateId==='number') openRateModal(selectedRateId);
+  else if(selectedRateId) alert('Edit static demo rates via the Partners & Rates modal.');
+}
+
+function showAddRate(){ openRateModal(null); }
+
+// ---- Add / Edit Rate modal ----
+function openRateModal(rateId){
+  const modal=document.getElementById('rate-form-modal'); if(!modal) return;
+  document.getElementById('rfm-error').style.display='none';
+  if(rateId!=null){
+    const d=DB_RATES.find(x=>x.rate.id===rateId); if(!d) return;
+    const r=d.rate, bd=(r.breakdown&&typeof r.breakdown==='object')?r.breakdown:{};
+    document.getElementById('rate-modal-title').textContent='Edit Rate';
+    document.getElementById('rfm-id').value=rateId;
+    document.getElementById('rfm-pol').value=r.pol||'';
+    document.getElementById('rfm-pod').value=r.pod||'';
+    document.getElementById('rfm-ctr').value=r.containerType||'';
+    document.getElementById('rfm-carrier').value=r.carrier||'';
+    document.getElementById('rfm-rate').value=r.freightRate||'';
+    document.getElementById('rfm-freedays').value=bd.freeDays||14;
+    document.getElementById('rfm-baf').value=bd.baf||'';
+    document.getElementById('rfm-caf').value=bd.caf||'';
+    document.getElementById('rfm-notes').value=r.notes||'';
+    document.getElementById('rfm-from').value=r.validFrom?r.validFrom.split('T')[0]:'';
+    document.getElementById('rfm-to').value=r.validTo?r.validTo.split('T')[0]:'';
+  } else {
+    document.getElementById('rate-modal-title').textContent='Add Rate';
+    document.getElementById('rfm-id').value='';
+    ['rfm-pol','rfm-pod','rfm-carrier','rfm-rate','rfm-baf','rfm-caf','rfm-notes','rfm-from','rfm-to'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+    document.getElementById('rfm-ctr').value='';
+    document.getElementById('rfm-freedays').value='14';
+  }
+  modal.style.display='flex';
+}
+
+function closeRateModal(){
+  const modal=document.getElementById('rate-form-modal'); if(modal) modal.style.display='none';
+}
+
+async function saveRateForm(){
+  const id    =document.getElementById('rfm-id').value;
+  const pol   =document.getElementById('rfm-pol').value.trim();
+  const pod   =document.getElementById('rfm-pod').value.trim();
+  const ctr   =document.getElementById('rfm-ctr').value;
+  const carrier=document.getElementById('rfm-carrier').value.trim();
+  const rate  =document.getElementById('rfm-rate').value;
+  const fd    =document.getElementById('rfm-freedays').value;
+  const baf   =document.getElementById('rfm-baf').value;
+  const caf   =document.getElementById('rfm-caf').value;
+  const notes =document.getElementById('rfm-notes').value.trim();
+  const vFrom =document.getElementById('rfm-from').value;
+  const vTo   =document.getElementById('rfm-to').value;
+  const errEl =document.getElementById('rfm-error');
+  if(!pol||!pod){ errEl.textContent='Origin (POL) and Destination (POD) are required.'; errEl.style.display='block'; return; }
+  const saveBtn=document.getElementById('rfm-save-btn');
+  saveBtn.disabled=true; saveBtn.textContent='Saving…'; errEl.style.display='none';
+  const breakdown={};
+  if(baf) breakdown.baf=Number(baf);
+  if(caf) breakdown.caf=Number(caf);
+  if(fd)  breakdown.freeDays=Number(fd);
+  const body={pol,pod,containerType:ctr||null,carrier:carrier||null,freightRate:rate||null,validFrom:vFrom||null,validTo:vTo||null,notes:notes||null,breakdown};
+  try {
+    const url=id?`/api/rates/${id}`:'/api/rates';
+    const method=id?'PUT':'POST';
+    const res=await fetch(url,{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    if(!res.ok) throw new Error(await res.text());
+    closeRateModal();
+    const savedId=id?Number(id):(await res.clone().json().catch(()=>({}))).id;
+    await loadDBRates();
+    if(savedId){ const d=DB_RATES.find(x=>x.rate.id===savedId); if(d) selectDBRate(d,document.querySelector('#rates-tbody tr.tr-sel')); }
+  } catch(e){
+    errEl.textContent='Failed to save rate. Please try again.'; errEl.style.display='block';
+  } finally {
+    saveBtn.disabled=false; saveBtn.textContent='Save rate';
+  }
+}
+
+async function deleteCurrentRate(){
+  if(typeof selectedRateId!=='number') return;
+  if(!confirm('Delete this rate? This cannot be undone.')) return;
+  try {
+    const res=await fetch(`/api/rates/${selectedRateId}`,{method:'DELETE'});
+    if(!res.ok) throw new Error('Delete failed');
+    document.getElementById('rate-detail-empty').style.display='flex';
+    document.getElementById('rate-detail-content').style.display='none';
+    selectedRateId=null;
+    await loadDBRates();
+  } catch(e){ alert('Failed to delete rate.'); }
+}
+
+async function deleteDBRate(id){
+  selectedRateId=id;
+  await deleteCurrentRate();
+}
 // -- PARTNER OUTREACH DATA --
 const PARTNERS = [
   { name:'OceanFavor International', contact:'May Zhao', email:'overseas@oceanfavor.com', routes:['SHA-APP','NGB-APP','TAO-APP'], avgReply:'1.2h', color:'#dbeafe' },
@@ -2250,7 +2542,7 @@ function showScreen(n) {
   const tab = document.getElementById(`st${n}`);
   if(tab) tab.classList.add('active');
   if(n===2) { renderDealsTable(); setTimeout(()=>selectRFQ(0, document.querySelector('#deals-tbody .trow')), 80); }
-  if(n===3) setTimeout(()=>renderRatesTable(), 50);
+  if(n===3) setTimeout(()=>loadDBRates(), 50);
   if(n===4) setTimeout(()=>{ renderQuoteList(); selectQuote('QUOTE-2604-0040', null); }, 50);
   if(n===5) setTimeout(()=>showSettingsTab('criteria'), 50);
 }
@@ -2265,7 +2557,7 @@ function showRatesSub(tab) {
     oPanel.style.display = 'none';
     rTab.style.color = '#5a9132'; rTab.style.borderBottomColor = '#7AB648'; rTab.style.fontWeight = '600';
     oTab.style.color = '#8a9e8a'; oTab.style.borderBottomColor = 'transparent'; oTab.style.fontWeight = '500';
-    renderRatesTable();
+    loadDBRates();
   } else {
     rPanel.style.display = 'none';
     oPanel.style.display = 'flex';

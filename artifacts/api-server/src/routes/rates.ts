@@ -110,6 +110,45 @@ router.post("/rates", async (req, res) => {
   }
 });
 
+// PUT /api/rates/:id — update a rate record
+router.put("/rates/:id", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const {
+      pol, pod, containerType, commodity, freightRate, currency,
+      carrier, validFrom, validTo, partnerId, notes, breakdown,
+    } = req.body as Record<string, unknown>;
+
+    const updated = await db
+      .update(ratesTable)
+      .set({
+        ...(pol !== undefined && { pol: pol as string }),
+        ...(pod !== undefined && { pod: pod as string }),
+        ...(containerType !== undefined && { containerType: (containerType as string) ?? null }),
+        ...(commodity !== undefined && { commodity: (commodity as string) ?? null }),
+        ...(freightRate !== undefined && { freightRate: (freightRate as string) ?? null }),
+        ...(currency !== undefined && { currency: currency as string }),
+        ...(carrier !== undefined && { carrier: (carrier as string) ?? null }),
+        ...(validFrom !== undefined && { validFrom: validFrom ? new Date(validFrom as string) : null }),
+        ...(validTo !== undefined && { validTo: validTo ? new Date(validTo as string) : null }),
+        ...(partnerId !== undefined && { partnerId: (partnerId as number) ?? null }),
+        ...(notes !== undefined && { notes: (notes as string) ?? null }),
+        ...(breakdown !== undefined && { breakdown: breakdown as Record<string, unknown> }),
+      })
+      .where(eq(ratesTable.id, id))
+      .returning();
+
+    if (!updated.length) {
+      res.status(404).json({ error: "Rate not found" });
+      return;
+    }
+    res.json(updated[0]);
+  } catch (err) {
+    req.log.error({ err }, "Failed to update rate");
+    res.status(500).json({ error: "Failed to update rate" });
+  }
+});
+
 // DELETE /api/rates/:id
 router.delete("/rates/:id", async (req, res) => {
   try {
