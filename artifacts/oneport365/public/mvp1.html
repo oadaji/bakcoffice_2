@@ -92,6 +92,26 @@ html,body{height:100%;background:#f0f4f0;color:#1a1a1a;font-family:'Inter',sans-
 .detail-body::-webkit-scrollbar-thumb{background:var(--border2)}
 .detail-actions{padding:10px 18px;border-top:1px solid var(--border);display:flex;gap:7px;flex-shrink:0}
 
+/* THREAD BRIEF CARD */
+.brief-card{margin:10px 18px 0;border:1.5px solid var(--accent);border-radius:10px;overflow:hidden;flex-shrink:0;background:#fff}
+.brief-card-hd{display:flex;align-items:center;gap:9px;padding:10px 14px;background:linear-gradient(90deg,#eef6e6,#f8faf8);cursor:pointer;user-select:none}
+.brief-card-icon{width:22px;height:22px;border-radius:6px;background:linear-gradient(135deg,var(--accent),var(--accent-dark));display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;flex-shrink:0}
+.brief-card-title{font-size:12px;font-weight:700;color:var(--accent-dark);flex:1}
+.brief-card-chevron{font-size:11px;color:var(--accent-dark);flex-shrink:0;transition:none}
+.brief-card-body{padding:12px 14px 14px;border-top:1px solid #d4eabd;display:flex;flex-direction:column;gap:10px}
+.brief-overview{font-size:12px;color:var(--text2);line-height:1.75}
+.brief-points{display:flex;flex-direction:column;border:1px solid var(--border);border-radius:7px;overflow:hidden}
+.brief-point{display:flex;gap:8px;font-size:11px;color:var(--text2);line-height:1.55;padding:6px 10px;border-bottom:1px solid var(--border)}
+.brief-point:last-child{border-bottom:none}
+.brief-dot{width:5px;height:5px;border-radius:50%;background:var(--accent);flex-shrink:0;margin-top:5px}
+.brief-chips{display:flex;gap:5px;flex-wrap:wrap}
+.brief-chip{font-size:10px;padding:2px 9px;border-radius:10px;background:#e8f5e0;color:var(--accent-dark);font-weight:500;border:1px solid #c8e6a0}
+.brief-chip.warn{background:#fffbeb;color:#92400e;border-color:#fde68a}
+.brief-chip.blue{background:#eff6ff;color:#1d4ed8;border-color:#bfdbfe}
+.brief-next{background:#fffbeb;border:1px solid #fde68a;border-radius:7px;padding:9px 12px}
+.brief-next-lbl{font-size:9px;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
+.brief-next-text{font-size:11px;color:#78350f;line-height:1.6}
+
 /* EXTRACTION PANEL */
 .ep-hd{padding:10px 14px;border-bottom:1px solid var(--border);background:var(--surface);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
 .ep-title{font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em}
@@ -450,6 +470,16 @@ tr.trow.sel td{background:#eef6e6}
           <div class="spinner"></div>
           <div class="processing-bar-text">Reading email and pulling out shipment details…</div>
           <span class="processing-badge">Processing</span>
+        </div>
+        <!-- THREAD BRIEF CARD -->
+        <div class="brief-card" id="brief-card" style="display:none">
+          <div class="brief-card-hd" onclick="toggleBrief()">
+            <div class="brief-card-icon">✦</div>
+            <span class="brief-card-title">Thread Brief</span>
+            <div id="brief-chips" class="brief-chips"></div>
+            <span class="brief-card-chevron" id="brief-chevron">▴</span>
+          </div>
+          <div class="brief-card-body" id="brief-body"></div>
         </div>
         <div class="detail-body" id="d-body"></div>
         <div id="d-thread"></div>
@@ -4014,9 +4044,102 @@ function selEmail(rfqId, el) {
     }
   }
 
-  // Render extraction panel: for grouped emails show the first RFQ's combined draft
+  // Render extraction panel + thread brief
   const renderTarget = currentGroupRfqs.length ? currentGroupRfqs[0] : r;
   renderExtraction(renderTarget);
+  renderBrief(renderTarget, currentGroupRfqs);
+}
+
+let briefOpen = true;
+function toggleBrief() {
+  briefOpen = !briefOpen;
+  const body = document.getElementById('brief-body');
+  const chev = document.getElementById('brief-chevron');
+  if (body) body.style.display = briefOpen ? 'flex' : 'none';
+  if (chev) chev.textContent = briefOpen ? '▴' : '▾';
+}
+
+function renderBrief(r, groupRfqs) {
+  const card = document.getElementById('brief-card');
+  const body = document.getElementById('brief-body');
+  const chipsEl = document.getElementById('brief-chips');
+  const chev = document.getElementById('brief-chevron');
+  if (!card || !body) return;
+
+  const fields = Array.isArray(r.fields) ? r.fields : [];
+  const missing = Array.isArray(r.missingFields) ? r.missingFields : [];
+
+  const fv = (key) => { const f = fields.find(f => f.k === key); return f?.v && f.v !== 'not specified' ? f.v : null; };
+
+  const pol = fv('POL'); const pod = fv('POD');
+  const commodity = fv('Commodity'); const container = fv('Container');
+  const incoterm = fv('Incoterm'); const customer = fv('Customer') || fv('Company');
+  const freightMode = fv('Freight Mode');
+  const isGrouped = groupRfqs && groupRfqs.length > 1;
+
+  // Build overview sentence
+  let overview = '';
+  if (r.emailType === 'rate-reply') {
+    overview = `Rate reply email${customer ? ' from ' + customer : ''}. Contains pricing data to be parsed and saved against the active RFQ.`;
+  } else if (r.emailType === 'outbound') {
+    overview = `Outbound email sent by the OnePort team${customer ? ' to ' + customer : ''}. Awaiting reply.`;
+  } else {
+    const routePart = (pol && pod) ? ` from ${pol} to ${pod}` : pol ? ` ex ${pol}` : pod ? ` to ${pod}` : '';
+    const commPart = commodity ? ` for ${commodity}` : '';
+    const modePart = freightMode ? ` via ${freightMode.toLowerCase()}` : '';
+    const groupPart = isGrouped ? ` — ${groupRfqs.length} shipments in this thread` : '';
+    overview = `Customer RFQ${commPart}${routePart}${modePart}${groupPart}.`;
+  }
+
+  // Build bullet points
+  const points = [];
+  if (freightMode) points.push(`${freightMode} shipment${container ? ' · ' + container : ''}`);
+  if (pol && pod) points.push(`Route: ${pol} → ${pod}`);
+  else if (pol) points.push(`Origin: ${pol}`);
+  else if (pod) points.push(`Destination: ${pod}`);
+  if (commodity) points.push(`Commodity: ${commodity}`);
+  if (incoterm) points.push(`Incoterm: ${incoterm}`);
+  if (isGrouped) points.push(`${groupRfqs.length} separate shipments detected in this email thread`);
+  if (missing.length) points.push(`${missing.length} field${missing.length > 1 ? 's' : ''} missing — auto follow-up queued`);
+  if (r.status === 'replied') points.push('Follow-up reply already sent to customer');
+
+  // Next step
+  let next = '';
+  if (r.emailType === 'rate-reply') {
+    next = 'Parse and save the rates from this email, then generate a quote.';
+  } else if (r.emailType === 'outbound') {
+    next = 'Monitoring for customer reply. No action needed.';
+  } else if (r.status === 'replied') {
+    next = 'Awaiting customer confirmation of missing details before pricing.';
+  } else if (!missing.length) {
+    next = 'All details captured. Search rates to build a quote.';
+  } else {
+    next = `Follow-up queued (3 min). Once ${missing[0].replace(/^[^—]+—\s*/,'').toLowerCase()} confirmed, route to pricing.`;
+  }
+
+  // Chips
+  const chips = [];
+  if (r.emailType === 'rate-reply') chips.push({ l: 'Rate Reply', cls: 'blue' });
+  else if (r.emailType === 'outbound') chips.push({ l: 'Outbound', cls: '' });
+  else chips.push({ l: 'Customer RFQ', cls: '' });
+  if (isGrouped) chips.push({ l: `${groupRfqs.length} shipments`, cls: 'blue' });
+  if (missing.length) chips.push({ l: 'Missing info', cls: 'warn' });
+  else if (r.status === 'replied') chips.push({ l: 'Replied', cls: '' });
+  else chips.push({ l: 'Ready', cls: '' });
+
+  if (chipsEl) chipsEl.innerHTML = chips.map(c => `<span class="brief-chip${c.cls ? ' '+c.cls : ''}">${escHtml(c.l)}</span>`).join('');
+
+  body.innerHTML = `
+    <div class="brief-overview">${escHtml(overview)}</div>
+    ${points.length ? `<div class="brief-points">${points.map(p=>`<div class="brief-point"><div class="brief-dot"></div><div>${escHtml(p)}</div></div>`).join('')}</div>` : ''}
+    ${next ? `<div class="brief-next"><div class="brief-next-lbl">→ Next step</div><div class="brief-next-text">${escHtml(next)}</div></div>` : ''}
+  `;
+
+  // Always show open when switching emails
+  briefOpen = true;
+  body.style.display = 'flex';
+  if (chev) chev.textContent = '▴';
+  card.style.display = '';
 }
 
 async function loadThread(rfqId) {
