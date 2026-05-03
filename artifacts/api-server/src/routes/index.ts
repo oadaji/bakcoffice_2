@@ -6,6 +6,7 @@ import { gmailRouter } from "./gmail";
 import { partnersRouter } from "./partners";
 import { ratesRouter } from "./rates";
 import { quotesRouter } from "./quotes";
+import seedRouter from "./seed";
 
 const router: IRouter = Router();
 
@@ -16,5 +17,6 @@ router.use(gmailRouter);
 router.use(partnersRouter);
 router.use(ratesRouter);
 router.use(quotesRouter);
+router.use(seedRouter);
 
 export default router;
