@@ -357,8 +357,9 @@ router.patch("/quotes/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
     const b = req.body as Record<string, unknown>;
-    const allowed = ["status", "notes", "marginPct", "exchangeRate", "originCharges", "destCharges", "haulage",
-      "hasSuggestedHaulage", "oceanLine", "carrier", "sentAt", "totalCostUSD", "sellPriceUSD"];
+    const allowed = ["status", "notes", "aiNotes", "marginPct", "exchangeRate", "originCharges", "destCharges", "haulage",
+      "hasSuggestedHaulage", "oceanLine", "carrier", "sentAt", "totalCostUSD", "sellPriceUSD",
+      "pol", "pod", "polCode", "podCode", "commodity", "containerType", "containerQty", "customerName", "companyName", "customerEmail"];
     const patch: Record<string, unknown> = { updatedAt: new Date() };
     for (const k of allowed) { if (b[k] !== undefined) patch[k] = b[k]; }
     if (b.status === "sent" && !b.sentAt) patch.sentAt = new Date();
