@@ -1,0 +1,80 @@
+Dest. Terminal,Port Code,Origin State,Origin City,Origin LGA,Destination State,Shipment Type,Equipment Type,Commodity Type,Currency,Price
+Onne Port,NGONE,Anambra,Onitsha,Onitsha North,Rivers,LCL,20FT,Hazardous,NGN,430000
+Apapa Terminal,NGAPP,Rivers,Port Harcourt,Port Harcourt,Lagos,LCL,20FT,General,NGN,240000
+Calabar Port,NGCBQ,Oyo,Ibadan,Ibadan North,Cross River,FCL,40FT,General,NGN,250000
+Tin Can Terminal,NGTCN,Delta,Warri,Warri South,Lagos,FCL,40FT,Hazardous,NGN,595000
+Calabar Port,NGCBQ,Lagos,Ikorodu,Ikorodu,Cross River,FCL,20FT,Refrigerated,NGN,155000
+Tin Can Terminal,NGTCN,Kaduna,Kaduna,Kaduna North,Lagos,FCL,40FT,General,NGN,635000
+Onne Port,NGONE,FCT,Abuja,Garki,Rivers,FCL,40FT,Hazardous,NGN,900000
+Tin Can Terminal,NGTCN,FCT,Abuja,Wuse,Lagos,FCL,40FT,General,NGN,555000
+Apapa Terminal,NGAPP,Kaduna,Kaduna,Kaduna North,Lagos,FCL,40FT,General,NGN,600000
+Onne Port,NGONE,Lagos,Mushin,Mushin,Rivers,FCL,40HC,Hazardous,NGN,280000
+Calabar Port,NGCBQ,Delta,Warri,Warri South,Cross River,LCL,40FT,General,NGN,320000
+Onne Port,NGONE,Lagos,Ikorodu,Ikorodu,Rivers,LCL,40FT,General,NGN,190000
+Calabar Port,NGCBQ,Rivers,Port Harcourt,Port Harcourt,Cross River,FCL,40FT,Refrigerated,NGN,555000
+Calabar Port,NGCBQ,Lagos,Ikorodu,Ikorodu,Cross River,FCL,40FT,Oversized,NGN,230000
+Apapa Terminal,NGAPP,Plateau,Jos,Jos North,Lagos,FCL,20FT,General,NGN,375000
+Tin Can Terminal,NGTCN,Abia,Aba,Aba North,Lagos,FCL,40HC,Oversized,NGN,590000
+Onne Port,NGONE,Kano,Kano,Nassarawa,Rivers,LCL,40HC,Oversized,NGN,950000
+Tin Can Terminal,NGTCN,FCT,Abuja,Garki,Lagos,FCL,40FT,General,NGN,515000
+Onne Port,NGONE,Lagos,Mushin,Mushin,Rivers,LCL,20FT,General,NGN,115000
+Calabar Port,NGCBQ,Kaduna,Kaduna,Kaduna North,Cross River,FCL,40FT,Oversized,NGN,770000
+Onne Port,NGONE,Anambra,Onitsha,Onitsha North,Rivers,FCL,40HC,Refrigerated,NGN,665000
+Tin Can Terminal,NGTCN,Kaduna,Kaduna,Kaduna North,Lagos,FCL,20FT,General,NGN,345000
+Onne Port,NGONE,Edo,Benin City,Oredo,Rivers,LCL,40FT,Refrigerated,NGN,500000
+Apapa Terminal,NGAPP,Enugu,Enugu,Enugu North,Lagos,FCL,40HC,General,NGN,495000
+Onne Port,NGONE,Abia,Aba,Aba North,Rivers,FCL,40FT,Oversized,NGN,570000
+Tin Can Terminal,NGTCN,Lagos,Mushin,Mushin,Lagos,FCL,40HC,General,NGN,180000
+Calabar Port,NGCBQ,Rivers,Port Harcourt,Port Harcourt,Cross River,FCL,40FT,General,NGN,380000
+Onne Port,NGONE,FCT,Abuja,Wuse,Rivers,LCL,20FT,Oversized,NGN,495000
+Onne Port,NGONE,FCT,Abuja,Garki,Rivers,FCL,40FT,General,NGN,530000
+Tin Can Terminal,NGTCN,FCT,Abuja,Garki,Lagos,LCL,40FT,General,NGN,525000
+Onne Port,NGONE,Abia,Aba,Aba North,Rivers,FCL,40FT,Hazardous,NGN,715000
+Calabar Port,NGCBQ,Delta,Warri,Warri South,Cross River,FCL,40FT,General,NGN,370000
+Apapa Terminal,NGAPP,Plateau,Jos,Jos North,Lagos,FCL,40FT,General,NGN,570000
+Tin Can Terminal,NGTCN,FCT,Abuja,Garki,Lagos,FCL,40FT,Oversized,NGN,785000
+Onne Port,NGONE,FCT,Abuja,Wuse,Rivers,FCL,40FT,Refrigerated,NGN,825000
+Onne Port,NGONE,Delta,Warri,Warri South,Rivers,LCL,20FT,General,NGN,200000
+Calabar Port,NGCBQ,FCT,Abuja,Garki,Cross River,FCL,40FT,General,NGN,490000
+Apapa Terminal,NGAPP,Enugu,Enugu,Enugu North,Lagos,FCL,40FT,General,NGN,435000
+Onne Port,NGONE,Lagos,Ikorodu,Ikorodu,Rivers,LCL,20FT,Refrigerated,NGN,150000
+Calabar Port,NGCBQ,Abia,Aba,Aba North,Cross River,FCL,40FT,Hazardous,NGN,645000
+Calabar Port,NGCBQ,Plateau,Jos,Jos North,Cross River,LCL,40HC,Hazardous,NGN,885000
+Apapa Terminal,NGAPP,Lagos,Lagos Island,Lagos Island,Lagos,FCL,20FT,General,NGN,85000
+Apapa Terminal,NGAPP,Kaduna,Kaduna,Kaduna North,Lagos,FCL,20FT,Oversized,NGN,545000
+Apapa Terminal,NGAPP,Lagos,Lagos Island,Lagos Island,Lagos,FCL,40HC,Refrigerated,NGN,235000
+Calabar Port,NGCBQ,Anambra,Onitsha,Onitsha North,Cross River,LCL,20FT,Oversized,NGN,385000
+Apapa Terminal,NGAPP,Lagos,Mushin,Mushin,Lagos,FCL,40HC,General,NGN,165000
+Tin Can Terminal,NGTCN,Edo,Benin City,Oredo,Lagos,FCL,20FT,Refrigerated,NGN,305000
+Calabar Port,NGCBQ,FCT,Abuja,Wuse,Cross River,FCL,40FT,General,NGN,475000
+Onne Port,NGONE,Lagos,Lagos Island,Lagos Island,Rivers,FCL,40HC,Refrigerated,NGN,245000
+Calabar Port,NGCBQ,Enugu,Enugu,Enugu North,Cross River,FCL,40FT,Oversized,NGN,695000
+Tin Can Terminal,NGTCN,Abia,Aba,Aba North,Lagos,FCL,20FT,General,NGN,265000
+Tin Can Terminal,NGTCN,Kano,Kano,Nassarawa,Lagos,FCL,40FT,General,NGN,665000
+Onne Port,NGONE,Edo,Benin City,Oredo,Rivers,LCL,40HC,General,NGN,355000
+Calabar Port,NGCBQ,Oyo,Ibadan,Ibadan North,Cross River,LCL,20FT,Hazardous,NGN,275000
+Tin Can Terminal,NGTCN,Kaduna,Kaduna,Kaduna North,Lagos,FCL,20FT,Hazardous,NGN,625000
+Tin Can Terminal,NGTCN,Lagos,Ikorodu,Ikorodu,Lagos,FCL,40FT,Hazardous,NGN,285000
+Apapa Terminal,NGAPP,Lagos,Lagos Island,Lagos Island,Lagos,FCL,40FT,General,NGN,150000
+Apapa Terminal,NGAPP,FCT,Abuja,Wuse,Lagos,LCL,20FT,General,NGN,350000
+Apapa Terminal,NGAPP,Lagos,Ikeja,Ikeja,Lagos,LCL,20FT,General,NGN,240000
+Onne Port,NGONE,FCT,Abuja,Wuse,Rivers,FCL,40HC,Oversized,NGN,745000
+Calabar Port,NGCBQ,Oyo,Ibadan,Ibadan North,Cross River,FCL,20FT,General,NGN,155000
+Tin Can Terminal,NGTCN,FCT,Abuja,Wuse,Lagos,FCL,40HC,Hazardous,NGN,800000
+Onne Port,NGONE,Enugu,Enugu,Enugu North,Rivers,LCL,40FT,General,NGN,435000
+Apapa Terminal,NGAPP,FCT,Abuja,Wuse,Lagos,FCL,40HC,Oversized,NGN,750000
+Tin Can Terminal,NGTCN,Plateau,Jos,Jos North,Lagos,LCL,20FT,Refrigerated,NGN,505000
+Calabar Port,NGCBQ,Anambra,Onitsha,Onitsha North,Cross River,FCL,40FT,General,NGN,415000
+Onne Port,NGONE,FCT,Abuja,Wuse,Rivers,FCL,20FT,Oversized,NGN,425000
+Calabar Port,NGCBQ,Enugu,Enugu,Enugu North,Cross River,FCL,40HC,Oversized,NGN,650000
+Apapa Terminal,NGAPP,Rivers,Port Harcourt,Port Harcourt,Lagos,FCL,40HC,Oversized,NGN,650000
+Onne Port,NGONE,Enugu,Enugu,Enugu North,Rivers,FCL,40HC,General,NGN,495000
+Tin Can Terminal,NGTCN,Anambra,Onitsha,Onitsha North,Lagos,FCL,40FT,General,NGN,460000
+Onne Port,NGONE,Oyo,Ibadan,Ibadan North,Rivers,FCL,20FT,Oversized,NGN,240000
+Tin Can Terminal,NGTCN,Enugu,Enugu,Enugu North,Lagos,FCL,40HC,General,NGN,450000
+Tin Can Terminal,NGTCN,FCT,Abuja,Garki,Lagos,FCL,40HC,Refrigerated,NGN,845000
+Calabar Port,NGCBQ,Lagos,Mushin,Mushin,Cross River,FCL,40FT,Refrigerated,NGN,275000
+Calabar Port,NGCBQ,FCT,Abuja,Garki,Cross River,LCL,20FT,Refrigerated,NGN,475000
+Tin Can Terminal,NGTCN,Lagos,Ikeja,Ikeja,Lagos,FCL,20FT,General,NGN,240000
+Onne Port,NGONE,Kano,Kano,Nassarawa,Rivers,FCL,20FT,General,NGN,385000
+Tin Can Terminal,NGTCN,Enugu,Enugu,Enugu North,Lagos,LCL,40FT,Refrigerated,NGN,680000

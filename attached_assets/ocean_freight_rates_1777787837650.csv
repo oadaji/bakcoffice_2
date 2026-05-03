@@ -1,0 +1,83 @@
+Carrier,POL Code,Origin Country,POD Code,Dest. Country,Commodity Type,Equipment Type,Rate Type,Inclusion Type,Transit Time,Free Time,Currency,20FT Amount,40FT Amount,40HC Amount,Expiry Date
+Evergreen,SGSIN,Singapore,GBFXT,UK,Oversized,20FT,Spot,Prepaid,30 days,14 days,USD,4100,,,2027-06-26
+ONE,CNSHA,China,USNYC,USA,General,40FT,All-in,Prepaid,10 days,14 days,USD,,2750,,2026-07-31
+COSCO,KRPUS,South Korea,USLA,USA,General,40FT,All-in,All-in,42 days,5 days,USD,,2300,,2026-12-28
+CMA CGM,INNSZ,India,NLRTM,Netherlands,Refrigerated,40HC,Base,All-in,10 days,21 days,USD,,,6450,2026-07-01
+Hapag-Lloyd,SGSIN,Singapore,USNYC,USA,General,20FT,Contract,Collect,22 days,21 days,USD,1600,,,2026-07-31
+MSC,TWKHH,Taiwan,NLRTM,Netherlands,General,40FT,Contract,All-in,28 days,7 days,USD,,2050,,2027-06-26
+Evergreen,GBFXT,UK,NGAPP,Nigeria,Hazardous,40FT,Contract,Collect,24 days,7 days,USD,,4650,,2027-06-26
+Hapag-Lloyd,NGONE,Nigeria,GBFXT,UK,Refrigerated,40HC,All-in,All-in,38 days,5 days,USD,,,5550,2027-02-26
+Hapag-Lloyd,CNSHA,China,GBFXT,UK,Oversized,40FT,All-in,All-in,22 days,14 days,USD,,5150,,2026-10-29
+COSCO,CNSHA,China,GBFXT,UK,Hazardous,40FT,Spot,All-in,24 days,7 days,USD,,5700,,2026-03-03
+Zim,SGSIN,Singapore,USNYC,USA,General,20FT,Spot,Collect,24 days,21 days,USD,1250,,,2026-10-29
+Evergreen,KRPUS,South Korea,DEHAM,Germany,Hazardous,40HC,Base,All-in,20 days,10 days,USD,,,4650,2026-12-28
+COSCO,INNSZ,India,NLRTM,Netherlands,General,40HC,All-in,All-in,14 days,10 days,USD,,,2950,2027-04-27
+HMM,NGAPP,Nigeria,CNSHA,China,Refrigerated,40FT,All-in,Collect,20 days,10 days,USD,,6700,,2027-02-26
+MSC,CNSHA,China,GBFXT,UK,General,20FT,Base,All-in,42 days,21 days,USD,1350,,,2026-12-28
+Evergreen,JPYOK,Japan,DEHAM,Germany,General,20FT,Base,Prepaid,30 days,7 days,USD,1500,,,2027-06-26
+Hapag-Lloyd,GBFXT,UK,CNSHA,China,General,20FT,Contract,All-in,24 days,7 days,USD,1350,,,2027-02-26
+Hapag-Lloyd,CNNGB,China,USNYC,USA,Hazardous,40HC,Spot,Collect,28 days,21 days,USD,,,5550,2026-03-03
+Hapag-Lloyd,CNSHA,China,USNYC,USA,General,40FT,Contract,All-in,38 days,10 days,USD,,2850,,2026-12-28
+COSCO,CNSHA,China,GBFXT,UK,General,40HC,Contract,All-in,42 days,5 days,USD,,,2700,2027-06-26
+Evergreen,CNSHA,China,USNYC,USA,General,20FT,Base,Prepaid,14 days,10 days,USD,1350,,,2026-04-02
+Zim,CNSHA,China,NLRTM,Netherlands,Hazardous,40HC,All-in,Prepaid,24 days,14 days,USD,,,5100,2026-04-02
+Evergreen,CNNGB,China,DEHAM,Germany,Oversized,20FT,Base,All-in,24 days,7 days,USD,3800,,,2026-03-03
+MSC,NGAPP,Nigeria,CNSHA,China,General,20FT,All-in,All-in,24 days,5 days,USD,1600,,,2026-08-30
+Evergreen,KRPUS,South Korea,USLA,USA,Refrigerated,40HC,Spot,All-in,28 days,14 days,USD,,,5800,2027-02-26
+CMA CGM,INNSZ,India,NLRTM,Netherlands,Oversized,20FT,Contract,Prepaid,42 days,10 days,USD,4200,,,2026-07-01
+Yang Ming,SGSIN,Singapore,GBFXT,UK,Refrigerated,20FT,All-in,All-in,22 days,5 days,USD,3900,,,2027-04-27
+CMA CGM,CNNGB,China,DEHAM,Germany,Oversized,40HC,Contract,All-in,42 days,21 days,USD,,,7050,2026-10-29
+ONE,CNSHA,China,NLRTM,Netherlands,Hazardous,20FT,All-in,Collect,14 days,5 days,USD,3250,,,2026-07-01
+CMA CGM,NGAPP,Nigeria,CNSHA,China,General,20FT,All-in,All-in,14 days,5 days,USD,1700,,,2026-07-31
+MSC,JPYOK,Japan,DEHAM,Germany,General,40FT,All-in,All-in,14 days,7 days,USD,,2550,,2026-04-02
+Evergreen,INNSZ,India,DEHAM,Germany,Oversized,20FT,All-in,Collect,35 days,10 days,USD,3850,,,2027-04-27
+ONE,JPYOK,Japan,DEHAM,Germany,Oversized,20FT,All-in,Collect,26 days,21 days,USD,3800,,,2026-07-01
+Zim,CNNGB,China,DEHAM,Germany,Hazardous,40HC,All-in,Collect,42 days,5 days,USD,,,4450,2027-04-27
+MSC,SGSIN,Singapore,GBFXT,UK,General,40HC,Base,Collect,22 days,21 days,USD,,,3250,2026-10-29
+Evergreen,JPYOK,Japan,DEHAM,Germany,General,40HC,Base,Prepaid,18 days,21 days,USD,,,3150,2026-03-03
+ONE,CNSHA,China,NLRTM,Netherlands,General,40FT,Base,Prepaid,22 days,21 days,USD,,2500,,2027-06-26
+Evergreen,GBFXT,UK,CNSHA,China,General,40HC,Contract,All-in,10 days,14 days,USD,,,3200,2026-10-29
+Evergreen,NGONE,Nigeria,GBFXT,UK,General,40FT,All-in,All-in,30 days,10 days,USD,,2500,,2026-12-28
+Maersk,NGAPP,Nigeria,DEHAM,Germany,General,40FT,Contract,Prepaid,18 days,21 days,USD,,2650,,2026-08-30
+MSC,SGSIN,Singapore,NLRTM,Netherlands,General,20FT,Base,Prepaid,42 days,7 days,USD,1450,,,2027-04-27
+Hapag-Lloyd,SGSIN,Singapore,GBFXT,UK,General,20FT,All-in,All-in,24 days,5 days,USD,1650,,,2027-02-26
+MSC,SGSIN,Singapore,USNYC,USA,General,40HC,Spot,All-in,35 days,7 days,USD,,,3100,2026-10-29
+ONE,NGAPP,Nigeria,NLRTM,Netherlands,Refrigerated,40HC,All-in,Prepaid,14 days,10 days,USD,,,7050,2027-04-27
+HMM,CNSHA,China,GBFXT,UK,Hazardous,40FT,All-in,Collect,22 days,7 days,USD,,5250,,2026-08-30
+CMA CGM,NGAPP,Nigeria,CNSHA,China,Hazardous,40HC,All-in,All-in,32 days,10 days,USD,,,5950,2026-04-02
+Evergreen,JPYOK,Japan,USLA,USA,Oversized,40HC,Spot,All-in,35 days,21 days,USD,,,7650,2026-03-03
+HMM,AEJEA,UAE,USNYC,USA,General,20FT,Base,Collect,22 days,14 days,USD,1350,,,2026-07-31
+ONE,NGAPP,Nigeria,NLRTM,Netherlands,Hazardous,20FT,All-in,All-in,22 days,5 days,USD,2550,,,2026-07-31
+ONE,NGAPP,Nigeria,DEHAM,Germany,Refrigerated,40FT,Spot,Prepaid,35 days,7 days,USD,,6200,,2026-10-29
+CMA CGM,CNNGB,China,DEHAM,Germany,Refrigerated,40FT,All-in,All-in,14 days,7 days,USD,,5050,,2026-03-03
+Hapag-Lloyd,JPYOK,Japan,DEHAM,Germany,General,40FT,All-in,Prepaid,35 days,14 days,USD,,2150,,2026-04-02
+COSCO,CNSHA,China,DEHAM,Germany,General,20FT,All-in,All-in,20 days,7 days,USD,1300,,,2026-07-01
+Hapag-Lloyd,NGAPP,Nigeria,NLRTM,Netherlands,General,40FT,Base,Prepaid,42 days,10 days,USD,,2400,,2026-03-03
+Maersk,SGSIN,Singapore,NLRTM,Netherlands,General,20FT,Contract,All-in,18 days,5 days,USD,1650,,,2027-06-26
+CMA CGM,NGAPP,Nigeria,CNSHA,China,General,40HC,Spot,Prepaid,26 days,21 days,USD,,,2400,2026-03-03
+Evergreen,AEJEA,UAE,NGAPP,Nigeria,Refrigerated,40HC,Base,Collect,18 days,7 days,USD,,,6050,2026-12-28
+Evergreen,KRPUS,South Korea,DEHAM,Germany,Refrigerated,40FT,Contract,Prepaid,14 days,7 days,USD,,5050,,2026-07-31
+COSCO,SGSIN,Singapore,GBFXT,UK,General,40HC,All-in,Prepaid,20 days,14 days,USD,,,2600,2026-07-01
+Hapag-Lloyd,INNSZ,India,NLRTM,Netherlands,Hazardous,40HC,All-in,Prepaid,26 days,7 days,USD,,,6050,2027-04-27
+Yang Ming,JPYOK,Japan,USLA,USA,General,20FT,All-in,Collect,38 days,21 days,USD,1200,,,2026-12-28
+ONE,NGAPP,Nigeria,CNSHA,China,Refrigerated,20FT,Contract,Collect,26 days,14 days,USD,2950,,,2026-10-29
+ONE,INNSZ,India,NLRTM,Netherlands,General,40HC,Spot,All-in,30 days,7 days,USD,,,2300,2027-02-26
+Yang Ming,CNSHA,China,USNYC,USA,General,20FT,Spot,All-in,20 days,5 days,USD,1500,,,2027-04-27
+Maersk,CNSHA,China,USNYC,USA,Refrigerated,20FT,All-in,Prepaid,35 days,14 days,USD,3500,,,2026-07-31
+Hapag-Lloyd,TWKHH,Taiwan,USNYC,USA,Hazardous,40HC,Spot,Prepaid,30 days,21 days,USD,,,5450,2026-03-03
+Evergreen,GBFXT,UK,NGAPP,Nigeria,General,20FT,All-in,All-in,20 days,5 days,USD,1750,,,2026-06-01
+Hapag-Lloyd,CNSHA,China,NLRTM,Netherlands,Oversized,40HC,Spot,Prepaid,30 days,5 days,USD,,,6300,2026-07-31
+Maersk,CNNGB,China,DEHAM,Germany,General,40HC,All-in,All-in,42 days,14 days,USD,,,2300,2027-02-26
+Maersk,NGONE,Nigeria,GBFXT,UK,General,20FT,All-in,Collect,10 days,21 days,USD,1400,,,2027-04-27
+Yang Ming,NGAPP,Nigeria,CNSHA,China,General,20FT,Base,Prepaid,42 days,14 days,USD,1450,,,2026-06-01
+Evergreen,NGAPP,Nigeria,DEHAM,Germany,Hazardous,40HC,Contract,Prepaid,38 days,14 days,USD,,,5850,2027-02-26
+CMA CGM,NGAPP,Nigeria,CNSHA,China,General,40FT,Base,Prepaid,10 days,5 days,USD,,2350,,2026-12-28
+MSC,GBFXT,UK,NGAPP,Nigeria,General,40FT,All-in,Prepaid,10 days,7 days,USD,,2450,,2026-07-01
+Zim,CNNGB,China,DEHAM,Germany,General,20FT,Spot,All-in,10 days,5 days,USD,1450,,,2027-04-27
+Hapag-Lloyd,GBFXT,UK,NGAPP,Nigeria,General,40HC,Contract,Prepaid,24 days,21 days,USD,,,3050,2027-02-26
+Evergreen,SGSIN,Singapore,USNYC,USA,General,40FT,All-in,Prepaid,20 days,5 days,USD,,2900,,2026-07-01
+Hapag-Lloyd,AEJEA,UAE,USNYC,USA,Refrigerated,40FT,All-in,All-in,26 days,14 days,USD,,6300,,2027-06-26
+Maersk,CNSHA,China,USNYC,USA,General,40HC,All-in,Prepaid,20 days,14 days,USD,,,2650,2026-08-30
+MSC,CNSHA,China,GBFXT,UK,General,40HC,Spot,All-in,22 days,7 days,USD,,,2550,2027-02-26
+HMM,NGAPP,Nigeria,NLRTM,Netherlands,Hazardous,40FT,All-in,All-in,30 days,5 days,USD,,5300,,2026-06-01
+Evergreen,SGSIN,Singapore,NLRTM,Netherlands,Refrigerated,40HC,Spot,Prepaid,14 days,5 days,USD,,,6650,2027-02-26

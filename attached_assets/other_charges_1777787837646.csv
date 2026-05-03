@@ -1,0 +1,31 @@
+Item Name,Shipment Type,Item Category,Commodity Type,Country,Currency,Price,As Per Receipt,Expiry Date
+Refundable Container Deposit,Import,Shipping Line,FAK,Nigeria,USD,300,No,2027-10-24
+Shipping Line Charges,Import,Shipping Line,FAK,Nigeria,USD,,Yes,2027-10-24
+Terminal Handling Charges,Import,Terminal Operators,FAK,Nigeria,NGN,,Yes,2026-03-03
+Son Fee,Import,Oneport 365,FAK,Nigeria,NGN,25000,No,2026-08-30
+Form M And Paar Documentation,Import,Oneport 365,FAK,Nigeria,NGN,45000,No,2026-12-28
+Agency Clearance Fee,Import,Oneport 365,FAK,Nigeria,NGN,80000,No,2027-06-26
+Customs Examination Fee,Import,Oneport 365,FAK,Nigeria,NGN,60000,No,2027-06-26
+Pre-Arrival Assessment Report,Import,Oneport 365,FAK,Nigeria,NGN,35000,No,2026-10-29
+Scanning Fee,Import,Terminal Operators,FAK,Nigeria,NGN,,Yes,2027-06-26
+Demurrage Fee,Import,Shipping Line,FAK,Nigeria,USD,,Yes,2026-12-28
+Container Deposit,Import,Shipping Line,FAK,Nigeria,USD,250,No,2026-08-30
+Bill of Lading Fee,Import,Shipping Line,FAK,Nigeria,USD,75,No,2026-12-28
+Port Development Levy,Import,Terminal Operators,FAK,Nigeria,NGN,15000,No,2026-03-03
+NAFDAC Inspection Fee,Import,Oneport 365,FAK,Nigeria,NGN,20000,No,2027-10-24
+NAFDAC Inspection Fee,Import,Oneport 365,Hazardous,Nigeria,NGN,40000,No,2026-07-01
+Bank Charge (Form M),Import,Oneport 365,FAK,Nigeria,NGN,12000,No,2026-10-29
+Terminal Handling Charges,Export,Terminal Operators,FAK,Nigeria,NGN,,Yes,2027-04-27
+Offloading,Export,Oneport 365,FAK,Nigeria,NGN,30000,No,2026-03-03
+Export Documentation Fee,Export,Oneport 365,FAK,Nigeria,NGN,25000,No,2026-10-29
+NXP Form Processing,Export,Oneport 365,FAK,Nigeria,NGN,18000,No,2027-10-24
+Stuffing / Loading Fee,Export,Terminal Operators,FAK,Nigeria,NGN,,Yes,2026-12-28
+Shipping Line Export Charges,Export,Shipping Line,FAK,Nigeria,USD,,Yes,2026-07-01
+Bill of Lading (Export),Export,Shipping Line,FAK,Nigeria,USD,75,No,2026-07-01
+Container Cleaning Fee,Export,Terminal Operators,FAK,Nigeria,NGN,12000,No,2026-07-01
+Hazardous Cargo Surcharge,Export,Oneport 365,Hazardous,Nigeria,NGN,95000,No,2026-08-30
+Reefer Monitoring Fee,Both,Terminal Operators,Refrigerated,Nigeria,NGN,,Yes,2026-08-30
+Carbon Levy,Both,Oneport 365,FAK,Nigeria,NGN,5000,No,2026-07-01
+Oversized Cargo Surcharge,Both,Oneport 365,Oversized,Nigeria,NGN,120000,No,2027-10-24
+Documentation Processing Fee,Both,Oneport 365,FAK,Nigeria,NGN,15000,No,2026-06-01
+VGM (Verified Gross Mass) Fee,Export,Oneport 365,FAK,Nigeria,NGN,8000,No,2026-03-03
