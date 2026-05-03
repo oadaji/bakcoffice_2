@@ -545,6 +545,82 @@ router.post("/rfq/extract", async (req, res) => {
   }
 });
 
+// POST /api/rfq/admin/reclassify — force-reset email_type and optionally re-ingest without freight filter.
+// Used to rescue emails that were incorrectly rejected by the freight filter (false negatives).
+// Body: { emailIds: number[], forceIngest?: boolean }
+router.post("/rfq/admin/reclassify", async (req, res) => {
+  try {
+    const port = process.env.PORT ?? "8080";
+    const { emailIds, forceIngest = true } = req.body as { emailIds: number[]; forceIngest?: boolean };
+
+    if (!Array.isArray(emailIds) || emailIds.length === 0) {
+      res.status(400).json({ error: "emailIds array required" });
+      return;
+    }
+
+    const safeIds = emailIds.map(Number).filter((n) => !isNaN(n));
+
+    // Fetch the target emails
+    const { rows: emailRows } = await db.execute<{
+      id: number; uid: string; from_name: string; from_email: string;
+      subject: string; body: string; received_at: Date; message_id: string | null; email_type: string;
+    }>(
+      `SELECT id, uid, from_name, from_email, subject, body, received_at, message_id, email_type
+       FROM emails WHERE id = ANY(ARRAY[${safeIds.join(",")}]::int[])`
+    );
+
+    const results: Array<{ id: number; action: string; rfqsCreated?: number }> = [];
+
+    for (const row of emailRows) {
+      // Always reset email_type to customer-rfq
+      await db.update(emailsTable).set({ emailType: "customer-rfq" }).where(eq(emailsTable.id, row.id));
+
+      if (!forceIngest) {
+        results.push({ id: row.id, action: "reclassified" });
+        continue;
+      }
+
+      // Check if this email already has RFQs
+      const existingRfqs = await db.select({ id: rfqsTable.id }).from(rfqsTable).where(eq(rfqsTable.emailId, row.id));
+      if (existingRfqs.length > 0) {
+        results.push({ id: row.id, action: "reclassified_email_only", rfqsCreated: 0 });
+        continue;
+      }
+
+      // Re-ingest without freight filter
+      const ingestResp = await fetch(`http://localhost:${port}/api/rfq/ingest`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          uid: row.uid,
+          fromName: row.from_name,
+          fromEmail: row.from_email,
+          subject: row.subject,
+          body: row.body,
+          receivedAt: row.received_at,
+          emailType: "customer-rfq",
+          requireFreightMatch: false,
+          messageId: row.message_id,
+        }),
+      });
+
+      if (ingestResp.ok) {
+        const data = await ingestResp.json() as { groupTotal?: number };
+        results.push({ id: row.id, action: "reclassified_and_ingested", rfqsCreated: data.groupTotal ?? 1 });
+      } else {
+        const err = await ingestResp.text();
+        results.push({ id: row.id, action: `ingest_failed: ${err}` });
+      }
+    }
+
+    req.log.info({ results }, "Admin reclassify complete");
+    res.json({ ok: true, results });
+  } catch (err) {
+    req.log.error({ err }, "Admin reclassify failed");
+    res.status(500).json({ error: "Reclassify failed" });
+  }
+});
+
 // POST /api/rfq/repair-orphans — re-process emails that have no linked RFQ
 // Also re-evaluates rejected emails to catch false negatives from the freight filter.
 router.post("/rfq/repair-orphans", async (req, res) => {
