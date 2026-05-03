@@ -129,6 +129,16 @@ tr.row-expiring-soon td{background:#fffbeb}
 .modal-hd{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
 .modal-title{font-size:15px;font-weight:600;color:var(--text)}
 .modal-close{background:none;border:none;font-size:18px;cursor:pointer;color:var(--text3);padding:2px 6px;border-radius:4px}
+.btn-split{position:relative;display:inline-flex}
+.btn-split .btn-main{border-radius:7px 0 0 7px;border-right:none}
+.btn-split .btn-caret{border-radius:0 7px 7px 0;padding:6px 7px;border-left:1px solid rgba(167,139,250,.4);min-width:0}
+.btn-split .btn-caret svg{display:block}
+.btn-split:hover .btn-main,.btn-split:hover .btn-caret{border-color:#7c3aed}
+.split-menu{position:absolute;top:calc(100% + 4px);right:0;background:#fff;border:1px solid var(--border2);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.12);min-width:170px;z-index:200;display:none;flex-direction:column;overflow:hidden}
+.split-menu.open{display:flex}
+.split-menu-item{padding:9px 14px;font-size:12px;color:var(--text);cursor:pointer;display:flex;align-items:center;gap:8px;background:#fff;border:none;text-align:left;font-family:Inter,sans-serif;width:100%}
+.split-menu-item:hover{background:#f5f3ff;color:#6d28d9}
+.split-menu-divider{height:1px;background:var(--border);margin:2px 0}
 .modal-close:hover{background:#f3f4f6;color:var(--text)}
 .modal-body{flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:14px}
 .modal-ft{padding:14px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;flex-shrink:0}
@@ -344,8 +354,17 @@ tr.row-expiring-soon td{background:#fffbeb}
           <p>International sea freight rates between ports — per container type</p>
         </div>
         <div class="panel-hd-right">
-          <button class="btn" onclick="openContactPartner()" style="border-color:#a78bfa;color:#6d28d9;background:#faf5ff">✉ Contact Partner</button>
-          <button class="btn" onclick="openOutreachHistory()" style="border-color:#c4b5fd;color:#7c3aed;background:#faf5ff;font-size:11px">📋 Outreach History</button>
+          <div class="btn-split" id="cp-split">
+            <button class="btn btn-main" onclick="openContactPartner()" style="border-color:#a78bfa;color:#6d28d9;background:#faf5ff">✉ Contact Partner</button>
+            <button class="btn btn-caret" onclick="toggleSplitMenu('cp-split')" style="border-color:#a78bfa;color:#6d28d9;background:#faf5ff" title="More options">
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 3.5L5 6.5L8 3.5" stroke="#6d28d9" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <div class="split-menu" id="cp-split-menu">
+              <button class="split-menu-item" onclick="openContactPartner();closeSplitMenu('cp-split')">✉ Send Rate Request</button>
+              <div class="split-menu-divider"></div>
+              <button class="split-menu-item" onclick="openOutreachHistory();closeSplitMenu('cp-split')">📋 Outreach History</button>
+            </div>
+          </div>
           <button class="btn" onclick="exportCsv('ocean')">↓ Export CSV</button>
           <button class="btn" onclick="openQuickSpotRate()" style="border-color:#7AB648;color:#3d6b1e;background:#f0f7e8;font-weight:600">⚡ Spot Rate</button>
           <button class="btn btn-primary" onclick="openModal('ocean', null)">+ Add Rate</button>
@@ -1976,6 +1995,23 @@ async function triggerScrape() {
     btn.innerHTML = '⟳ Scrape Now';
   }
 }
+
+function toggleSplitMenu(id) {
+  const menu = document.getElementById(id + '-menu');
+  if (!menu) return;
+  const isOpen = menu.classList.contains('open');
+  document.querySelectorAll('.split-menu.open').forEach(m => m.classList.remove('open'));
+  if (!isOpen) menu.classList.add('open');
+}
+function closeSplitMenu(id) {
+  const menu = document.getElementById(id + '-menu');
+  if (menu) menu.classList.remove('open');
+}
+document.addEventListener('click', e => {
+  if (!e.target.closest('.btn-split')) {
+    document.querySelectorAll('.split-menu.open').forEach(m => m.classList.remove('open'));
+  }
+});
 
 function showToast(msg, ms = 3000) {
   let t = document.getElementById('mi-toast');
