@@ -1699,8 +1699,11 @@ tr.trow.sel td{background:#eef6e6}
 
                 <!-- TERMS & CONDITIONS -->
                 <div style="padding:18px 28px">
-                  <div style="font-size:12px;font-weight:700;color:#1a2e1a;text-transform:uppercase;margin-bottom:14px">OnePort365 Terms and Conditions</div>
-                  <div style="font-size:11px;color:#4a5e4a;line-height:1.8">
+                  <div style="font-size:12px;font-weight:700;color:#1a2e1a;text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between">
+                    <span>OnePort365 Terms and Conditions</span>
+                    <button id="qp-terms-edit-btn" onclick="toggleTermsEdit()" style="font-size:10px;padding:3px 10px;border-radius:5px;border:1px solid #a3c4a3;background:#f0f7f0;color:#2e6b2e;cursor:pointer;font-family:Inter,sans-serif;font-weight:500">✎ Edit</button>
+                  </div>
+                  <div id="qp-terms-list" style="font-size:11px;color:#4a5e4a;line-height:1.8">
                     <div style="display:flex;flex-direction:column;gap:6px">
                       <div style="display:flex;gap:10px"><span style="font-size:10px;color:#8a9e8a;min-width:20px;font-weight:600">1.</span><span>Customs clearance would be provided by ONEEXPRESS: A licenced customs brokerage provider.</span></div>
                       <div style="display:flex;gap:10px"><span style="font-size:10px;color:#8a9e8a;min-width:20px;font-weight:600">2.</span><span>Transit time is estimated time by carriers, and may vary depending on sailing dates of the specific service contracted.</span></div>
@@ -1726,6 +1729,7 @@ tr.trow.sel td{background:#eef6e6}
                       <div style="display:flex;gap:10px"><span style="font-size:10px;color:#8a9e8a;min-width:20px;font-weight:600">22.</span><span>Prompt payment of freight to ensure timely issuance of OBL/Seawaybill.</span></div>
                     </div>
                   </div>
+                  <textarea id="qp-terms-textarea" style="display:none;width:100%;min-height:340px;font-size:11px;color:#2a3e2a;line-height:1.9;border:1px solid #a3c4a3;border-radius:6px;padding:12px;font-family:Inter,sans-serif;resize:vertical;box-sizing:border-box;background:#fafff8;outline:none"></textarea>
                 </div>
 
                 <!-- QB SYNC STATUS -->
@@ -3691,6 +3695,68 @@ function renderQuotePreview(q) {
   // Show Regenerate button only for draft quotes that have an RFQ linked
   const regenBtn = document.getElementById('qv-regenerate-btn');
   if (regenBtn) regenBtn.style.display = (q.status === 'draft' && q.rfqId) ? 'inline-flex' : 'none';
+
+  // Load saved T&C for this quote (persisted per-quote in localStorage)
+  const termsTa = document.getElementById('qp-terms-textarea');
+  const termsList = document.getElementById('qp-terms-list');
+  const termsBtn = document.getElementById('qp-terms-edit-btn');
+  if (termsTa && termsList && termsBtn) {
+    termsTa.style.display = 'none';
+    termsList.style.display = '';
+    termsBtn.textContent = '✎ Edit';
+    termsBtn.style.cssText = 'font-size:10px;padding:3px 10px;border-radius:5px;border:1px solid #a3c4a3;background:#f0f7f0;color:#2e6b2e;cursor:pointer;font-family:Inter,sans-serif;font-weight:500';
+    try {
+      const saved = localStorage.getItem('op365-terms-' + q.id);
+      if (saved) renderTermsList(JSON.parse(saved));
+    } catch(e) {}
+  }
+}
+
+function getTermsFromList() {
+  const list = document.getElementById('qp-terms-list');
+  if (!list) return [];
+  return Array.from(list.querySelectorAll('div[style*="display:flex"] span:last-child')).map(s => s.textContent.trim()).filter(Boolean);
+}
+
+function renderTermsList(terms) {
+  const list = document.getElementById('qp-terms-list');
+  if (!list) return;
+  list.innerHTML = '<div style="display:flex;flex-direction:column;gap:6px">' +
+    terms.map((t, i) =>
+      `<div style="display:flex;gap:10px"><span style="font-size:10px;color:#8a9e8a;min-width:20px;font-weight:600">${i+1}.</span><span>${escHtml(t)}</span></div>`
+    ).join('') +
+  '</div>';
+}
+
+function toggleTermsEdit() {
+  const list = document.getElementById('qp-terms-list');
+  const ta = document.getElementById('qp-terms-textarea');
+  const btn = document.getElementById('qp-terms-edit-btn');
+  if (!list || !ta || !btn) return;
+
+  const isEditing = ta.style.display !== 'none';
+
+  if (isEditing) {
+    // Save
+    const terms = ta.value.split('\n')
+      .map(l => l.replace(/^\s*\d+[\.\)]\s*/, '').trim())
+      .filter(Boolean);
+    renderTermsList(terms);
+    try { localStorage.setItem('op365-terms-' + currentQuoteDbId, JSON.stringify(terms)); } catch(e) {}
+    ta.style.display = 'none';
+    list.style.display = '';
+    btn.textContent = '✎ Edit';
+    btn.style.cssText = 'font-size:10px;padding:3px 10px;border-radius:5px;border:1px solid #a3c4a3;background:#f0f7f0;color:#2e6b2e;cursor:pointer;font-family:Inter,sans-serif;font-weight:500';
+  } else {
+    // Enter edit mode — populate textarea with one term per line
+    const terms = getTermsFromList();
+    ta.value = terms.map((t, i) => `${i+1}. ${t}`).join('\n');
+    list.style.display = 'none';
+    ta.style.display = 'block';
+    btn.textContent = '✓ Save';
+    btn.style.cssText = 'font-size:10px;padding:3px 10px;border-radius:5px;border:1px solid #1C3829;background:#1C3829;color:#fff;cursor:pointer;font-family:Inter,sans-serif;font-weight:500';
+    ta.focus();
+  }
 }
 
 function selectQuote(id, el) {
