@@ -1,67 +1,131 @@
-import { pgTable, serial, text, timestamp, numeric, integer, jsonb, boolean } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, timestamp, numeric, integer, jsonb, boolean, date } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { partnersTable } from "./partners";
 
 export const ratesTable = pgTable("rates", {
   id: serial("id").primaryKey(),
-
-  // Route
-  originPortCode: text("origin_port_code"),          // LOCODE e.g. "NGAPP"
-  destinationPortCode: text("destination_port_code"), // LOCODE e.g. "CNSHA"
-  pol: text("pol").notNull(),                         // human-readable origin name
-  pod: text("pod").notNull(),                         // human-readable destination name
-
-  // Carrier
+  originPortCode: text("origin_port_code"),
+  destinationPortCode: text("destination_port_code"),
+  pol: text("pol").notNull(),
+  pod: text("pod").notNull(),
   carrier: text("carrier"),
-  scac: text("scac"),                                 // carrier SCAC code e.g. "MSCU"
+  scac: text("scac"),
   isAgentRate: boolean("is_agent_rate").notNull().default(false),
-
-  // Cargo & rate classification
-  cargoType: text("cargo_type"),                      // "dry" | "reefer"
-  rateType: text("rate_type"),                        // "standard" | "spot" | "contract"
-  inclusionType: text("inclusion_type"),              // "imported" | "manual" | "integrated"
-  commodityType: text("commodity_type"),              // "fak" | "others"
-  commodityTypeField: text("commodity_type_field"),   // free-text commodity description
-
-  // Per-size charges (new — replaces single freightRate for multi-size records)
+  cargoType: text("cargo_type"),
+  rateType: text("rate_type"),
+  inclusionType: text("inclusion_type"),
+  commodityType: text("commodity_type"),
+  commodityTypeField: text("commodity_type_field"),
   charge20ft: numeric("charge_20ft"),
   charge40ft: numeric("charge_40ft"),
   charge40hc: numeric("charge_40hc"),
-
-  // Legacy single-rate field (kept for backward compat with existing records)
-  containerType: text("container_type"),              // "20FT" | "40FT" | "40HC" | "LCL"
-  freightRate: numeric("freight_rate"),               // base ocean freight USD (legacy)
-
-  commodity: text("commodity"),                       // legacy cargo filter
+  containerType: text("container_type"),
+  freightRate: numeric("freight_rate"),
+  commodity: text("commodity"),
   currency: text("currency").notNull().default("USD"),
-
-  // Time fields
   validFrom: timestamp("valid_from"),
   validTo: timestamp("valid_to"),
   sailingDate: timestamp("sailing_date"),
-
-  // Days
-  freeTime: integer("free_time"),                     // free days at destination
-  transitTime: integer("transit_time"),               // transit days
+  freeTime: integer("free_time"),
+  transitTime: integer("transit_time"),
   demurrageDays: integer("demurrage_days"),
   detentionDays: integer("detention_days"),
-
-  // Market reference
   avgMarketRate20ft: numeric("avg_market_rate_20ft"),
   avgMarketRate40ft: numeric("avg_market_rate_40ft"),
-
-  // Relations & metadata
   partnerId: integer("partner_id").references(() => partnersTable.id),
   notes: text("notes"),
   breakdown: jsonb("breakdown").notNull().default({}),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
-export const insertRateSchema = createInsertSchema(ratesTable).omit({
-  id: true,
-  createdAt: true,
-});
-
+export const insertRateSchema = createInsertSchema(ratesTable).omit({ id: true, createdAt: true });
 export type InsertRate = z.infer<typeof insertRateSchema>;
 export type Rate = typeof ratesTable.$inferSelect;
+
+// ── OCEAN FREIGHT RATES ─────────────────────────────────────────────────────
+export const oceanFreightRates = pgTable("ocean_freight_rates", {
+  id: serial("id").primaryKey(),
+  carrier: text("carrier").notNull(),
+  polCode: text("pol_code").notNull(),
+  originCountry: text("origin_country"),
+  podCode: text("pod_code").notNull(),
+  destCountry: text("dest_country"),
+  commodityType: text("commodity_type").notNull().default("general"),
+  equipmentType: text("equipment_type").notNull().default("40ft"),
+  rateType: text("rate_type").notNull().default("all_in"),
+  inclusionType: text("inclusion_type"),
+  transitTime: text("transit_time"),
+  freeTime: text("free_time"),
+  currency: text("currency").notNull().default("USD"),
+  amount20ft: numeric("amount_20ft", { precision: 12, scale: 2 }),
+  amount40ft: numeric("amount_40ft", { precision: 12, scale: 2 }),
+  amount40hc: numeric("amount_40hc", { precision: 12, scale: 2 }),
+  expiryDate: date("expiry_date").notNull(),
+  archived: boolean("archived").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export type OceanFreightRate = typeof oceanFreightRates.$inferSelect;
+
+// ── HAULAGE IMPORT RATES ─────────────────────────────────────────────────────
+export const haulageImportRates = pgTable("haulage_import_rates", {
+  id: serial("id").primaryKey(),
+  terminalName: text("terminal_name").notNull(),
+  portCode: text("port_code").notNull(),
+  originState: text("origin_state"),
+  destCity: text("dest_city"),
+  destLga: text("dest_lga").notNull(),
+  destState: text("dest_state"),
+  shipmentType: text("shipment_type").notNull().default("fcl"),
+  equipmentType: text("equipment_type").notNull().default("40ft"),
+  commodityType: text("commodity_type").notNull().default("general"),
+  currency: text("currency").notNull().default("NGN"),
+  price: numeric("price", { precision: 12, scale: 2 }).notNull(),
+  archived: boolean("archived").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export type HaulageImportRate = typeof haulageImportRates.$inferSelect;
+
+// ── HAULAGE EXPORT RATES ─────────────────────────────────────────────────────
+export const haulageExportRates = pgTable("haulage_export_rates", {
+  id: serial("id").primaryKey(),
+  terminalName: text("terminal_name").notNull(),
+  portCode: text("port_code").notNull(),
+  originState: text("origin_state").notNull(),
+  originCity: text("origin_city"),
+  originLga: text("origin_lga").notNull(),
+  destState: text("dest_state"),
+  shipmentType: text("shipment_type").notNull().default("fcl"),
+  equipmentType: text("equipment_type").notNull().default("40ft"),
+  commodityType: text("commodity_type").notNull().default("general"),
+  currency: text("currency").notNull().default("NGN"),
+  price: numeric("price", { precision: 12, scale: 2 }).notNull(),
+  archived: boolean("archived").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export type HaulageExportRate = typeof haulageExportRates.$inferSelect;
+
+// ── OTHER CHARGES ─────────────────────────────────────────────────────────────
+export const otherCharges = pgTable("other_charges", {
+  id: serial("id").primaryKey(),
+  itemName: text("item_name").notNull(),
+  shipmentType: text("shipment_type").notNull().default("both"),
+  itemCategory: text("item_category").notNull(),
+  commodityType: text("commodity_type").notNull().default("FAK"),
+  country: text("country"),
+  currency: text("currency").notNull().default("NGN"),
+  price: numeric("price", { precision: 12, scale: 2 }),
+  asPerReceipt: boolean("as_per_receipt").notNull().default(false),
+  expiryDate: date("expiry_date"),
+  archived: boolean("archived").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export type OtherCharge = typeof otherCharges.$inferSelect;

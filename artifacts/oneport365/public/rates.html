@@ -1,0 +1,1046 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Rates — OnePort 365</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--accent:#7AB648;--accent-dark:#1a6e2e;--accent-light:#e8f5e0;--surface:#fff;--bg:#f0f4f0;--text:#1a2e1a;--text2:#4a5e4a;--text3:#8a9e8a;--border:#e4e8e4;--border2:#d0d8d0;--danger:#dc2626;--warn:#d97706;--info:#2563eb}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Inter,sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column;overflow:hidden}
+button{font-family:Inter,sans-serif;cursor:pointer}
+
+/* GATE */
+#gate{position:fixed;inset:0;background:#1C3829;display:flex;align-items:center;justify-content:center;z-index:1000}
+.gate-box{background:#fff;border-radius:16px;padding:36px 40px;width:360px;display:flex;flex-direction:column;align-items:center;gap:16px}
+.gate-logo{width:48px;height:48px;background:#7AB648;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:#fff}
+.gate-title{font-size:18px;font-weight:700;color:#1a2e1a}
+.gate-sub{font-size:12px;color:#8a9e8a;text-align:center}
+.gate-input{width:100%;border:1.5px solid #e4e8e4;border-radius:8px;padding:11px 14px;font-size:14px;font-family:Inter,sans-serif;outline:none;transition:border-color .15s}
+.gate-input:focus{border-color:#7AB648}
+.gate-btn{width:100%;background:#7AB648;border:none;border-radius:8px;padding:11px;color:#fff;font-size:14px;font-weight:600}
+.gate-btn:hover{background:#6aa33e}
+.gate-err{font-size:12px;color:#dc2626;min-height:16px}
+
+/* TOPNAV */
+.topnav{background:#1C3829;height:48px;display:flex;align-items:center;padding:0 16px;gap:0;flex-shrink:0}
+.logo-box{display:flex;align-items:center;margin-right:16px}
+.nav-item{padding:0 14px;height:48px;display:flex;align-items:center;font-size:12px;font-weight:500;color:rgba(255,255,255,.6);cursor:pointer;border-bottom:2px solid transparent;transition:color .15s;text-decoration:none;white-space:nowrap}
+.nav-item:hover{color:rgba(255,255,255,.9)}
+.nav-item.active{color:#fff;border-bottom-color:#7AB648;font-weight:600}
+.nav-right{margin-left:auto;display:flex;align-items:center;gap:12px}
+.t-status{display:flex;align-items:center;gap:6px;font-size:11px;color:rgba(255,255,255,.5)}
+.t-status-dot{width:6px;height:6px;border-radius:50%;background:#7AB648}
+.user-chip{display:flex;align-items:center;gap:8px;padding:4px 12px;border:1px solid rgba(255,255,255,.2);border-radius:20px;cursor:pointer}
+.user-avatar{width:24px;height:24px;border-radius:50%;background:#7AB648;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff}
+
+/* TAB BAR */
+.tab-bar{background:#fff;border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:0;flex-shrink:0;overflow-x:auto}
+.tab-btn{padding:0 18px;height:44px;display:flex;align-items:center;gap:7px;font-size:12px;font-weight:500;color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap}
+.tab-btn:hover{color:var(--text2)}
+.tab-btn.active{color:var(--accent-dark);font-weight:600;border-bottom-color:var(--accent)}
+.tab-count{font-size:10px;padding:1px 6px;border-radius:10px;background:rgba(0,0,0,.07);font-weight:600}
+.tab-btn.active .tab-count{background:var(--accent);color:#fff}
+
+/* CONTENT */
+.content{flex:1;overflow-y:auto;padding:20px}
+.panel{display:none}
+.panel.active{display:flex;flex-direction:column;gap:14px}
+
+/* PANEL HEADER */
+.panel-hd{display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.panel-hd-left h2{font-size:17px;font-weight:600;color:var(--text);margin-bottom:3px}
+.panel-hd-left p{font-size:12px;color:var(--text3)}
+.panel-hd-right{display:flex;gap:8px;flex-wrap:wrap}
+.btn{border-radius:7px;padding:7px 14px;font-size:12px;font-weight:500;border:1px solid var(--border2);background:#fff;color:var(--text2);cursor:pointer;display:flex;align-items:center;gap:5px}
+.btn:hover{background:var(--bg)}
+.btn-primary{background:var(--accent-dark);color:#fff;border-color:transparent}
+.btn-primary:hover{background:#155a25}
+.btn-danger{background:#fef2f2;color:var(--danger);border-color:#fecaca}
+.btn-danger:hover{background:#fee2e2}
+
+/* FILTER BAR */
+.filter-bar{background:#fff;border:1px solid var(--border);border-radius:10px;padding:14px;display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap}
+.filter-group{display:flex;flex-direction:column;gap:4px;min-width:90px;flex:1}
+.filter-label{font-size:9px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em}
+.filter-input,.filter-select{border:1px solid var(--border2);border-radius:6px;padding:6px 8px;font-size:11px;font-family:Inter,sans-serif;color:var(--text);background:#fff;outline:none}
+.filter-input{width:100%}
+.filter-select{width:100%}
+.filter-input:focus,.filter-select:focus{border-color:var(--accent)}
+
+/* TABLE CARD */
+.table-card{background:#fff;border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.table-toolbar{padding:10px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.table-count{font-size:12px;font-weight:600;color:var(--text)}
+.table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:collapse;font-size:12px;min-width:700px}
+thead tr{background:#f8faf8}
+th{text-align:left;padding:9px 12px;font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border);white-space:nowrap;cursor:pointer;user-select:none}
+th:hover{color:var(--text2)}
+th.sort-asc::after{content:" ▴";color:var(--accent-dark)}
+th.sort-desc::after{content:" ▾";color:var(--accent-dark)}
+td{padding:9px 12px;border-bottom:1px solid var(--border);color:var(--text2);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#f8faf8}
+tr.selected td{background:#eef6e6}
+.cb{width:14px;height:14px;cursor:pointer;accent-color:var(--accent)}
+
+/* EXPIRY */
+.expiry-ok{color:var(--text2)}
+.expiry-soon{color:var(--warn);font-weight:600}
+.expiry-expired{color:var(--danger);font-weight:600}
+tr.row-expired td{background:#fff7f7}
+tr.row-expiring-soon td{background:#fffbeb}
+
+/* STATUS CHIPS */
+.chip{display:inline-flex;align-items:center;font-size:10px;padding:2px 8px;border-radius:10px;font-weight:500;white-space:nowrap}
+.chip-green{background:#dcfce7;color:#166534}
+.chip-blue{background:#dbeafe;color:#1e40af}
+.chip-amber{background:#fef3c7;color:#92400e}
+.chip-red{background:#fee2e2;color:#991b1b}
+.chip-gray{background:#f1f5f9;color:#475569}
+.chip-purple{background:#ede9fe;color:#6d28d9}
+
+/* ROW ACTIONS */
+.row-actions{display:flex;gap:6px;white-space:nowrap}
+.row-btn{border:none;background:none;font-size:11px;cursor:pointer;padding:3px 7px;border-radius:4px;color:var(--text3)}
+.row-btn:hover{background:var(--bg);color:var(--text2)}
+.row-btn.del:hover{color:var(--danger);background:#fee2e2}
+
+/* EMPTY STATE */
+.empty-state{padding:48px 20px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px}
+.empty-icon{font-size:32px}
+.empty-title{font-size:14px;font-weight:600;color:var(--text2)}
+.empty-sub{font-size:12px;color:var(--text3);max-width:280px;line-height:1.6}
+
+/* PAGINATION */
+.pagination{padding:10px 16px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.page-info{font-size:11px;color:var(--text3)}
+.page-btns{display:flex;gap:4px}
+.page-btn{border:1px solid var(--border2);background:#fff;border-radius:5px;padding:4px 10px;font-size:11px;cursor:pointer;color:var(--text2)}
+.page-btn:hover{background:var(--bg)}
+.page-btn.active{background:var(--accent-dark);color:#fff;border-color:transparent}
+.page-btn:disabled{opacity:.4;cursor:default}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px}
+.modal-box{background:#fff;border-radius:14px;box-shadow:0 8px 40px rgba(0,0,0,.2);width:640px;max-width:100%;max-height:90vh;display:flex;flex-direction:column}
+.modal-hd{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.modal-title{font-size:15px;font-weight:600;color:var(--text)}
+.modal-close{background:none;border:none;font-size:18px;cursor:pointer;color:var(--text3);padding:2px 6px;border-radius:4px}
+.modal-close:hover{background:#f3f4f6;color:var(--text)}
+.modal-body{flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:14px}
+.modal-ft{padding:14px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;flex-shrink:0}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-grid.cols3{grid-template-columns:1fr 1fr 1fr}
+.form-grid.cols1{grid-template-columns:1fr}
+.form-field{display:flex;flex-direction:column;gap:4px}
+.form-field.span2{grid-column:span 2}
+.form-label{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.04em}
+.form-input,.form-select{border:1px solid var(--border2);border-radius:7px;padding:8px 10px;font-size:12px;font-family:Inter,sans-serif;color:var(--text);background:#fff;outline:none;width:100%}
+.form-input:focus,.form-select:focus{border-color:var(--accent)}
+.form-section{font-size:10px;font-weight:700;color:var(--accent-dark);text-transform:uppercase;letter-spacing:.06em;padding-bottom:4px;border-bottom:1px solid var(--accent-light)}
+
+/* BULK BAR */
+.bulk-bar{position:fixed;bottom:0;left:0;right:0;background:#1a2e1a;color:#fff;padding:12px 24px;display:flex;align-items:center;gap:16px;z-index:200;transform:translateY(100%);transition:transform .2s}
+.bulk-bar.visible{transform:translateY(0)}
+.bulk-info{font-size:13px;font-weight:500;flex:1}
+
+/* AS PER RECEIPT */
+.apr-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;color:var(--info);font-weight:500;font-style:italic}
+</style>
+</head>
+<body>
+
+<!-- PASSWORD GATE -->
+<div id="gate">
+  <div class="gate-box">
+    <div class="gate-logo">O</div>
+    <div class="gate-title">OnePort <span style="color:#7AB648">365</span></div>
+    <div class="gate-sub">Rates Database · Enter password to continue</div>
+    <input class="gate-input" type="password" id="gate-pwd" placeholder="Password" onkeydown="if(event.key==='Enter')tryLogin()">
+    <div class="gate-err" id="gate-err"></div>
+    <button class="gate-btn" onclick="tryLogin()">Enter</button>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" style="display:none;flex-direction:column;height:100vh">
+
+  <!-- TOP NAV -->
+  <div class="topnav">
+    <div class="logo-box">
+      <img src="/oneport365_logo.png" alt="OnePort 365" style="height:26px;width:auto">
+    </div>
+    <a class="nav-item" href="/mvp1.html">✉ RFQ</a>
+    <a class="nav-item" href="/mvp1.html">Deals</a>
+    <a class="nav-item active" href="/rates.html">$ Rates</a>
+    <div class="nav-right">
+      <div class="t-status"><div class="t-status-dot"></div>monitoring sales@oneport365.com</div>
+      <div class="user-chip">
+        <div class="user-avatar">OA</div>
+        <span style="font-size:11px;color:rgba(255,255,255,.85)">Okpanachi Adaji</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB BAR -->
+  <div class="tab-bar">
+    <div class="tab-btn active" id="tab-ocean" onclick="switchTab('ocean')">🚢 Ocean Freight <span class="tab-count" id="cnt-ocean">0</span></div>
+    <div class="tab-btn" id="tab-import" onclick="switchTab('import')">🚛 Haulage — Import <span class="tab-count" id="cnt-import">0</span></div>
+    <div class="tab-btn" id="tab-export" onclick="switchTab('export')">📦 Haulage — Export <span class="tab-count" id="cnt-export">0</span></div>
+    <div class="tab-btn" id="tab-other" onclick="switchTab('other')">📋 Other Charges <span class="tab-count" id="cnt-other">0</span></div>
+    <div style="margin-left:auto;display:flex;align-items:center">
+      <button class="btn" onclick="loadSampleData()" style="font-size:11px;color:var(--text3);border-style:dashed">✦ Load sample data</button>
+    </div>
+  </div>
+
+  <!-- CONTENT -->
+  <div class="content" id="content">
+
+    <!-- ── OCEAN FREIGHT ── -->
+    <div id="panel-ocean" class="panel active">
+      <div class="panel-hd">
+        <div class="panel-hd-left">
+          <h2>Ocean Freight Rates</h2>
+          <p>International sea freight rates between ports — per container type</p>
+        </div>
+        <div class="panel-hd-right">
+          <button class="btn" onclick="exportCsv('ocean')">↓ Export CSV</button>
+          <button class="btn btn-primary" onclick="openModal('ocean', null)">+ Add Rate</button>
+        </div>
+      </div>
+      <div class="filter-bar">
+        <div class="filter-group" style="max-width:200px">
+          <span class="filter-label">Search</span>
+          <input class="filter-input" id="f-ocean-search" placeholder="Carrier, port, country…" oninput="renderTable('ocean')">
+        </div>
+        <div class="filter-group">
+          <span class="filter-label">Equipment</span>
+          <select class="filter-select" id="f-ocean-equip" onchange="renderTable('ocean')">
+            <option value="">All</option><option>20ft</option><option>40ft</option><option>40hc</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <span class="filter-label">Rate Type</span>
+          <select class="filter-select" id="f-ocean-ratetype" onchange="renderTable('ocean')">
+            <option value="">All</option><option>all_in</option><option>base</option><option>spot</option><option>contract</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <span class="filter-label">Carrier</span>
+          <input class="filter-input" id="f-ocean-carrier" placeholder="e.g. MSC" oninput="renderTable('ocean')">
+        </div>
+        <div class="filter-group">
+          <span class="filter-label">Origin Country</span>
+          <input class="filter-input" id="f-ocean-orig" placeholder="e.g. Nigeria" oninput="renderTable('ocean')">
+        </div>
+        <div class="filter-group">
+          <span class="filter-label">Dest Country</span>
+          <input class="filter-input" id="f-ocean-dest" placeholder="e.g. China" oninput="renderTable('ocean')">
+        </div>
+        <div class="filter-group">
+          <span class="filter-label">Status</span>
+          <select class="filter-select" id="f-ocean-status" onchange="renderTable('ocean')">
+            <option value="">All</option><option value="valid">Valid</option><option value="expiring">Expiring (30d)</option><option value="expired">Expired</option>
+          </select>
+        </div>
+        <button class="btn" style="align-self:flex-end" onclick="clearFilters('ocean')">Clear</button>
+      </div>
+      <div class="table-card">
+        <div class="table-toolbar">
+          <span class="table-count" id="ocean-count">— rates</span>
+          <span style="font-size:11px;color:var(--text3)">Click column header to sort · <span style="color:var(--warn)">■</span> expiring soon · <span style="color:var(--danger)">■</span> expired</span>
+        </div>
+        <div class="table-wrap">
+          <table id="t-ocean">
+            <thead><tr>
+              <th style="width:30px"><input type="checkbox" class="cb" id="chk-ocean-all" onchange="toggleAllRows('ocean',this.checked)"></th>
+              <th onclick="setSortCol('ocean','carrier')">Carrier</th>
+              <th onclick="setSortCol('ocean','polCode')">POL</th>
+              <th onclick="setSortCol('ocean','originCountry')">Origin</th>
+              <th onclick="setSortCol('ocean','podCode')">POD</th>
+              <th onclick="setSortCol('ocean','destCountry')">Dest</th>
+              <th onclick="setSortCol('ocean','equipmentType')">Equip</th>
+              <th onclick="setSortCol('ocean','rateType')">Rate Type</th>
+              <th onclick="setSortCol('ocean','amount20ft')" style="text-align:right">20FT</th>
+              <th onclick="setSortCol('ocean','amount40ft')" style="text-align:right">40FT</th>
+              <th onclick="setSortCol('ocean','amount40hc')" style="text-align:right">40HC</th>
+              <th onclick="setSortCol('ocean','transitTime')">Transit</th>
+              <th onclick="setSortCol('ocean','expiryDate')">Expiry</th>
+              <th></th>
+            </tr></thead>
+            <tbody id="tb-ocean"><tr><td colspan="14"><div class="empty-state"><div class="empty-icon">🌊</div><div class="empty-title">No rates yet</div><div class="empty-sub">Add your first ocean freight rate or load sample data above</div></div></td></tr></tbody>
+          </table>
+        </div>
+        <div class="pagination" id="pg-ocean"></div>
+      </div>
+    </div>
+
+    <!-- ── HAULAGE IMPORT ── -->
+    <div id="panel-import" class="panel">
+      <div class="panel-hd">
+        <div class="panel-hd-left">
+          <h2>Haulage — Import Rates</h2>
+          <p>Trucking from import terminal to customer destination (LGA-based pricing)</p>
+        </div>
+        <div class="panel-hd-right">
+          <button class="btn" onclick="exportCsv('import')">↓ Export CSV</button>
+          <button class="btn btn-primary" onclick="openModal('import', null)">+ Add Rate</button>
+        </div>
+      </div>
+      <div class="filter-bar">
+        <div class="filter-group" style="max-width:200px">
+          <span class="filter-label">Search</span>
+          <input class="filter-input" id="f-import-search" placeholder="Terminal, LGA, state…" oninput="renderTable('import')">
+        </div>
+        <div class="filter-group">
+          <span class="filter-label">Equipment</span>
+          <select class="filter-select" id="f-import-equip" onchange="renderTable('import')">
+            <option value="">All</option><option>20ft</option><option>40ft</option><option>40hc</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <span class="filter-label">Shipment Type</span>
+          <select class="filter-select" id="f-import-ship" onchange="renderTable('import')">
+            <option value="">All</option><option>fcl</option><option>lcl</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <span class="filter-label">Origin State</span>
+          <input class="filter-input" id="f-import-orig" placeholder="e.g. Lagos" oninput="renderTable('import')">
+        </div>
+        <div class="filter-group">
+          <span class="filter-label">Dest State</span>
+          <input class="filter-input" id="f-import-dest" placeholder="e.g. Kano" oninput="renderTable('import')">
+        </div>
+        <button class="btn" style="align-self:flex-end" onclick="clearFilters('import')">Clear</button>
+      </div>
+      <div class="table-card">
+        <div class="table-toolbar">
+          <span class="table-count" id="import-count">— rates</span>
+        </div>
+        <div class="table-wrap">
+          <table id="t-import">
+            <thead><tr>
+              <th style="width:30px"><input type="checkbox" class="cb" id="chk-import-all" onchange="toggleAllRows('import',this.checked)"></th>
+              <th onclick="setSortCol('import','terminalName')">Terminal</th>
+              <th onclick="setSortCol('import','portCode')">Port</th>
+              <th onclick="setSortCol('import','originState')">Origin State</th>
+              <th onclick="setSortCol('import','destCity')">Dest City</th>
+              <th onclick="setSortCol('import','destLga')">Dest LGA</th>
+              <th onclick="setSortCol('import','destState')">Dest State</th>
+              <th onclick="setSortCol('import','shipmentType')">Ship Type</th>
+              <th onclick="setSortCol('import','equipmentType')">Equip</th>
+              <th onclick="setSortCol('import','commodityType')">Commodity</th>
+              <th onclick="setSortCol('import','currency')">CCY</th>
+              <th onclick="setSortCol('import','price')" style="text-align:right">Price</th>
+              <th></th>
+            </tr></thead>
+            <tbody id="tb-import"><tr><td colspan="13"><div class="empty-state"><div class="empty-icon">🚛</div><div class="empty-title">No import haulage rates</div><div class="empty-sub">Add lane pricing from terminal to delivery destination</div></div></td></tr></tbody>
+          </table>
+        </div>
+        <div class="pagination" id="pg-import"></div>
+      </div>
+    </div>
+
+    <!-- ── HAULAGE EXPORT ── -->
+    <div id="panel-export" class="panel">
+      <div class="panel-hd">
+        <div class="panel-hd-left">
+          <h2>Haulage — Export Rates</h2>
+          <p>Trucking from customer collection point to export terminal (LGA-based pricing)</p>
+        </div>
+        <div class="panel-hd-right">
+          <button class="btn" onclick="exportCsv('export')">↓ Export CSV</button>
+          <button class="btn btn-primary" onclick="openModal('export', null)">+ Add Rate</button>
+        </div>
+      </div>
+      <div class="filter-bar">
+        <div class="filter-group" style="max-width:200px">
+          <span class="filter-label">Search</span>
+          <input class="filter-input" id="f-export-search" placeholder="Terminal, LGA, state…" oninput="renderTable('export')">
+        </div>
+        <div class="filter-group">
+          <span class="filter-label">Equipment</span>
+          <select class="filter-select" id="f-export-equip" onchange="renderTable('export')">
+            <option value="">All</option><option>20ft</option><option>40ft</option><option>40hc</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <span class="filter-label">Shipment Type</span>
+          <select class="filter-select" id="f-export-ship" onchange="renderTable('export')">
+            <option value="">All</option><option>fcl</option><option>lcl</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <span class="filter-label">Origin State</span>
+          <input class="filter-input" id="f-export-orig" placeholder="e.g. Kano" oninput="renderTable('export')">
+        </div>
+        <div class="filter-group">
+          <span class="filter-label">Dest State</span>
+          <input class="filter-input" id="f-export-dest" placeholder="e.g. Lagos" oninput="renderTable('export')">
+        </div>
+        <button class="btn" style="align-self:flex-end" onclick="clearFilters('export')">Clear</button>
+      </div>
+      <div class="table-card">
+        <div class="table-toolbar">
+          <span class="table-count" id="export-count">— rates</span>
+        </div>
+        <div class="table-wrap">
+          <table id="t-export">
+            <thead><tr>
+              <th style="width:30px"><input type="checkbox" class="cb" id="chk-export-all" onchange="toggleAllRows('export',this.checked)"></th>
+              <th onclick="setSortCol('export','terminalName')">Terminal</th>
+              <th onclick="setSortCol('export','portCode')">Port</th>
+              <th onclick="setSortCol('export','originState')">Origin State</th>
+              <th onclick="setSortCol('export','originCity')">Origin City</th>
+              <th onclick="setSortCol('export','originLga')">Origin LGA</th>
+              <th onclick="setSortCol('export','destState')">Dest State</th>
+              <th onclick="setSortCol('export','shipmentType')">Ship Type</th>
+              <th onclick="setSortCol('export','equipmentType')">Equip</th>
+              <th onclick="setSortCol('export','commodityType')">Commodity</th>
+              <th onclick="setSortCol('export','currency')">CCY</th>
+              <th onclick="setSortCol('export','price')" style="text-align:right">Price</th>
+              <th></th>
+            </tr></thead>
+            <tbody id="tb-export"><tr><td colspan="13"><div class="empty-state"><div class="empty-icon">📦</div><div class="empty-title">No export haulage rates</div><div class="empty-sub">Add lane pricing from pickup to export terminal</div></div></td></tr></tbody>
+          </table>
+        </div>
+        <div class="pagination" id="pg-export"></div>
+      </div>
+    </div>
+
+    <!-- ── OTHER CHARGES ── -->
+    <div id="panel-other" class="panel">
+      <div class="panel-hd">
+        <div class="panel-hd-left">
+          <h2>Other Charges</h2>
+          <p>Ancillary fees — documentation, handling, customs, deposits</p>
+        </div>
+        <div class="panel-hd-right">
+          <button class="btn" onclick="exportCsv('other')">↓ Export CSV</button>
+          <button class="btn btn-primary" onclick="openModal('other', null)">+ Add Charge</button>
+        </div>
+      </div>
+      <div class="filter-bar">
+        <div class="filter-group" style="max-width:220px">
+          <span class="filter-label">Search</span>
+          <input class="filter-input" id="f-other-search" placeholder="Item name, category…" oninput="renderTable('other')">
+        </div>
+        <div class="filter-group">
+          <span class="filter-label">Shipment Type</span>
+          <select class="filter-select" id="f-other-ship" onchange="renderTable('other')">
+            <option value="">All</option><option>import</option><option>export</option><option>both</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <span class="filter-label">Item Category</span>
+          <select class="filter-select" id="f-other-cat" onchange="renderTable('other')">
+            <option value="">All</option><option>oneport_365</option><option>shipping_line</option><option>terminal_operators</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <span class="filter-label">Status</span>
+          <select class="filter-select" id="f-other-status" onchange="renderTable('other')">
+            <option value="">All</option><option value="valid">Valid</option><option value="expiring">Expiring (30d)</option><option value="expired">Expired</option>
+          </select>
+        </div>
+        <button class="btn" style="align-self:flex-end" onclick="clearFilters('other')">Clear</button>
+      </div>
+      <div class="table-card">
+        <div class="table-toolbar">
+          <span class="table-count" id="other-count">— charges</span>
+          <span style="font-size:11px;color:var(--text3)"><span style="color:var(--warn)">■</span> expiring soon · <span style="color:var(--danger)">■</span> expired</span>
+        </div>
+        <div class="table-wrap">
+          <table id="t-other">
+            <thead><tr>
+              <th style="width:30px"><input type="checkbox" class="cb" id="chk-other-all" onchange="toggleAllRows('other',this.checked)"></th>
+              <th onclick="setSortCol('other','itemName')">Item Name</th>
+              <th onclick="setSortCol('other','shipmentType')">Shipment</th>
+              <th onclick="setSortCol('other','itemCategory')">Category</th>
+              <th onclick="setSortCol('other','commodityType')">Commodity</th>
+              <th onclick="setSortCol('other','country')">Country</th>
+              <th onclick="setSortCol('other','currency')">CCY</th>
+              <th onclick="setSortCol('other','price')" style="text-align:right">Price</th>
+              <th onclick="setSortCol('other','expiryDate')">Expiry</th>
+              <th></th>
+            </tr></thead>
+            <tbody id="tb-other"><tr><td colspan="10"><div class="empty-state"><div class="empty-icon">📋</div><div class="empty-title">No charges yet</div><div class="empty-sub">Add ancillary fees or load sample data above</div></div></td></tr></tbody>
+          </table>
+        </div>
+        <div class="pagination" id="pg-other"></div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /app -->
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal" style="display:none" onclick="if(event.target===this)closeModal()">
+  <div class="modal-box">
+    <div class="modal-hd">
+      <span class="modal-title" id="modal-title">Add Rate</span>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modal-fields"></div>
+    <div class="modal-ft">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" id="modal-save-btn" onclick="saveRate()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- BULK BAR -->
+<div class="bulk-bar" id="bulk-bar">
+  <span class="bulk-info" id="bulk-info">0 selected</span>
+  <button class="btn btn-danger" onclick="bulkDelete()">Delete Selected</button>
+  <button class="btn" onclick="clearSelection()" style="color:#fff;border-color:rgba(255,255,255,.3);background:transparent">Cancel</button>
+</div>
+
+<script>
+const PASS = 'X#9mK$vL2@nQ7pR!';
+const SKEY = 'op365-auth';
+
+// ── STATE ─────────────────────────────────────────────────────────────────────
+let currentTab = 'ocean';
+let allData = { ocean: [], import: [], export: [], other: [] };
+let sortState = { ocean: { col: null, dir: 'asc' }, import: { col: null, dir: 'asc' }, export: { col: null, dir: 'asc' }, other: { col: null, dir: 'asc' } };
+let pages = { ocean: 1, import: 1, export: 1, other: 1 };
+let selected = new Set();
+let editingId = null;
+let editingTab = null;
+const PAGE_SIZE = 15;
+
+const ENDPOINTS = { ocean: '/api/rates/ocean-freight', import: '/api/rates/haulage-import', export: '/api/rates/haulage-export', other: '/api/rates/other-charges' };
+
+// ── AUTH ──────────────────────────────────────────────────────────────────────
+function tryLogin() {
+  const v = document.getElementById('gate-pwd').value;
+  if (v === PASS) { sessionStorage.setItem(SKEY, '1'); showApp(); }
+  else { document.getElementById('gate-err').textContent = 'Incorrect password'; }
+}
+function showApp() {
+  document.getElementById('gate').style.display = 'none';
+  const app = document.getElementById('app');
+  app.style.display = 'flex';
+  switchTab('ocean');
+}
+window.onload = () => { if (sessionStorage.getItem(SKEY) === '1') showApp(); else document.getElementById('gate').style.display = 'flex'; };
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+// ── TABS ──────────────────────────────────────────────────────────────────────
+async function switchTab(tab) {
+  currentTab = tab;
+  pages[tab] = 1;
+  selected.clear();
+  updateBulkBar();
+  document.querySelectorAll('.tab-btn').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-' + tab).classList.add('active');
+  await loadData(tab);
+}
+
+// ── DATA LOADING ──────────────────────────────────────────────────────────────
+async function loadData(tab) {
+  try {
+    const r = await fetch(ENDPOINTS[tab]);
+    if (r.ok) allData[tab] = await r.json();
+    else allData[tab] = [];
+  } catch { allData[tab] = []; }
+  renderTable(tab);
+  document.getElementById('cnt-' + tab).textContent = allData[tab].length;
+}
+
+// ── FILTERING ─────────────────────────────────────────────────────────────────
+function getFiltered(tab) {
+  let rows = [...allData[tab]];
+  const g = id => (document.getElementById(id)?.value || '').toLowerCase().trim();
+  const today = new Date(); today.setHours(0,0,0,0);
+  const in30 = new Date(today.getTime() + 30*24*3600*1000);
+
+  if (tab === 'ocean') {
+    const s = g('f-ocean-search'), eq = g('f-ocean-equip'), rt = g('f-ocean-ratetype'), ca = g('f-ocean-carrier'), or = g('f-ocean-orig'), de = g('f-ocean-dest'), st = g('f-ocean-status');
+    rows = rows.filter(r => {
+      if (s && !`${r.carrier||''} ${r.polCode||''} ${r.podCode||''} ${r.originCountry||''} ${r.destCountry||''}`.toLowerCase().includes(s)) return false;
+      if (eq && r.equipmentType?.toLowerCase() !== eq) return false;
+      if (rt && r.rateType?.toLowerCase() !== rt) return false;
+      if (ca && !(r.carrier||'').toLowerCase().includes(ca)) return false;
+      if (or && !(r.originCountry||'').toLowerCase().includes(or)) return false;
+      if (de && !(r.destCountry||'').toLowerCase().includes(de)) return false;
+      if (st) { const es = expiryStatus(r.expiryDate); if (st !== es) return false; }
+      return true;
+    });
+  } else if (tab === 'import') {
+    const s = g('f-import-search'), eq = g('f-import-equip'), sh = g('f-import-ship'), or = g('f-import-orig'), de = g('f-import-dest');
+    rows = rows.filter(r => {
+      if (s && !`${r.terminalName||''} ${r.portCode||''} ${r.destLga||''} ${r.destCity||''} ${r.destState||''} ${r.originState||''}`.toLowerCase().includes(s)) return false;
+      if (eq && r.equipmentType?.toLowerCase() !== eq) return false;
+      if (sh && r.shipmentType?.toLowerCase() !== sh) return false;
+      if (or && !(r.originState||'').toLowerCase().includes(or)) return false;
+      if (de && !(r.destState||'').toLowerCase().includes(de)) return false;
+      return true;
+    });
+  } else if (tab === 'export') {
+    const s = g('f-export-search'), eq = g('f-export-equip'), sh = g('f-export-ship'), or = g('f-export-orig'), de = g('f-export-dest');
+    rows = rows.filter(r => {
+      if (s && !`${r.terminalName||''} ${r.portCode||''} ${r.originLga||''} ${r.originCity||''} ${r.originState||''} ${r.destState||''}`.toLowerCase().includes(s)) return false;
+      if (eq && r.equipmentType?.toLowerCase() !== eq) return false;
+      if (sh && r.shipmentType?.toLowerCase() !== sh) return false;
+      if (or && !(r.originState||'').toLowerCase().includes(or)) return false;
+      if (de && !(r.destState||'').toLowerCase().includes(de)) return false;
+      return true;
+    });
+  } else if (tab === 'other') {
+    const s = g('f-other-search'), sh = g('f-other-ship'), ca = g('f-other-cat'), st = g('f-other-status');
+    rows = rows.filter(r => {
+      if (s && !`${r.itemName||''} ${r.itemCategory||''} ${r.country||''}`.toLowerCase().includes(s)) return false;
+      if (sh && r.shipmentType?.toLowerCase() !== sh) return false;
+      if (ca && r.itemCategory?.toLowerCase() !== ca) return false;
+      if (st) { const es = expiryStatus(r.expiryDate); if (st !== es) return false; }
+      return true;
+    });
+  }
+
+  // Sort
+  const ss = sortState[tab];
+  if (ss.col) {
+    rows.sort((a, b) => {
+      const av = a[ss.col] ?? ''; const bv = b[ss.col] ?? '';
+      const n = isNaN(Number(av)) ? String(av).localeCompare(String(bv)) : Number(av) - Number(bv);
+      return ss.dir === 'asc' ? n : -n;
+    });
+  }
+  return rows;
+}
+
+function clearFilters(tab) {
+  document.querySelectorAll(`[id^="f-${tab}-"]`).forEach(el => { el.value = ''; });
+  renderTable(tab);
+}
+
+// ── SORT ──────────────────────────────────────────────────────────────────────
+function setSortCol(tab, col) {
+  const ss = sortState[tab];
+  if (ss.col === col) ss.dir = ss.dir === 'asc' ? 'desc' : 'asc';
+  else { ss.col = col; ss.dir = 'asc'; }
+  document.querySelectorAll(`#t-${tab} th`).forEach(th => th.classList.remove('sort-asc','sort-desc'));
+  renderTable(tab);
+}
+
+// ── EXPIRY ────────────────────────────────────────────────────────────────────
+function expiryStatus(dateStr) {
+  if (!dateStr) return 'ok';
+  const d = new Date(dateStr); const today = new Date(); today.setHours(0,0,0,0);
+  const in30 = new Date(today.getTime() + 30*24*3600*1000);
+  if (d < today) return 'expired';
+  if (d <= in30) return 'expiring';
+  return 'valid';
+}
+function expiryHtml(dateStr) {
+  if (!dateStr) return '<span style="color:var(--text3)">—</span>';
+  const st = expiryStatus(dateStr);
+  const d = dateStr.slice(0,10);
+  if (st === 'expired') return `<span class="expiry-expired">⚠ ${d}</span>`;
+  if (st === 'expiring') return `<span class="expiry-soon">◉ ${d}</span>`;
+  return `<span class="expiry-ok">${d}</span>`;
+}
+function rowClass(item, tab) {
+  if (tab === 'ocean' || tab === 'other') {
+    const st = expiryStatus(item.expiryDate);
+    if (st === 'expired') return 'row-expired';
+    if (st === 'expiring') return 'row-expiring-soon';
+  }
+  return '';
+}
+
+// ── RENDER TABLE ──────────────────────────────────────────────────────────────
+function renderTable(tab) {
+  const filtered = getFiltered(tab);
+  const total = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  if (pages[tab] > totalPages) pages[tab] = totalPages;
+  const start = (pages[tab] - 1) * PAGE_SIZE;
+  const pageRows = filtered.slice(start, start + PAGE_SIZE);
+
+  const countEl = document.getElementById(tab + '-count');
+  if (countEl) countEl.textContent = `${total} ${tab === 'other' ? 'charge' : 'rate'}${total !== 1 ? 's' : ''}`;
+
+  // Update sort headers
+  const ss = sortState[tab];
+  if (ss.col) {
+    document.querySelectorAll(`#t-${tab} th`).forEach(th => {
+      th.classList.remove('sort-asc','sort-desc');
+      if (th.getAttribute('onclick')?.includes(ss.col)) th.classList.add(ss.dir === 'asc' ? 'sort-asc' : 'sort-desc');
+    });
+  }
+
+  const tbody = document.getElementById('tb-' + tab);
+  if (!pageRows.length) {
+    const icons = { ocean: '🌊', import: '🚛', export: '📦', other: '📋' };
+    const msgs = { ocean: 'No rates match your filters', import: 'No haulage import rates match', export: 'No haulage export rates match', other: 'No charges match your filters' };
+    tbody.innerHTML = `<tr><td colspan="20"><div class="empty-state"><div class="empty-icon">${icons[tab]}</div><div class="empty-title">${msgs[tab]}</div><div class="empty-sub">Try adjusting your filters or add a new entry</div></div></td></tr>`;
+    renderPagination(tab, total, totalPages);
+    return;
+  }
+
+  tbody.innerHTML = pageRows.map(r => {
+    const rc = rowClass(r, tab);
+    const chk = `<input type="checkbox" class="cb row-cb" data-id="${r.id}" data-tab="${tab}" onchange="toggleRow(this)" ${selected.has(r.id)?'checked':''}>`;
+    const acts = `<td><div class="row-actions"><button class="row-btn" onclick="openModal('${tab}',${r.id})" title="Edit">✎</button><button class="row-btn del" onclick="deleteRate('${tab}',${r.id})" title="Delete">✕</button></div></td>`;
+    if (tab === 'ocean') {
+      return `<tr class="${rc}"><td>${chk}</td><td><strong>${esc(r.carrier)}</strong></td><td><span class="chip chip-blue">${esc(r.polCode)}</span></td><td>${esc(r.originCountry||'—')}</td><td><span class="chip chip-green">${esc(r.podCode)}</span></td><td>${esc(r.destCountry||'—')}</td><td><span class="chip chip-gray">${esc(r.equipmentType?.toUpperCase()||'—')}</span></td><td>${equipTypeChip(r.rateType)}</td><td style="text-align:right">${fmtAmt(r.amount20ft, r.currency)}</td><td style="text-align:right">${fmtAmt(r.amount40ft, r.currency)}</td><td style="text-align:right">${fmtAmt(r.amount40hc, r.currency)}</td><td>${esc(r.transitTime||'—')}</td><td>${expiryHtml(r.expiryDate)}</td>${acts}</tr>`;
+    } else if (tab === 'import') {
+      return `<tr class="${rc}"><td>${chk}</td><td><strong>${esc(r.terminalName)}</strong></td><td><span class="chip chip-blue">${esc(r.portCode)}</span></td><td>${esc(r.originState||'—')}</td><td>${esc(r.destCity||'—')}</td><td><strong>${esc(r.destLga)}</strong></td><td>${esc(r.destState||'—')}</td><td><span class="chip chip-gray">${esc(r.shipmentType?.toUpperCase()||'—')}</span></td><td><span class="chip chip-gray">${esc(r.equipmentType?.toUpperCase()||'—')}</span></td><td>${esc(r.commodityType||'—')}</td><td>${esc(r.currency)}</td><td style="text-align:right"><strong>${fmtPrice(r.price, r.currency)}</strong></td>${acts}</tr>`;
+    } else if (tab === 'export') {
+      return `<tr class="${rc}"><td>${chk}</td><td><strong>${esc(r.terminalName)}</strong></td><td><span class="chip chip-blue">${esc(r.portCode)}</span></td><td>${esc(r.originState)}</td><td>${esc(r.originCity||'—')}</td><td><strong>${esc(r.originLga)}</strong></td><td>${esc(r.destState||'—')}</td><td><span class="chip chip-gray">${esc(r.shipmentType?.toUpperCase()||'—')}</span></td><td><span class="chip chip-gray">${esc(r.equipmentType?.toUpperCase()||'—')}</span></td><td>${esc(r.commodityType||'—')}</td><td>${esc(r.currency)}</td><td style="text-align:right"><strong>${fmtPrice(r.price, r.currency)}</strong></td>${acts}</tr>`;
+    } else {
+      const priceCell = r.asPerReceipt ? `<span class="apr-badge">ℹ As Per Receipt</span>` : fmtAmt(r.price, r.currency);
+      return `<tr class="${rc}"><td>${chk}</td><td><strong>${esc(r.itemName)}</strong></td><td>${shipTypeChip(r.shipmentType)}</td><td>${catChip(r.itemCategory)}</td><td><span class="chip chip-gray">${esc(r.commodityType||'FAK')}</span></td><td>${esc(r.country||'—')}</td><td>${esc(r.currency)}</td><td style="text-align:right">${priceCell}</td><td>${expiryHtml(r.expiryDate)}</td>${acts}</tr>`;
+    }
+  }).join('');
+
+  renderPagination(tab, total, totalPages);
+}
+
+function fmtAmt(val, ccy) {
+  if (val == null || val === '') return '<span style="color:var(--text3)">—</span>';
+  const n = Number(val);
+  return `<strong>${ccy||'USD'} ${n.toLocaleString('en-US', {minimumFractionDigits:0, maximumFractionDigits:0})}</strong>`;
+}
+function fmtPrice(val, ccy) {
+  if (val == null || val === '') return '—';
+  const n = Number(val);
+  return `${ccy||'NGN'} ${n.toLocaleString('en-US', {minimumFractionDigits:0})}`;
+}
+function equipTypeChip(v) {
+  if (!v) return '<span style="color:var(--text3)">—</span>';
+  const map = { all_in: 'chip-green', base: 'chip-blue', spot: 'chip-amber', contract: 'chip-purple' };
+  const cls = map[v] || 'chip-gray';
+  return `<span class="chip ${cls}">${v.replace('_',' ')}</span>`;
+}
+function shipTypeChip(v) {
+  const map = { import: 'chip-blue', export: 'chip-green', both: 'chip-purple' };
+  return `<span class="chip ${map[v]||'chip-gray'}">${v||'—'}</span>`;
+}
+function catChip(v) {
+  const map = { oneport_365: 'chip-green', shipping_line: 'chip-blue', terminal_operators: 'chip-amber' };
+  const labels = { oneport_365: 'OnePort 365', shipping_line: 'Shipping Line', terminal_operators: 'Terminal Ops' };
+  return `<span class="chip ${map[v]||'chip-gray'}">${labels[v]||v||'—'}</span>`;
+}
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ── PAGINATION ────────────────────────────────────────────────────────────────
+function renderPagination(tab, total, totalPages) {
+  const el = document.getElementById('pg-' + tab);
+  if (!el) return;
+  if (totalPages <= 1) { el.innerHTML = ''; return; }
+  const cur = pages[tab];
+  const start = (cur-1)*PAGE_SIZE+1, end = Math.min(cur*PAGE_SIZE, total);
+  let btns = `<button class="page-btn" onclick="goPage('${tab}',${cur-1})" ${cur===1?'disabled':''}>‹ Prev</button>`;
+  for (let i = Math.max(1,cur-2); i <= Math.min(totalPages, cur+2); i++) {
+    btns += `<button class="page-btn ${i===cur?'active':''}" onclick="goPage('${tab}',${i})">${i}</button>`;
+  }
+  btns += `<button class="page-btn" onclick="goPage('${tab}',${cur+1})" ${cur===totalPages?'disabled':''}>Next ›</button>`;
+  el.innerHTML = `<span class="page-info">Showing ${start}–${end} of ${total}</span><div class="page-btns">${btns}</div>`;
+}
+function goPage(tab, p) {
+  const filtered = getFiltered(tab);
+  const tp = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  pages[tab] = Math.max(1, Math.min(p, tp));
+  renderTable(tab);
+}
+
+// ── SELECTION ─────────────────────────────────────────────────────────────────
+function toggleRow(el) {
+  const id = parseInt(el.dataset.id, 10);
+  if (el.checked) selected.add(id); else selected.delete(id);
+  updateBulkBar();
+}
+function toggleAllRows(tab, checked) {
+  const filtered = getFiltered(tab);
+  const start = (pages[tab]-1)*PAGE_SIZE;
+  filtered.slice(start, start+PAGE_SIZE).forEach(r => { checked ? selected.add(r.id) : selected.delete(r.id); });
+  renderTable(tab);
+  updateBulkBar();
+}
+function clearSelection() { selected.clear(); renderTable(currentTab); updateBulkBar(); }
+function updateBulkBar() {
+  const n = selected.size;
+  const bar = document.getElementById('bulk-bar');
+  bar.classList.toggle('visible', n > 0);
+  document.getElementById('bulk-info').textContent = `${n} row${n!==1?'s':''} selected`;
+}
+
+// ── DELETE ────────────────────────────────────────────────────────────────────
+async function deleteRate(tab, id) {
+  if (!confirm('Delete this rate? This action is reversible — the record will be archived.')) return;
+  try {
+    await fetch(`${ENDPOINTS[tab]}/${id}`, { method: 'DELETE' });
+    await loadData(tab);
+    selected.delete(id);
+    updateBulkBar();
+  } catch { alert('Failed to delete. Please try again.'); }
+}
+async function bulkDelete() {
+  const ids = [...selected];
+  if (!ids.length) return;
+  if (!confirm(`Archive ${ids.length} selected rate${ids.length>1?'s':''}?`)) return;
+  try {
+    await Promise.all(ids.map(id => fetch(`${ENDPOINTS[currentTab]}/${id}`, { method: 'DELETE' })));
+    selected.clear();
+    await loadData(currentTab);
+    updateBulkBar();
+  } catch { alert('Bulk delete failed.'); }
+}
+
+// ── MODAL ─────────────────────────────────────────────────────────────────────
+function openModal(tab, id) {
+  editingTab = tab;
+  editingId = id;
+  const isEdit = id !== null;
+  document.getElementById('modal-title').textContent = isEdit ? 'Edit Rate' : (tab === 'other' ? 'Add Charge' : 'Add Rate');
+  const item = isEdit ? allData[tab].find(r => r.id === id) : null;
+  document.getElementById('modal-fields').innerHTML = buildModalFields(tab, item);
+  if (item?.asPerReceipt) toggleAprField(true);
+  document.getElementById('modal').style.display = 'flex';
+}
+function closeModal() {
+  document.getElementById('modal').style.display = 'none';
+  editingId = null; editingTab = null;
+}
+
+function val(id, def='') {
+  const el = document.getElementById('mf-' + id);
+  return el ? el.value : def;
+}
+function sel(id, opts, cur) {
+  return `<select class="form-select" id="mf-${id}">` + opts.map(o => {
+    const v = Array.isArray(o) ? o[0] : o; const l = Array.isArray(o) ? o[1] : o;
+    return `<option value="${v}" ${cur===v?'selected':''}>${l}</option>`;
+  }).join('') + '</select>';
+}
+function inp(id, placeholder, cur, type='text') {
+  return `<input class="form-input" id="mf-${id}" type="${type}" placeholder="${placeholder}" value="${esc(cur||'')}">`;
+}
+
+function buildModalFields(tab, r) {
+  const v = (k, d='') => r ? (r[k] ?? d) : d;
+  const equipOpts = [['20ft','20FT'],['40ft','40FT'],['40hc','40HC']];
+  const commodOpts = [['general','General'],['hazardous','Hazardous'],['refrigerated','Refrigerated'],['oversized','Oversized']];
+  const shipOpts = [['fcl','FCL'],['lcl','LCL']];
+
+  if (tab === 'ocean') return `
+    <div class="form-section">Route</div>
+    <div class="form-grid">
+      <div class="form-field"><label class="form-label">Carrier *</label>${inp('carrier','e.g. MSC, Maersk',v('carrier'))}</div>
+      <div class="form-field"><label class="form-label">POL Code *</label>${inp('polCode','e.g. NGAPP',v('polCode'))}</div>
+      <div class="form-field"><label class="form-label">Origin Country</label>${inp('originCountry','e.g. Nigeria',v('originCountry'))}</div>
+      <div class="form-field"><label class="form-label">POD Code *</label>${inp('podCode','e.g. CNSHA',v('podCode'))}</div>
+      <div class="form-field"><label class="form-label">Dest Country</label>${inp('destCountry','e.g. China',v('destCountry'))}</div>
+      <div class="form-field"><label class="form-label">Transit Time</label>${inp('transitTime','e.g. 28 days',v('transitTime'))}</div>
+    </div>
+    <div class="form-section" style="margin-top:4px">Classification</div>
+    <div class="form-grid">
+      <div class="form-field"><label class="form-label">Equipment Type *</label>${sel('equipmentType',equipOpts,v('equipmentType','40ft'))}</div>
+      <div class="form-field"><label class="form-label">Commodity Type</label>${sel('commodityType',commodOpts,v('commodityType','general'))}</div>
+      <div class="form-field"><label class="form-label">Rate Type</label>${sel('rateType',[['all_in','All-in'],['base','Base'],['spot','Spot'],['contract','Contract']],v('rateType','all_in'))}</div>
+      <div class="form-field"><label class="form-label">Inclusion Type</label>${sel('inclusionType',[['all_in','All-in'],['prepaid','Prepaid'],['collect','Collect']],v('inclusionType','prepaid'))}</div>
+      <div class="form-field"><label class="form-label">Free Time</label>${inp('freeTime','e.g. 7 days',v('freeTime'))}</div>
+      <div class="form-field"><label class="form-label">Currency</label>${sel('currency',[['USD','USD'],['EUR','EUR'],['NGN','NGN'],['GBP','GBP']],v('currency','USD'))}</div>
+    </div>
+    <div class="form-section" style="margin-top:4px">Rates (USD per container)</div>
+    <div class="form-grid cols3">
+      <div class="form-field"><label class="form-label">20FT Amount</label>${inp('amount20ft','e.g. 1200',v('amount20ft'),'number')}</div>
+      <div class="form-field"><label class="form-label">40FT Amount</label>${inp('amount40ft','e.g. 1800',v('amount40ft'),'number')}</div>
+      <div class="form-field"><label class="form-label">40HC Amount</label>${inp('amount40hc','e.g. 1900',v('amount40hc'),'number')}</div>
+    </div>
+    <div class="form-grid cols1" style="margin-top:4px">
+      <div class="form-field"><label class="form-label">Expiry Date *</label>${inp('expiryDate','',v('expiryDate'),'date')}</div>
+    </div>`;
+
+  if (tab === 'import') return `
+    <div class="form-section">Terminal</div>
+    <div class="form-grid">
+      <div class="form-field"><label class="form-label">Terminal Name *</label>${inp('terminalName','e.g. Apapa Terminal',v('terminalName'))}</div>
+      <div class="form-field"><label class="form-label">Port Code *</label>${inp('portCode','e.g. NGAPP',v('portCode'))}</div>
+      <div class="form-field"><label class="form-label">Origin State</label>${inp('originState','e.g. Lagos',v('originState'))}</div>
+    </div>
+    <div class="form-section" style="margin-top:4px">Destination</div>
+    <div class="form-grid">
+      <div class="form-field"><label class="form-label">Dest City</label>${inp('destCity','e.g. Kano',v('destCity'))}</div>
+      <div class="form-field"><label class="form-label">Dest LGA *</label>${inp('destLga','e.g. Kano Municipal',v('destLga'))}</div>
+      <div class="form-field"><label class="form-label">Dest State</label>${inp('destState','e.g. Kano',v('destState'))}</div>
+    </div>
+    <div class="form-section" style="margin-top:4px">Classification & Price</div>
+    <div class="form-grid">
+      <div class="form-field"><label class="form-label">Shipment Type</label>${sel('shipmentType',shipOpts,v('shipmentType','fcl'))}</div>
+      <div class="form-field"><label class="form-label">Equipment Type *</label>${sel('equipmentType',equipOpts,v('equipmentType','40ft'))}</div>
+      <div class="form-field"><label class="form-label">Commodity Type</label>${sel('commodityType',commodOpts,v('commodityType','general'))}</div>
+      <div class="form-field"><label class="form-label">Currency</label>${sel('currency',[['NGN','NGN'],['USD','USD']],v('currency','NGN'))}</div>
+      <div class="form-field span2"><label class="form-label">Price *</label>${inp('price','e.g. 350000',v('price'),'number')}</div>
+    </div>`;
+
+  if (tab === 'export') return `
+    <div class="form-section">Terminal (Destination)</div>
+    <div class="form-grid">
+      <div class="form-field"><label class="form-label">Terminal Name *</label>${inp('terminalName','e.g. Tin Can Terminal',v('terminalName'))}</div>
+      <div class="form-field"><label class="form-label">Port Code *</label>${inp('portCode','e.g. NGTCN',v('portCode'))}</div>
+      <div class="form-field"><label class="form-label">Dest State</label>${inp('destState','e.g. Lagos',v('destState'))}</div>
+    </div>
+    <div class="form-section" style="margin-top:4px">Origin (Pickup)</div>
+    <div class="form-grid">
+      <div class="form-field"><label class="form-label">Origin State *</label>${inp('originState','e.g. Kano',v('originState'))}</div>
+      <div class="form-field"><label class="form-label">Origin City</label>${inp('originCity','e.g. Kano',v('originCity'))}</div>
+      <div class="form-field"><label class="form-label">Origin LGA *</label>${inp('originLga','e.g. Kano Municipal',v('originLga'))}</div>
+    </div>
+    <div class="form-section" style="margin-top:4px">Classification & Price</div>
+    <div class="form-grid">
+      <div class="form-field"><label class="form-label">Shipment Type</label>${sel('shipmentType',shipOpts,v('shipmentType','fcl'))}</div>
+      <div class="form-field"><label class="form-label">Equipment Type *</label>${sel('equipmentType',equipOpts,v('equipmentType','40ft'))}</div>
+      <div class="form-field"><label class="form-label">Commodity Type</label>${sel('commodityType',commodOpts,v('commodityType','general'))}</div>
+      <div class="form-field"><label class="form-label">Currency</label>${sel('currency',[['NGN','NGN'],['USD','USD']],v('currency','NGN'))}</div>
+      <div class="form-field span2"><label class="form-label">Price *</label>${inp('price','e.g. 280000',v('price'),'number')}</div>
+    </div>`;
+
+  // other
+  const isApr = r?.asPerReceipt ?? false;
+  return `
+    <div class="form-section">Charge Details</div>
+    <div class="form-grid cols1">
+      <div class="form-field"><label class="form-label">Item Name *</label>${inp('itemName','e.g. Son Fee',v('itemName'))}</div>
+    </div>
+    <div class="form-grid">
+      <div class="form-field"><label class="form-label">Shipment Type</label>${sel('shipmentType',[['import','Import'],['export','Export'],['both','Both']],v('shipmentType','both'))}</div>
+      <div class="form-field"><label class="form-label">Item Category *</label>${sel('itemCategory',[['oneport_365','OnePort 365'],['shipping_line','Shipping Line'],['terminal_operators','Terminal Operators']],v('itemCategory','oneport_365'))}</div>
+      <div class="form-field"><label class="form-label">Commodity Type</label>${sel('commodityType',[['FAK','FAK — Freight All Kinds'],['hazardous','Hazardous'],['refrigerated','Refrigerated']],v('commodityType','FAK'))}</div>
+      <div class="form-field"><label class="form-label">Country</label>${inp('country','e.g. Nigeria',v('country'))}</div>
+      <div class="form-field"><label class="form-label">Currency</label>${sel('currency',[['NGN','NGN'],['USD','USD'],['EUR','EUR']],v('currency','NGN'))}</div>
+      <div class="form-field"><label class="form-label">Expiry Date</label>${inp('expiryDate','',v('expiryDate'),'date')}</div>
+    </div>
+    <div class="form-grid" style="margin-top:4px">
+      <div class="form-field">
+        <label class="form-label">As Per Receipt</label>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
+          <input type="checkbox" class="cb" id="mf-asPerReceipt" ${isApr?'checked':''} onchange="toggleAprField(this.checked)">
+          <span style="font-size:12px;color:var(--text3)">No fixed price — billed at cost</span>
+        </div>
+      </div>
+      <div class="form-field" id="price-field" style="${isApr?'display:none':''}">
+        <label class="form-label">Fixed Price</label>
+        ${inp('price','e.g. 50000',v('price'),'number')}
+      </div>
+    </div>`;
+}
+
+function toggleAprField(checked) {
+  const pf = document.getElementById('price-field');
+  if (pf) pf.style.display = checked ? 'none' : '';
+}
+
+async function saveRate() {
+  const tab = editingTab;
+  const body = {};
+
+  const fval = id => { const el = document.getElementById('mf-' + id); return el ? el.value.trim() : null; };
+  const fnum = id => { const v = fval(id); return v ? v : null; };
+
+  if (tab === 'ocean') {
+    const required = ['carrier','polCode','podCode','expiryDate'];
+    for (const r of required) { if (!fval(r)) { alert(`${r} is required`); return; } }
+    Object.assign(body, { carrier: fval('carrier'), polCode: fval('polCode'), originCountry: fval('originCountry'), podCode: fval('podCode'), destCountry: fval('destCountry'), commodityType: fval('commodityType'), equipmentType: fval('equipmentType'), rateType: fval('rateType'), inclusionType: fval('inclusionType'), transitTime: fval('transitTime'), freeTime: fval('freeTime'), currency: fval('currency'), amount20ft: fnum('amount20ft'), amount40ft: fnum('amount40ft'), amount40hc: fnum('amount40hc'), expiryDate: fval('expiryDate') });
+  } else if (tab === 'import') {
+    if (!fval('terminalName') || !fval('portCode') || !fval('destLga') || !fval('price')) { alert('Terminal, port, LGA and price are required'); return; }
+    Object.assign(body, { terminalName: fval('terminalName'), portCode: fval('portCode'), originState: fval('originState'), destCity: fval('destCity'), destLga: fval('destLga'), destState: fval('destState'), shipmentType: fval('shipmentType'), equipmentType: fval('equipmentType'), commodityType: fval('commodityType'), currency: fval('currency'), price: fnum('price') });
+  } else if (tab === 'export') {
+    if (!fval('terminalName') || !fval('portCode') || !fval('originState') || !fval('originLga') || !fval('price')) { alert('Terminal, port, origin state, LGA and price are required'); return; }
+    Object.assign(body, { terminalName: fval('terminalName'), portCode: fval('portCode'), originState: fval('originState'), originCity: fval('originCity'), originLga: fval('originLga'), destState: fval('destState'), shipmentType: fval('shipmentType'), equipmentType: fval('equipmentType'), commodityType: fval('commodityType'), currency: fval('currency'), price: fnum('price') });
+  } else {
+    if (!fval('itemName') || !fval('itemCategory')) { alert('Item name and category are required'); return; }
+    const apr = document.getElementById('mf-asPerReceipt')?.checked ?? false;
+    Object.assign(body, { itemName: fval('itemName'), shipmentType: fval('shipmentType'), itemCategory: fval('itemCategory'), commodityType: fval('commodityType'), country: fval('country'), currency: fval('currency'), asPerReceipt: apr, price: apr ? null : fnum('price'), expiryDate: fval('expiryDate') || null });
+  }
+
+  const btn = document.getElementById('modal-save-btn');
+  btn.textContent = 'Saving…'; btn.disabled = true;
+  try {
+    const url = editingId ? `${ENDPOINTS[tab]}/${editingId}` : ENDPOINTS[tab];
+    const method = editingId ? 'PUT' : 'POST';
+    const r = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    if (!r.ok) { const e = await r.json(); throw new Error(e.error || 'Save failed'); }
+    closeModal();
+    await loadData(tab);
+  } catch (err) { alert('Save failed: ' + err.message); }
+  finally { btn.textContent = 'Save'; btn.disabled = false; }
+}
+
+// ── CSV EXPORT ────────────────────────────────────────────────────────────────
+function exportCsv(tab) {
+  const filtered = getFiltered(tab);
+  if (!filtered.length) { alert('No data to export.'); return; }
+  const keys = Object.keys(filtered[0]).filter(k => k !== 'archived');
+  const rows = [keys.join(','), ...filtered.map(r => keys.map(k => `"${(r[k]??'').toString().replace(/"/g,'""')}"`).join(','))];
+  const blob = new Blob([rows.join('\n')], { type: 'text/csv' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = `oneport365-${tab}-rates-${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+}
+
+// ── SAMPLE DATA ───────────────────────────────────────────────────────────────
+async function loadSampleData() {
+  if (!confirm('This will add sample rates to all four tables. Continue?')) return;
+
+  const oceans = [
+    { carrier:'MSC', polCode:'NGAPP', originCountry:'Nigeria', podCode:'CNSHA', destCountry:'China', commodityType:'general', equipmentType:'40ft', rateType:'all_in', currency:'USD', amount40ft:'1800', amount40hc:'1950', transitTime:'28 days', freeTime:'14 days', expiryDate:'2026-09-30' },
+    { carrier:'Maersk', polCode:'NGAPP', originCountry:'Nigeria', podCode:'DEHAM', destCountry:'Germany', commodityType:'general', equipmentType:'40ft', rateType:'all_in', currency:'USD', amount20ft:'1400', amount40ft:'2100', amount40hc:'2200', transitTime:'21 days', freeTime:'7 days', expiryDate:'2026-08-31' },
+    { carrier:'CMA CGM', polCode:'CNSHA', originCountry:'China', podCode:'NGAPP', destCountry:'Nigeria', commodityType:'general', equipmentType:'40ft', rateType:'spot', currency:'USD', amount20ft:'950', amount40ft:'1700', amount40hc:'1800', transitTime:'30 days', freeTime:'14 days', expiryDate:'2026-07-31' },
+    { carrier:'OOCL', polCode:'CNTAO', originCountry:'China', podCode:'NGLOS', destCountry:'Nigeria', commodityType:'general', equipmentType:'40hc', rateType:'contract', currency:'USD', amount40hc:'1650', transitTime:'28 days', freeTime:'21 days', expiryDate:'2026-12-31' },
+    { carrier:'ZIM', polCode:'NGAPP', originCountry:'Nigeria', podCode:'ITCTA', destCountry:'Italy', commodityType:'general', equipmentType:'40ft', rateType:'base', currency:'USD', amount20ft:'1200', amount40ft:'1900', amount40hc:'2000', transitTime:'18 days', freeTime:'7 days', expiryDate:'2026-06-15' },
+  ];
+  const imports = [
+    { terminalName:'Apapa Terminal', portCode:'NGAPP', originState:'Lagos', destCity:'Ikeja', destLga:'Ikeja', destState:'Lagos', shipmentType:'fcl', equipmentType:'40ft', commodityType:'general', currency:'NGN', price:'180000' },
+    { terminalName:'Apapa Terminal', portCode:'NGAPP', originState:'Lagos', destCity:'Kano', destLga:'Kano Municipal', destState:'Kano', shipmentType:'fcl', equipmentType:'40ft', commodityType:'general', currency:'NGN', price:'650000' },
+    { terminalName:'Onne Port', portCode:'NGONE', originState:'Rivers', destCity:'Port Harcourt', destLga:'Port Harcourt', destState:'Rivers', shipmentType:'fcl', equipmentType:'40ft', commodityType:'general', currency:'NGN', price:'120000' },
+    { terminalName:'Apapa Terminal', portCode:'NGAPP', originState:'Lagos', destCity:'Abuja', destLga:'Abuja Municipal', destState:'FCT', shipmentType:'fcl', equipmentType:'20ft', commodityType:'general', currency:'NGN', price:'480000' },
+    { terminalName:'Tin Can Terminal', portCode:'NGTCN', originState:'Lagos', destCity:'Ibadan', destLga:'Ibadan North', destState:'Oyo', shipmentType:'fcl', equipmentType:'40hc', commodityType:'general', currency:'NGN', price:'220000' },
+  ];
+  const exports_ = [
+    { terminalName:'Apapa Terminal', portCode:'NGAPP', originState:'Kano', originCity:'Kano', originLga:'Kano Municipal', destState:'Lagos', shipmentType:'fcl', equipmentType:'40ft', commodityType:'general', currency:'NGN', price:'700000' },
+    { terminalName:'Tin Can Terminal', portCode:'NGTCN', originState:'Oyo', originCity:'Ibadan', originLga:'Ibadan North', destState:'Lagos', shipmentType:'fcl', equipmentType:'40ft', commodityType:'general', currency:'NGN', price:'250000' },
+    { terminalName:'Apapa Terminal', portCode:'NGAPP', originState:'Lagos', originCity:'Lagos', originLga:'Lagos Island', destState:'Lagos', shipmentType:'fcl', equipmentType:'20ft', commodityType:'general', currency:'NGN', price:'120000' },
+  ];
+  const others = [
+    { itemName:'Refundable Container Deposit', shipmentType:'import', itemCategory:'shipping_line', commodityType:'FAK', country:'Nigeria', currency:'USD', price:'1000', asPerReceipt:false, expiryDate:'2026-12-31' },
+    { itemName:'Shipping Line Charges', shipmentType:'import', itemCategory:'shipping_line', commodityType:'FAK', country:'Nigeria', currency:'USD', asPerReceipt:true, expiryDate:'2026-12-31' },
+    { itemName:'Terminal Handling Charges (Import)', shipmentType:'import', itemCategory:'terminal_operators', commodityType:'FAK', country:'Nigeria', currency:'NGN', asPerReceipt:true, expiryDate:'2026-12-31' },
+    { itemName:'Son Fee', shipmentType:'import', itemCategory:'oneport_365', commodityType:'FAK', country:'Nigeria', currency:'NGN', price:'15000', asPerReceipt:false, expiryDate:'2026-12-31' },
+    { itemName:'Form M and PAAR Documentation', shipmentType:'import', itemCategory:'oneport_365', commodityType:'FAK', country:'Nigeria', currency:'NGN', price:'75000', asPerReceipt:false, expiryDate:'2026-12-31' },
+    { itemName:'Agency Clearance Fee', shipmentType:'import', itemCategory:'oneport_365', commodityType:'FAK', country:'Nigeria', currency:'NGN', price:'120000', asPerReceipt:false, expiryDate:'2026-12-31' },
+    { itemName:'Customs Examination Fee', shipmentType:'import', itemCategory:'oneport_365', commodityType:'FAK', country:'Nigeria', currency:'NGN', price:'45000', asPerReceipt:false, expiryDate:'2026-12-31' },
+    { itemName:'Terminal Handling Charges (Export)', shipmentType:'export', itemCategory:'terminal_operators', commodityType:'FAK', country:'Nigeria', currency:'NGN', asPerReceipt:true, expiryDate:'2026-12-31' },
+    { itemName:'Offloading', shipmentType:'export', itemCategory:'oneport_365', commodityType:'FAK', country:'Nigeria', currency:'NGN', price:'35000', asPerReceipt:false, expiryDate:'2026-12-31' },
+  ];
+
+  try {
+    await Promise.all([
+      ...oceans.map(d => fetch('/api/rates/ocean-freight', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(d) })),
+      ...imports.map(d => fetch('/api/rates/haulage-import', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(d) })),
+      ...exports_.map(d => fetch('/api/rates/haulage-export', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(d) })),
+      ...others.map(d => fetch('/api/rates/other-charges', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(d) })),
+    ]);
+    await loadData(currentTab);
+    // Refresh other tabs counts
+    for (const t of ['ocean','import','export','other']) {
+      if (t !== currentTab) {
+        const r = await fetch(ENDPOINTS[t]); if (r.ok) { allData[t] = await r.json(); document.getElementById('cnt-'+t).textContent = allData[t].length; }
+      }
+    }
+    alert('Sample data loaded successfully!');
+  } catch { alert('Some sample data failed to load. Please try again.'); }
+}
+</script>
+</body>
+</html>
