@@ -1199,13 +1199,7 @@ tr.trow.sel td{background:#eef6e6}
                   <div style="grid-column:1/-1">
                     <label style="font-size:10px;color:#8a9e8a;font-weight:600;display:block;margin-bottom:4px">RFQ / Deal Reference</label>
                     <select id="br-rfq" onchange="brUpdate()" style="width:100%;background:#fff;border:1px solid #d0d8d0;color:#1a2e1a;font-family:Inter,sans-serif;font-size:12px;padding:8px 10px;border-radius:7px;outline:none;box-sizing:border-box">
-                      <option value="">Select open RFQ...</option>
-                      <option value="RFQ-2604-0040">RFQ-2604-0040 — Grace Benson</option>
-                      <option value="RFQ-2604-0039">RFQ-2604-0039 — Kayode · HAM → LOS</option>
-                      <option value="RFQ-2604-0038">RFQ-2604-0038 — Demir Guzel · IST → LOS</option>
-                      <option value="RFQ-2604-0037">RFQ-2604-0037 — Royal Foam · TAO → APP</option>
-                      <option value="RFQ-2604-0033">RFQ-2604-0033 — Adaeze · APP → RTM</option>
-                      <option value="RFQ-2604-0032">RFQ-2604-0032 — Saro Agro · NGB → APP</option>
+                      <option value="">Select open RFQ…</option>
                     </select>
                   </div>
                   <div>
@@ -2768,6 +2762,30 @@ function brInitOceanDropdown(){
   });
 }
 
+async function brInitRfqDropdown(){
+  const sel = document.getElementById('br-rfq');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">Loading RFQs…</option>';
+  try {
+    const r = await fetch('/api/rfqs');
+    const rfqs = await r.json();
+    const open = Array.isArray(rfqs) ? rfqs.filter(x => x.status !== 'archived') : [];
+    sel.innerHTML = '<option value="">Select open RFQ…</option>' + open.map(rfq => {
+      const fields = Array.isArray(rfq.fields) ? rfq.fields : [];
+      const polF = fields.find(f => /pol|port.of.load/i.test(f.k));
+      const podF = fields.find(f => /pod|port.of.dis/i.test(f.k));
+      const pol = polF?.v && polF.v !== 'not specified' ? polF.v.split('(')[0].trim().slice(0,12) : '';
+      const pod = podF?.v && podF.v !== 'not specified' ? podF.v.split('(')[0].trim().slice(0,12) : '';
+      const customer = rfq.email?.fromName || rfq.email?.fromEmail || '';
+      const route = pol && pod ? ` · ${pol}→${pod}` : '';
+      const cust = customer ? ` — ${customer}` : '';
+      return `<option value="${rfq.id}">${escHtml(rfq.ref)}${cust}${route}</option>`;
+    }).join('');
+  } catch(e) {
+    sel.innerHTML = '<option value="">Failed to load RFQs</option>';
+  }
+}
+
 function brToggleSections(){
   const s=id=>document.getElementById(id);
   s('br-sec-ocean').style.display  = s('br-chk-ocean').checked   ? 'block':'none';
@@ -2899,13 +2917,9 @@ function saveBuildRateDraft(){
 }
 
 async function convertToQuote(){
-  const rfqRef=document.getElementById('br-rfq')?.value;
-  const sell=document.getElementById('br-sell-price')?.textContent;
-  if(sell==='—'||!sell){alert('Complete the rate builder before converting to a quote.');return;}
-  if(!rfqRef){alert('Select an RFQ to attach this quote to.');return;}
-  // Find the RFQ id from rfqData
-  const rfqObj = Array.isArray(rfqData) ? rfqData.find(r=>r.ref===rfqRef||r.id===rfqRef) : null;
-  if (!rfqObj) { openGenerateQuoteModal(); return; }
+  const rfqSel = document.getElementById('br-rfq');
+  const rfqId = rfqSel ? parseInt(rfqSel.value) : NaN;
+  if(!rfqId || isNaN(rfqId)){alert('Select an RFQ to attach this quote to.');return;}
   const margin = Number(document.getElementById('br-margin-pct')?.value)||13;
   const fx = Number(document.getElementById('br-fx')?.value)||1600;
   const btn = document.querySelector('[onclick="convertToQuote()"]');
@@ -2913,7 +2927,7 @@ async function convertToQuote(){
   try {
     const r = await fetch('/api/quotes/generate', {
       method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({rfqId: rfqObj.id, marginPct:margin, exchangeRate:fx, save:true})
+      body: JSON.stringify({rfqId, marginPct:margin, exchangeRate:fx, save:true})
     });
     if(!r.ok){const e=await r.json();throw new Error(e.error||'Failed');}
     const quote = await r.json();
@@ -3410,6 +3424,7 @@ function showRatesSub(tab) {
   } else if(tab === 'build') {
     if(bPanel) bPanel.style.display = 'flex';
     brInitOceanDropdown();
+    brInitRfqDropdown();
   } else {
     oPanel.style.display = 'flex';
     oTab.style.color = '#5a9132'; oTab.style.borderBottomColor = '#7AB648'; oTab.style.fontWeight = '600';
@@ -4498,6 +4513,13 @@ function epCancel() {
 // Init — load from API
 document.addEventListener('DOMContentLoaded', () => {
   loadInbox();
+  // Populate quotes badge immediately without waiting for screen 4
+  fetch('/api/quotes').then(r=>r.json()).then(qs=>{
+    if(Array.isArray(qs)){
+      const badge=document.getElementById('quotes-count');
+      if(badge) badge.textContent=qs.length;
+    }
+  }).catch(()=>{});
 });
 
 // Pipeline panel — uses shared rfqData from API
