@@ -176,6 +176,7 @@ tr.row-expiring-soon td{background:#fffbeb}
     <a class="nav-item" href="/mvp1.html">✉ RFQ</a>
     <a class="nav-item" href="/mvp1.html">Deals</a>
     <a class="nav-item active" href="/rates.html">$ Rates</a>
+    <a class="nav-item" href="/mvp1.html#quotes" id="nav-quotes">📄 Quotes <span id="quotes-nav-badge" style="font-size:10px;padding:1px 6px;border-radius:10px;background:rgba(255,255,255,.15);color:#fff;font-weight:600;margin-left:2px">0</span></a>
     <div class="nav-right">
       <div class="t-status"><div class="t-status-dot"></div>monitoring sales@oneport365.com</div>
       <div class="user-chip">
@@ -1041,6 +1042,16 @@ async function loadSampleData() {
     alert('Sample data loaded successfully!');
   } catch { alert('Some sample data failed to load. Please try again.'); }
 }
+// Populate Quotes badge from API
+fetch('/api/quotes').then(r=>r.json()).then(qs=>{
+  if(Array.isArray(qs)){
+    const badge=document.getElementById('quotes-nav-badge');
+    if(badge){
+      badge.textContent=qs.length;
+      if(qs.length>0) badge.style.background='#7AB648';
+    }
+  }
+}).catch(()=>{});
 </script>
 </body>
 </html>
