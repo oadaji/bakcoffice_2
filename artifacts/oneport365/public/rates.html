@@ -218,6 +218,61 @@ tr.row-expiring-soon td{background:#fffbeb}
 /* Benchmark Modal */
 .bm-row{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--border);border-radius:7px;background:#fff}
 .bm-row:hover{border-color:var(--border2);background:#f8faf8}
+
+/* Quick Spot Rate Drawer */
+.qsr-overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:1100;display:none;backdrop-filter:blur(2px)}
+.qsr-overlay.open{display:block}
+.qsr-drawer{position:fixed;top:0;right:0;bottom:0;width:420px;max-width:100vw;background:#fff;z-index:1101;box-shadow:-8px 0 40px rgba(0,0,0,.18);display:flex;flex-direction:column;transform:translateX(100%);transition:transform .25s cubic-bezier(.4,0,.2,1)}
+.qsr-drawer.open{transform:translateX(0)}
+.qsr-header{padding:20px 22px 16px;border-bottom:1px solid var(--border);background:linear-gradient(135deg,#0a1a0a 0%,#1a3a1a 100%)}
+.qsr-header h3{margin:0 0 3px;font-size:16px;color:#fff;font-weight:700}
+.qsr-header p{margin:0;font-size:11px;color:rgba(255,255,255,.55)}
+.qsr-badge{display:inline-block;font-size:9px;font-weight:700;padding:2px 7px;border-radius:4px;background:#7AB648;color:#fff;letter-spacing:.04em;margin-bottom:8px}
+.qsr-close{position:absolute;top:16px;right:16px;background:rgba(255,255,255,.12);border:none;color:#fff;width:28px;height:28px;border-radius:6px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center}
+.qsr-close:hover{background:rgba(255,255,255,.22)}
+.qsr-body{flex:1;overflow-y:auto;padding:18px 22px}
+.qsr-section{font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;margin:16px 0 8px}
+.qsr-section:first-child{margin-top:0}
+.qsr-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.qsr-row.full{grid-template-columns:1fr}
+.qsr-row.three{grid-template-columns:1fr 1fr 1fr}
+.qsr-field label{display:block;font-size:10px;font-weight:600;color:var(--text2);margin-bottom:4px}
+.qsr-field input,.qsr-field select{width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;color:var(--text);font-family:Inter,sans-serif;background:#fff;transition:border-color .15s}
+.qsr-field input:focus,.qsr-field select:focus{outline:none;border-color:#7AB648;box-shadow:0 0 0 2px rgba(122,182,72,.12)}
+.qsr-field input.required-err{border-color:#ef4444}
+.qsr-hint{font-size:9px;color:var(--text3);margin-top:3px}
+.qsr-footer{padding:14px 22px;border-top:1px solid var(--border);display:flex;gap:8px;background:#fafbfa}
+.qsr-save{flex:1;padding:10px;background:#7AB648;color:#fff;border:none;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;transition:background .15s}
+.qsr-save:hover{background:#6aa33e}
+.qsr-save:disabled{background:#b0c8a0;cursor:not-allowed}
+.qsr-cancel{padding:10px 16px;background:#fff;color:var(--text2);border:1px solid var(--border);border-radius:7px;font-size:12px;cursor:pointer;font-family:Inter,sans-serif}
+.qsr-cancel:hover{border-color:var(--border2);color:var(--text)}
+
+/* Maersk API Modal */
+.msk-modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1200;display:none;align-items:center;justify-content:center}
+.msk-modal-bg.open{display:flex}
+.msk-modal{background:#fff;border-radius:14px;width:560px;max-width:96vw;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.25);overflow:hidden}
+.msk-hd{padding:20px 24px 16px;border-bottom:1px solid var(--border);background:linear-gradient(135deg,#003594 0%,#00519b 100%)}
+.msk-hd h3{margin:0 0 3px;font-size:16px;color:#fff;font-weight:700}
+.msk-hd p{margin:0;font-size:11px;color:rgba(255,255,255,.6)}
+.msk-body{flex:1;overflow-y:auto;padding:20px 24px}
+.msk-alert{background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px 14px;font-size:11px;color:#1e40af;line-height:1.6;margin-bottom:16px}
+.msk-alert a{color:#2563eb;font-weight:600}
+.msk-field{margin-bottom:12px}
+.msk-field label{display:block;font-size:11px;font-weight:600;color:var(--text2);margin-bottom:4px}
+.msk-field input,.msk-field select{width:100%;box-sizing:border-box;padding:8px 11px;border:1px solid var(--border);border-radius:7px;font-size:12px;color:var(--text);font-family:Inter,sans-serif}
+.msk-field input:focus,.msk-field select:focus{outline:none;border-color:#003594;box-shadow:0 0 0 2px rgba(0,53,148,.12)}
+.msk-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.msk-results{margin-top:16px;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.msk-results-hd{padding:8px 12px;background:#f1f5f9;font-size:10px;font-weight:700;color:var(--text2);letter-spacing:.05em;text-transform:uppercase}
+.msk-result-row{display:grid;grid-template-columns:1fr 80px 80px 80px 70px;align-items:center;padding:8px 12px;border-top:1px solid var(--border);font-size:11px;color:var(--text)}
+.msk-result-row:first-child{border-top:none}
+.msk-result-row.hdr{background:#f8faf8;font-weight:600;font-size:10px;color:var(--text2)}
+.msk-ft{padding:14px 24px;border-top:1px solid var(--border);display:flex;gap:8px;background:#fafbfa}
+.msk-btn-primary{flex:1;padding:9px;background:#003594;color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif}
+.msk-btn-primary:hover{background:#002a7a}
+.msk-btn-primary:disabled{background:#93c5fd;cursor:not-allowed}
+.msk-btn-sec{padding:9px 14px;background:#fff;color:var(--text2);border:1px solid var(--border);border-radius:7px;font-size:12px;cursor:pointer;font-family:Inter,sans-serif}
 </style>
 </head>
 <body>
@@ -272,6 +327,7 @@ tr.row-expiring-soon td{background:#fffbeb}
     <div class="mp-actions">
       <span id="mp-updated" style="font-size:9px;color:rgba(255,255,255,.25)"></span>
       <button class="mp-btn" onclick="openBenchmarkModal()" title="Manage manual benchmarks">⚙ Benchmarks</button>
+      <button class="mp-btn" onclick="openMaerskModal()" title="Fetch live Maersk spot rates" style="border-color:#4f86d0;color:#4f86d0">⚓ Maersk</button>
       <button class="mp-btn mp-btn-primary" id="mp-scrape-btn" onclick="triggerScrape()">⟳ Scrape Now</button>
     </div>
   </div>
@@ -290,6 +346,8 @@ tr.row-expiring-soon td{background:#fffbeb}
           <button class="btn" onclick="openOutreachHistory()" style="border-color:#c4b5fd;color:#7c3aed;background:#faf5ff;font-size:11px">📋 Outreach History</button>
           <button class="btn" onclick="openContactPartner()" style="border-color:#a78bfa;color:#6d28d9;background:#faf5ff">✉ Contact Partner</button>
           <button class="btn" onclick="exportCsv('ocean')">↓ Export CSV</button>
+          <button class="btn" onclick="openMaerskModal()" style="border-color:#003594;color:#003594;background:#eff6ff;font-weight:600">⚓ Maersk API</button>
+          <button class="btn" onclick="openQuickSpotRate()" style="border-color:#7AB648;color:#3d6b1e;background:#f0f7e8;font-weight:600">⚡ Spot Rate</button>
           <button class="btn btn-primary" onclick="openModal('ocean', null)">+ Add Rate</button>
         </div>
       </div>
@@ -2074,6 +2132,353 @@ function clearBenchmarkForm() {
     if (el) el.value = '';
   });
 }
+
+// ── QUICK SPOT RATE DRAWER ────────────────────────────────────────────────────
+function openQuickSpotRate(prefill = {}) {
+  const today = new Date().toISOString().slice(0,10);
+  const expiry = new Date(Date.now() + 30*86400000).toISOString().slice(0,10);
+  document.getElementById('qsr-carrier').value   = prefill.carrier || '';
+  document.getElementById('qsr-source').value    = prefill.source  || '';
+  document.getElementById('qsr-pol').value        = prefill.polCode || '';
+  document.getElementById('qsr-origin').value    = prefill.originCountry || '';
+  document.getElementById('qsr-pod').value        = prefill.podCode || 'NGAPP';
+  document.getElementById('qsr-dest').value      = prefill.destCountry || 'Nigeria';
+  document.getElementById('qsr-20ft').value      = prefill.amount20ft || '';
+  document.getElementById('qsr-40ft').value      = prefill.amount40ft || '';
+  document.getElementById('qsr-40hc').value      = prefill.amount40hc || '';
+  document.getElementById('qsr-tt').value        = prefill.transitTime || '';
+  document.getElementById('qsr-from').value      = prefill.validFrom || today;
+  document.getElementById('qsr-expiry').value    = prefill.expiryDate || expiry;
+  document.getElementById('qsr-overlay').classList.add('open');
+  document.getElementById('qsr-drawer').classList.add('open');
+  document.getElementById('qsr-carrier').focus();
+}
+
+function closeQuickSpotRate() {
+  document.getElementById('qsr-overlay').classList.remove('open');
+  document.getElementById('qsr-drawer').classList.remove('open');
+}
+
+async function saveQuickSpotRate() {
+  const v = id => document.getElementById(id)?.value.trim();
+  const carrier  = v('qsr-carrier');
+  const polCode  = v('qsr-pol');
+  const podCode  = v('qsr-pod');
+  const expiry   = v('qsr-expiry');
+
+  // Validate required
+  let hasErr = false;
+  ['qsr-carrier','qsr-pol','qsr-pod','qsr-expiry'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el.value.trim()) { el.classList.add('required-err'); hasErr = true; }
+    else el.classList.remove('required-err');
+  });
+  if (!v('qsr-20ft') && !v('qsr-40ft') && !v('qsr-40hc')) {
+    alert('Enter at least one rate (20FT, 40FT, or 40HC).');
+    return;
+  }
+  if (hasErr) { alert('Please fill in all required fields (marked in red).'); return; }
+
+  const btn = document.getElementById('qsr-save-btn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+
+  const body = {
+    carrier, polCode, podCode, expiryDate: expiry,
+    originCountry: v('qsr-origin') || null,
+    destCountry: v('qsr-dest') || null,
+    rateType: 'spot',
+    commodityType: 'general',
+    equipmentType: v('qsr-40ft') ? '40ft' : (v('qsr-40hc') ? '40hc' : '20ft'),
+    currency: 'USD',
+    amount20ft: v('qsr-20ft') || null,
+    amount40ft: v('qsr-40ft') || null,
+    amount40hc: v('qsr-40hc') || null,
+    transitTime: v('qsr-tt') || null,
+    inclusionType: v('qsr-source') ? `Source: ${v('qsr-source')}` : null,
+  };
+
+  try {
+    const res = await fetch('/api/rates/ocean-freight', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    closeQuickSpotRate();
+    await loadRates('ocean');
+    await loadMarketIntel();
+    showToast(`✓ Spot rate added — ${carrier} ${polCode}→${podCode} · now appears in quotes`);
+  } catch(e) {
+    alert('Failed to save: ' + e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Add to Rates Table';
+  }
+}
+
+// ── MAERSK SPOT API MODAL ─────────────────────────────────────────────────────
+let mskFetchedOffers = [];
+
+function openMaerskModal() {
+  mskFetchedOffers = [];
+  document.getElementById('msk-results').style.display = 'none';
+  document.getElementById('msk-import-btn').style.display = 'none';
+  document.getElementById('msk-status').textContent = '';
+  const saved = sessionStorage.getItem('maersk-api-key') || '';
+  document.getElementById('msk-apikey').value = saved;
+  document.getElementById('msk-modal-bg').classList.add('open');
+}
+
+function closeMaerskModal() {
+  document.getElementById('msk-modal-bg').classList.remove('open');
+}
+
+async function fetchMaerskSpot() {
+  const key    = document.getElementById('msk-apikey').value.trim();
+  const pol    = document.getElementById('msk-pol').value.trim().toUpperCase();
+  const pod    = document.getElementById('msk-pod').value.trim().toUpperCase();
+  const origin = document.getElementById('msk-origin').value.trim();
+  const dest   = document.getElementById('msk-dest').value.trim() || 'Nigeria';
+
+  if (!key)  { alert('Enter your Maersk Consumer-Key.'); return; }
+  if (!pol || !pod) { alert('POL and POD codes are required.'); return; }
+
+  sessionStorage.setItem('maersk-api-key', key);
+
+  const btn = document.getElementById('msk-fetch-btn');
+  btn.disabled = true; btn.textContent = 'Fetching…';
+  document.getElementById('msk-status').textContent = '';
+  document.getElementById('msk-results').style.display = 'none';
+  document.getElementById('msk-import-btn').style.display = 'none';
+
+  try {
+    const res = await fetch('/api/market-intel/maersk-spot', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ apiKey: key, polCode: pol, podCode: pod, equipmentCode: 'all' }),
+    });
+    const data = await res.json();
+
+    if (data.error === 'no_api_key' || data.error === 'invalid_api_key') {
+      document.getElementById('msk-status').innerHTML =
+        `<span style="color:#dc2626">${data.message}</span>`;
+      return;
+    }
+    if (!res.ok) {
+      document.getElementById('msk-status').innerHTML =
+        `<span style="color:#dc2626">Error: ${data.error || 'Unknown error'}</span>`;
+      return;
+    }
+
+    mskFetchedOffers = (data.offers || []).map(o => ({
+      ...o, polCode: pol, podCode: pod, originCountry: origin, destCountry: dest
+    }));
+
+    if (!mskFetchedOffers.length) {
+      document.getElementById('msk-status').textContent = 'No offers returned for this route. Try different port codes.';
+      return;
+    }
+
+    // Build results table grouping by equipment
+    const byEquip = {};
+    for (const o of mskFetchedOffers) {
+      const label = o.equipmentCode === '22G1' ? '20FT' : o.equipmentCode === '42G1' ? '40FT' : o.equipmentCode === '45G1' ? '40HC' : o.equipmentCode;
+      if (!byEquip[label]) byEquip[label] = [];
+      byEquip[label].push(o);
+    }
+
+    const rows = Object.entries(byEquip).map(([eq, offers]) => {
+      const best = offers.sort((a,b) => a.price - b.price)[0];
+      return `<div class="msk-result-row">
+        <div><strong>${eq}</strong> <span style="font-size:10px;color:var(--text3)">${pol}→${pod}</span></div>
+        <div style="font-weight:700;color:#003594">$${best.price.toLocaleString()}</div>
+        <div style="color:var(--text2)">${best.currency}</div>
+        <div style="color:var(--text2)">${best.transitTime ? best.transitTime+'d' : '—'}</div>
+        <div style="font-size:10px;color:var(--text3)">${best.validTo || '—'}</div>
+      </div>`;
+    }).join('');
+
+    document.getElementById('msk-result-body').innerHTML = rows;
+    document.getElementById('msk-results').style.display = 'block';
+    document.getElementById('msk-import-btn').style.display = '';
+    document.getElementById('msk-status').innerHTML =
+      `<span style="color:#166534">✓ ${mskFetchedOffers.length} offer${mskFetchedOffers.length!==1?'s':''} fetched from Maersk</span>`;
+  } catch(e) {
+    document.getElementById('msk-status').innerHTML =
+      `<span style="color:#dc2626">Request failed: ${e.message}</span>`;
+  } finally {
+    btn.disabled = false; btn.textContent = 'Fetch Spot Rates';
+  }
+}
+
+async function importMaerskRates() {
+  const key    = document.getElementById('msk-apikey').value.trim();
+  const pol    = document.getElementById('msk-pol').value.trim().toUpperCase();
+  const pod    = document.getElementById('msk-pod').value.trim().toUpperCase();
+  const origin = document.getElementById('msk-origin').value.trim();
+  const dest   = document.getElementById('msk-dest').value.trim() || 'Nigeria';
+
+  const btn = document.getElementById('msk-import-btn');
+  btn.disabled = true; btn.textContent = 'Importing…';
+
+  try {
+    const res = await fetch('/api/market-intel/maersk-spot/import', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ apiKey: key, polCode: pol, podCode: pod, originCountry: origin, destCountry: dest }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Import failed');
+    closeMaerskModal();
+    await loadRates('ocean');
+    await loadMarketIntel();
+    showToast(`✓ Maersk spot rate imported — ${pol}→${pod} · now available in quotes`);
+  } catch(e) {
+    alert('Import failed: ' + e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Import to Rates Table';
+  }
+}
 </script>
+
+<!-- QUICK SPOT RATE DRAWER -->
+<div class="qsr-overlay" id="qsr-overlay" onclick="closeQuickSpotRate()"></div>
+<div class="qsr-drawer" id="qsr-drawer">
+  <div class="qsr-header">
+    <button class="qsr-close" onclick="closeQuickSpotRate()">✕</button>
+    <div class="qsr-badge">SPOT RATE</div>
+    <h3>Add Actual Spot Rate</h3>
+    <p>Saves directly to your ocean table · immediately available in quotes</p>
+  </div>
+  <div class="qsr-body">
+    <div class="qsr-section">Carrier &amp; Source</div>
+    <div class="qsr-row">
+      <div class="qsr-field">
+        <label>Carrier <span style="color:#ef4444">*</span></label>
+        <input id="qsr-carrier" type="text" placeholder="e.g. Maersk, CMA CGM, MSC">
+      </div>
+      <div class="qsr-field">
+        <label>Source / Reference</label>
+        <input id="qsr-source" type="text" placeholder="e.g. Carrier website, email">
+      </div>
+    </div>
+
+    <div class="qsr-section">Trade Lane</div>
+    <div class="qsr-row">
+      <div class="qsr-field">
+        <label>POL Code <span style="color:#ef4444">*</span></label>
+        <input id="qsr-pol" type="text" placeholder="e.g. CNSHA, GBFXT, DEHAM">
+        <div class="qsr-hint">UN/LOCODE for port of loading</div>
+      </div>
+      <div class="qsr-field">
+        <label>Origin Country</label>
+        <input id="qsr-origin" type="text" placeholder="e.g. China, Germany">
+      </div>
+    </div>
+    <div class="qsr-row">
+      <div class="qsr-field">
+        <label>POD Code <span style="color:#ef4444">*</span></label>
+        <input id="qsr-pod" type="text" placeholder="e.g. NGAPP, NGTIN" value="NGAPP">
+        <div class="qsr-hint">NGAPP = Apapa · NGTIN = Tin Can</div>
+      </div>
+      <div class="qsr-field">
+        <label>Destination Country</label>
+        <input id="qsr-dest" type="text" placeholder="e.g. Nigeria" value="Nigeria">
+      </div>
+    </div>
+
+    <div class="qsr-section">Rates (USD)</div>
+    <div class="qsr-row three">
+      <div class="qsr-field">
+        <label>20FT</label>
+        <input id="qsr-20ft" type="number" placeholder="$0" min="0" step="1">
+      </div>
+      <div class="qsr-field">
+        <label>40FT</label>
+        <input id="qsr-40ft" type="number" placeholder="$0" min="0" step="1">
+      </div>
+      <div class="qsr-field">
+        <label>40HC</label>
+        <input id="qsr-40hc" type="number" placeholder="$0" min="0" step="1">
+      </div>
+    </div>
+
+    <div class="qsr-section">Details</div>
+    <div class="qsr-row">
+      <div class="qsr-field">
+        <label>Transit Time</label>
+        <input id="qsr-tt" type="text" placeholder="e.g. 28-32 days">
+      </div>
+      <div class="qsr-field">
+        <label>Valid From</label>
+        <input id="qsr-from" type="date">
+      </div>
+    </div>
+    <div class="qsr-row full">
+      <div class="qsr-field">
+        <label>Expiry Date <span style="color:#ef4444">*</span></label>
+        <input id="qsr-expiry" type="date">
+      </div>
+    </div>
+  </div>
+  <div class="qsr-footer">
+    <button class="qsr-cancel" onclick="closeQuickSpotRate()">Cancel</button>
+    <button class="qsr-save" id="qsr-save-btn" onclick="saveQuickSpotRate()">Add to Rates Table</button>
+  </div>
+</div>
+
+<!-- MAERSK API MODAL -->
+<div class="msk-modal-bg" id="msk-modal-bg" onclick="if(event.target===this)closeMaerskModal()">
+  <div class="msk-modal">
+    <div class="msk-hd">
+      <h3>⚓ Maersk Spot Rate API</h3>
+      <p>Pull live Maersk spot rates directly into your ocean freight table</p>
+    </div>
+    <div class="msk-body">
+      <div class="msk-alert">
+        <strong>Free Maersk Developer API</strong> — Register at
+        <a href="https://developer.maersk.com/api-catalogue" target="_blank">developer.maersk.com</a>
+        to get your free Consumer-Key. Takes about 5 minutes. The Spot Rates API is free to use.
+        Once you have a key, paste it below and it will be remembered for this session.
+      </div>
+      <div class="msk-field">
+        <label>Consumer-Key (API Key)</label>
+        <input id="msk-apikey" type="password" placeholder="Paste your Maersk Consumer-Key here">
+      </div>
+      <div class="msk-grid">
+        <div class="msk-field">
+          <label>POL Code (Port of Loading)</label>
+          <input id="msk-pol" type="text" placeholder="e.g. CNSHA" style="text-transform:uppercase">
+        </div>
+        <div class="msk-field">
+          <label>POD Code (Port of Discharge)</label>
+          <input id="msk-pod" type="text" placeholder="e.g. NGAPP" value="NGAPP" style="text-transform:uppercase">
+        </div>
+        <div class="msk-field">
+          <label>Origin Country (for table)</label>
+          <input id="msk-origin" type="text" placeholder="e.g. China">
+        </div>
+        <div class="msk-field">
+          <label>Dest Country (for table)</label>
+          <input id="msk-dest" type="text" placeholder="Nigeria" value="Nigeria">
+        </div>
+      </div>
+      <div id="msk-status" style="font-size:11px;margin:6px 0 10px;min-height:16px"></div>
+      <div id="msk-results" style="display:none">
+        <div class="msk-results">
+          <div class="msk-results-hd">Fetched Offers</div>
+          <div class="msk-result-row hdr">
+            <div>Equipment / Route</div><div>Best Rate</div><div>Currency</div><div>Transit</div><div>Valid To</div>
+          </div>
+          <div id="msk-result-body"></div>
+        </div>
+      </div>
+    </div>
+    <div class="msk-ft">
+      <button class="msk-btn-sec" onclick="closeMaerskModal()">Close</button>
+      <button class="msk-btn-primary" id="msk-fetch-btn" onclick="fetchMaerskSpot()">Fetch Spot Rates</button>
+      <button class="msk-btn-primary" id="msk-import-btn" style="display:none;background:#166534" onclick="importMaerskRates()">Import to Rates Table</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>

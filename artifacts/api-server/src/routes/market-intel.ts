@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { marketIndexSnapshots, rateBenchmarks } from "@workspace/db";
+import { marketIndexSnapshots, rateBenchmarks, oceanFreightRates } from "@workspace/db";
 import { desc, eq } from "drizzle-orm";
 
 export const marketIntelRouter = Router();
@@ -346,4 +346,167 @@ marketIntelRouter.delete("/market-intel/benchmarks/:id", async (req, res) => {
   const id = parseInt(req.params.id, 10);
   await db.delete(rateBenchmarks).where(eq(rateBenchmarks.id, id));
   res.json({ ok: true });
+});
+
+// ── MAERSK SPOT API CONNECTOR ─────────────────────────────────────────────────
+// POST /api/market-intel/maersk-spot — fetch real spot rates from Maersk API
+marketIntelRouter.post("/market-intel/maersk-spot", async (req, res) => {
+  const { apiKey, polCode, podCode, equipmentCode } = req.body as {
+    apiKey?: string; polCode?: string; podCode?: string; equipmentCode?: string;
+  };
+
+  const key = apiKey || process.env.MAERSK_API_KEY;
+  if (!key) {
+    return res.status(400).json({
+      error: "no_api_key",
+      message: "No Maersk API key provided. Register free at developer.maersk.com to get a Consumer-Key.",
+      registerUrl: "https://developer.maersk.com/api-catalogue",
+    });
+  }
+  if (!polCode || !podCode) {
+    return res.status(400).json({ error: "polCode and podCode are required" });
+  }
+
+  try {
+    const equip = equipmentCode || "22G1"; // 20' general purpose
+    const equipCodes: Record<string, string[]> = {
+      "20ft":  ["22G1"],
+      "40ft":  ["42G1"],
+      "40hc":  ["45G1"],
+      "all":   ["22G1","42G1","45G1"],
+    };
+    const codes = equipCodes[equip] || ["22G1","42G1","45G1"];
+
+    const offers: Array<{
+      polCode: string; podCode: string; equipmentCode: string;
+      price: number; currency: string; transitTime: number;
+      validFrom: string; validTo: string; productName?: string;
+    }> = [];
+
+    for (const code of codes) {
+      const url = `https://api.maersk.com/spot-rates/v2/offers?portOfLoad=${polCode}&portOfDischarge=${podCode}&equipmentCode=${code}&numberOfContainers=1`;
+      const r = await fetch(url, {
+        headers: {
+          "Consumer-Key": key,
+          "Accept": "application/json",
+        },
+        signal: AbortSignal.timeout(20000),
+      });
+
+      if (r.status === 401) {
+        return res.status(401).json({
+          error: "invalid_api_key",
+          message: "Maersk API key rejected. Check your Consumer-Key at developer.maersk.com.",
+        });
+      }
+      if (!r.ok) {
+        const errText = await r.text().catch(() => "");
+        req.log.warn({ status: r.status, body: errText }, "Maersk API non-200");
+        continue;
+      }
+
+      const data = await r.json() as { offers?: Array<{
+        price?: { amount?: number; currency?: string };
+        transitTime?: number; validFrom?: string; validTo?: string;
+        productName?: string; equipmentCode?: string;
+      }> };
+
+      for (const o of data.offers || []) {
+        if (o.price?.amount) {
+          offers.push({
+            polCode, podCode,
+            equipmentCode: o.equipmentCode || code,
+            price: o.price.amount,
+            currency: o.price.currency || "USD",
+            transitTime: o.transitTime || 0,
+            validFrom: o.validFrom || new Date().toISOString().slice(0, 10),
+            validTo: o.validTo || new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10),
+            productName: o.productName,
+          });
+        }
+      }
+    }
+
+    res.json({ offers, count: offers.length });
+  } catch (err) {
+    req.log.error({ err }, "Maersk Spot API fetch failed");
+    res.status(502).json({ error: "Maersk API request failed", detail: String(err) });
+  }
+});
+
+// POST /api/market-intel/maersk-spot/import — fetch from Maersk + save to ocean_freight_rates
+marketIntelRouter.post("/market-intel/maersk-spot/import", async (req, res) => {
+  const { apiKey, polCode, podCode, originCountry, destCountry } = req.body as {
+    apiKey?: string; polCode?: string; podCode?: string;
+    originCountry?: string; destCountry?: string;
+  };
+
+  const key = apiKey || process.env.MAERSK_API_KEY;
+  if (!key) {
+    return res.status(400).json({ error: "no_api_key", message: "Maersk API key required." });
+  }
+  if (!polCode || !podCode) {
+    return res.status(400).json({ error: "polCode and podCode are required" });
+  }
+
+  try {
+    // Fetch 20ft, 40ft, 40HC offers
+    const equipMap: Record<string, keyof typeof insertRow> = {
+      "22G1": "amount20ft", "42G1": "amount40ft", "45G1": "amount40hc",
+    };
+    type InsertRow = {
+      carrier: string; polCode: string; podCode: string;
+      originCountry: string | null; destCountry: string | null;
+      rateType: string; commodityType: string; equipmentType: string;
+      currency: string; amount20ft: string | null; amount40ft: string | null; amount40hc: string | null;
+      transitTime: string | null; expiryDate: string; archived: boolean;
+    };
+    const insertRow: InsertRow = {
+      carrier: "Maersk", polCode, podCode,
+      originCountry: originCountry || null,
+      destCountry: destCountry || null,
+      rateType: "spot", commodityType: "general", equipmentType: "40ft",
+      currency: "USD",
+      amount20ft: null, amount40ft: null, amount40hc: null,
+      transitTime: null,
+      expiryDate: new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10),
+      archived: false,
+    };
+
+    let transitTime = 0;
+    let foundAny = false;
+
+    for (const [isoCode, field] of Object.entries(equipMap)) {
+      const url = `https://api.maersk.com/spot-rates/v2/offers?portOfLoad=${polCode}&portOfDischarge=${podCode}&equipmentCode=${isoCode}&numberOfContainers=1`;
+      const r = await fetch(url, {
+        headers: { "Consumer-Key": key, "Accept": "application/json" },
+        signal: AbortSignal.timeout(20000),
+      });
+      if (!r.ok) continue;
+      const data = await r.json() as { offers?: Array<{
+        price?: { amount?: number; currency?: string };
+        transitTime?: number; validTo?: string;
+      }> };
+      const best = (data.offers || []).sort((a, b) => (a.price?.amount||0) - (b.price?.amount||0))[0];
+      if (best?.price?.amount) {
+        (insertRow as any)[field] = String(best.price.amount);
+        if (best.transitTime) transitTime = best.transitTime;
+        if (best.validTo) insertRow.expiryDate = best.validTo.slice(0, 10);
+        if (best.price.currency) insertRow.currency = best.price.currency;
+        foundAny = true;
+      }
+    }
+
+    if (!foundAny) {
+      return res.status(404).json({ error: "No rates returned by Maersk API for this route" });
+    }
+
+    if (transitTime) insertRow.transitTime = `${transitTime} days`;
+
+    const [saved] = await db.insert(oceanFreightRates).values(insertRow).returning();
+    res.status(201).json({ imported: 1, rate: saved });
+  } catch (err) {
+    req.log.error({ err }, "Maersk import failed");
+    res.status(502).json({ error: "Import failed", detail: String(err) });
+  }
 });
