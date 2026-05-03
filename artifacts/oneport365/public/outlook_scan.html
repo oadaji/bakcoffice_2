@@ -112,7 +112,24 @@ html,body{height:100%;background:#f0f4f0;color:#1a1a1a;font-family:'Inter',sans-
 .ep-draft{font-size:10px;color:var(--text2);line-height:1.7;white-space:pre-wrap;font-family:monospace}
 .ep-timer{font-size:10px;color:var(--warn);background:#fffbeb;padding:2px 7px;border-radius:4px;font-weight:500}
 .ep-timer.sent{color:#166534;background:#dcfce7}
-/* THREAD BRIEF / SUMMARY TAB */
+/* THREAD BRIEF CARD (in center column) */
+.brief-card{margin:0 18px 0;border:1.5px solid var(--accent);border-radius:10px;overflow:hidden;flex-shrink:0;background:#fff}
+.brief-card-hd{display:flex;align-items:center;gap:9px;padding:10px 14px;background:linear-gradient(90deg,#eef6e6,#f8faf8);cursor:pointer;user-select:none}
+.brief-card-icon{width:22px;height:22px;border-radius:6px;background:linear-gradient(135deg,var(--accent),var(--accent-dark));display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;flex-shrink:0}
+.brief-card-title{font-size:12px;font-weight:700;color:var(--accent-dark);flex:1}
+.brief-card-chips{display:flex;gap:5px;flex-wrap:wrap}
+.brief-card-chevron{font-size:11px;color:var(--accent-dark);transition:transform .2s;flex-shrink:0}
+.brief-card-chevron.open{transform:rotate(180deg)}
+.brief-card-body{padding:12px 14px 14px;border-top:1px solid #d4eabd;display:flex;flex-direction:column;gap:10px}
+.brief-overview{font-size:12px;color:var(--text2);line-height:1.75}
+.brief-points{display:flex;flex-direction:column;gap:0;border:1px solid var(--border);border-radius:7px;overflow:hidden}
+.brief-point{display:flex;gap:8px;font-size:11px;color:var(--text2);line-height:1.55;padding:6px 10px;border-bottom:1px solid var(--border)}
+.brief-point:last-child{border-bottom:none}
+.brief-dot{width:5px;height:5px;border-radius:50%;background:var(--accent);flex-shrink:0;margin-top:5px}
+.brief-next{background:#fffbeb;border:1px solid #fde68a;border-radius:7px;padding:9px 12px}
+.brief-next-lbl{font-size:9px;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
+.brief-next-text{font-size:11px;color:#78350f;line-height:1.6}
+/* SIDE PANEL TABS */
 .ep-tabs{display:flex;flex-shrink:0;background:var(--surface);padding:8px 10px;border-bottom:1px solid var(--border);gap:0}
 .ep-tabs-inner{display:flex;flex:1;background:#eef2ee;border-radius:8px;padding:3px;gap:2px}
 .ep-tab{flex:1;height:30px;display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:500;color:var(--text3);cursor:pointer;border-radius:6px;transition:all .15s;gap:5px;border:none}
@@ -415,7 +432,17 @@ tr.trow.sel td{background:#eef6e6}
           <div class="processing-bar-text">Reading email and pulling out shipment details…</div>
           <span class="processing-badge">Processing</span>
         </div>
-        <div class="detail-body" id="d-body"></div>
+        <!-- THREAD BRIEF CARD -->
+        <div class="brief-card" id="brief-card" style="margin-top:10px">
+          <div class="brief-card-hd" onclick="toggleBrief()">
+            <div class="brief-card-icon">✦</div>
+            <span class="brief-card-title">Thread Brief</span>
+            <div class="brief-card-chips" id="brief-chips"></div>
+            <span class="brief-card-chevron" id="brief-chevron">▾</span>
+          </div>
+          <div class="brief-card-body" id="brief-body" style="display:none"></div>
+        </div>
+        <div class="detail-body" id="d-body" style="margin-top:10px"></div>
         <div class="detail-actions" id="d-actions">
           <button class="btn btn-primary btn-sm" onclick="showScreen(2)">View in Deals →</button>
           <button class="btn btn-sm">Reply</button>
@@ -3248,7 +3275,8 @@ function renderExtraction(i) {
     aw.innerHTML = `<button class="btn btn-sm" style="width:100%;color:var(--text3)" disabled>Complete info to get rates</button>`;
   }
 
-  // Render summary data and reset to Extracted tab
+  // Render summary data; reset brief card to open state on each email switch
+  briefOpen = false;
   renderSummary(i);
   showEpTab('extract');
 }
@@ -3272,36 +3300,74 @@ function showEpTab(tab) {
   }
 }
 
+let briefOpen = false;
+function toggleBrief() {
+  briefOpen = !briefOpen;
+  const body = document.getElementById('brief-body');
+  const chev = document.getElementById('brief-chevron');
+  if (body) body.style.display = briefOpen ? 'flex' : 'none';
+  if (chev) { chev.classList.toggle('open', briefOpen); chev.textContent = briefOpen ? '▴' : '▾'; }
+}
+
 function renderSummary(i) {
+  // Side panel summary (kept for backward compat)
   const sumEl = document.getElementById('ep-summary-body');
-  if (!sumEl) return;
+  // Center column brief card
+  const briefBody = document.getElementById('brief-body');
+  const briefChips = document.getElementById('brief-chips');
+  const briefCard = document.getElementById('brief-card');
   const ex = extractions[i];
+
   if (!ex || !ex.summary) {
-    sumEl.innerHTML = `<div style="font-size:11px;color:var(--text3);text-align:center;padding:24px 0">No summary available</div>`;
+    if (sumEl) sumEl.innerHTML = `<div style="font-size:11px;color:var(--text3);text-align:center;padding:24px 0">No summary available</div>`;
+    if (briefCard) briefCard.style.display = 'none';
     return;
   }
+  if (briefCard) briefCard.style.display = '';
+
   const s = ex.summary;
   const chipsHtml = (s.chips || []).map(c =>
     `<span class="sum-chip${c.t ? ' ' + c.t : ''}">${c.l}</span>`
   ).join('');
   const pointsHtml = (s.points || []).map(p =>
-    `<div class="sum-point"><div class="sum-dot"></div><div>${p}</div></div>`
+    `<div class="brief-point"><div class="brief-dot"></div><div>${p}</div></div>`
   ).join('');
 
-  sumEl.innerHTML = `
-    <div class="sum-ai-badge">
-      <div class="sum-ai-icon">✦</div>
-      Thread Brief
-    </div>
-    <div class="sum-overview">${s.overview}</div>
-    ${chipsHtml ? `<div class="sum-chips">${chipsHtml}</div>` : ''}
-    <div class="sum-lbl">Key points</div>
-    <div class="sum-points">${pointsHtml}</div>
-    ${s.next ? `<div class="sum-next">
-      <div class="sum-next-lbl">→ Next step</div>
-      <div class="sum-next-text">${s.next}</div>
-    </div>` : ''}
-  `;
+  // Populate center brief card chips
+  if (briefChips) briefChips.innerHTML = chipsHtml ? `<div style="display:flex;gap:5px;flex-wrap:wrap">${chipsHtml}</div>` : '';
+
+  // Populate center brief card body
+  if (briefBody) {
+    briefBody.innerHTML = `
+      <div class="brief-overview">${s.overview}</div>
+      <div class="brief-points">${pointsHtml}</div>
+      ${s.next ? `<div class="brief-next">
+        <div class="brief-next-lbl">→ Next step</div>
+        <div class="brief-next-text">${s.next}</div>
+      </div>` : ''}
+    `;
+  }
+
+  // Also populate side panel summary
+  if (sumEl) {
+    sumEl.innerHTML = `
+      <div class="sum-ai-badge"><div class="sum-ai-icon">✦</div>Thread Brief</div>
+      <div class="sum-overview">${s.overview}</div>
+      ${chipsHtml ? `<div class="sum-chips">${chipsHtml}</div>` : ''}
+      <div class="sum-lbl">Key points</div>
+      <div class="sum-points">${(s.points||[]).map(p=>`<div class="sum-point"><div class="sum-dot"></div><div>${p}</div></div>`).join('')}</div>
+      ${s.next ? `<div class="sum-next"><div class="sum-next-lbl">→ Next step</div><div class="sum-next-text">${s.next}</div></div>` : ''}
+    `;
+  }
+
+  // Auto-open the brief card on first load
+  if (!briefOpen) {
+    briefOpen = true;
+    const body = document.getElementById('brief-body');
+    const chev = document.getElementById('brief-chevron');
+    if (body) body.style.display = 'flex';
+    if (chev) { chev.classList.add('open'); chev.textContent = '▴'; }
+  }
 }
 
 function startEpTimer() {
