@@ -158,32 +158,78 @@ router.post("/quotes/generate", async (req, res) => {
       return sType === "both" || sType === shipmentDir;
     });
 
-    // 5. Fetch haulage rates — match by port code, with city-name fallback
+    // 5. Fetch haulage rates — destination-city match is PRIMARY; port-code is secondary
     let haulagePool: any[] = [];
     if (isImportToNigeria) {
-      // Try by extracted port code first, then by all Lagos/Apapa port codes
       const allImport = await db.select().from(haulageImportRates)
         .where(eq(haulageImportRates.archived, false));
+
+      // Extract city/neighbourhood keywords from the raw POD string
+      const podWords = rawPod.toLowerCase()
+        .replace(/[,.()\-]/g, " ")
+        .split(/\s+/)
+        .filter(w => w.length > 3);
+
+      // Score each rate: 2 = exact city/lga word match, 1 = partial, 0 = port-code only
+      const scored = allImport.map(r => {
+        const city = (r.destCity ?? "").toLowerCase().trim();
+        const lga  = (r.destLga  ?? "").toLowerCase().trim();
+        // Exact: a podWord IS the city name (e.g. "alaba" === "alaba")
+        const exactCity = podWords.some(w => w === city || city === w);
+        const exactLga  = podWords.some(w => w === lga  || lga  === w);
+        // Partial: city contains a podWord or vice versa
+        const partCity = podWords.some(w => city.includes(w) || w.includes(city));
+        const partLga  = podWords.some(w => lga.includes(w)  || w.includes(lga));
+        const score = (exactCity || exactLga) ? 2 : (partCity || partLga) ? 1 : 0;
+        return { r, score };
+      }).filter(x => x.score > 0).sort((a, b) => b.score - a.score);
+
+      // 2nd priority: rates from the matched Nigerian port (e.g. NGAPP)
       const nigeriaPodCode = isNigeriaPort(podCode) ? podCode : "NGAPP";
-      haulagePool = allImport.filter(r => r.portCode === nigeriaPodCode);
-      // Fallback: try matching destination city from the raw POD text
-      if (haulagePool.length === 0) {
-        haulagePool = allImport.filter(r =>
-          rawPod.toLowerCase().includes((r.destCity ?? "").toLowerCase()) ||
-          rawPod.toLowerCase().includes((r.destState ?? "").toLowerCase())
-        ).slice(0, 10);
+      const byPortCode = allImport.filter(r => r.portCode === nigeriaPodCode);
+
+      // Merge: exact city matches first, partial city matches second, then port-matched
+      const seen = new Set<number>();
+      for (const { r } of scored) {
+        if (!seen.has(r.id)) { seen.add(r.id); haulagePool.push(r); }
       }
-      // Last resort: any Apapa/Lagos import rates
+      for (const r of byPortCode) {
+        if (!seen.has(r.id)) { seen.add(r.id); haulagePool.push(r); }
+      }
+
+      // Last resort: any Apapa/TinCan Lagos rates
       if (haulagePool.length === 0) {
-        haulagePool = allImport.filter(r => r.portCode === "NGAPP" || r.portCode === "NGTCN").slice(0, 10);
+        haulagePool = allImport
+          .filter(r => r.portCode === "NGAPP" || r.portCode === "NGTCN")
+          .slice(0, 15);
       }
     } else if (isExportFromNigeria) {
       const allExport = await db.select().from(haulageExportRates)
         .where(eq(haulageExportRates.archived, false));
+
+      const polWords = rawPol.toLowerCase()
+        .replace(/[,.()\-]/g, " ")
+        .split(/\s+/)
+        .filter(w => w.length > 3);
+
+      const byOriginCity = allExport.filter(r => {
+        const city = (r.originCity ?? "").toLowerCase();
+        const lga  = (r.originLga  ?? "").toLowerCase();
+        return (city && polWords.some(w => city.includes(w) || w.includes(city))) ||
+               (lga  && polWords.some(w => lga.includes(w)  || w.includes(lga)));
+      });
+
       const nigeriaPolCode = isNigeriaPort(polCode) ? polCode : "NGAPP";
-      haulagePool = allExport.filter(r => r.portCode === nigeriaPolCode);
+      const byPortCode = allExport.filter(r => r.portCode === nigeriaPolCode);
+
+      const seen = new Set<number>();
+      for (const r of [...byOriginCity, ...byPortCode]) {
+        if (!seen.has(r.id)) { seen.add(r.id); haulagePool.push(r); }
+      }
       if (haulagePool.length === 0) {
-        haulagePool = allExport.filter(r => r.portCode === "NGAPP" || r.portCode === "NGTCN").slice(0, 10);
+        haulagePool = allExport
+          .filter(r => r.portCode === "NGAPP" || r.portCode === "NGTCN")
+          .slice(0, 10);
       }
     }
 
@@ -210,14 +256,18 @@ ${JSON.stringify(oceanPool.slice(0, 15), null, 2)}
 Available Other Charges (${applicableCharges.length} items):
 ${JSON.stringify(applicableCharges.slice(0, 30), null, 2)}
 
-Available Haulage Rates (${haulagePool.length} options):
-${JSON.stringify(haulagePool.slice(0, 10), null, 2)}
+Available Haulage Rates (${haulagePool.length} options, sorted by destination-city match relevance):
+${JSON.stringify(haulagePool.slice(0, 15), null, 2)}
 
 Instructions:
-1. Select the BEST ocean freight rate from the available options. Pick the most appropriate rate matching the container type (${containerType}). If none match exactly, pick the closest.
-2. Select relevant other charges for this shipment type (${shipmentDir}). Include core charges like Agency Clearance Fee, THC, Shipping Line Charges, Form M/Documentation etc. for import. For export include export doc fee, THC, NXP form etc.
-3. If haulage rates are available AND the RFQ mentions inland delivery or no specific port pickup, include haulage. Set hasSuggestedHaulage=true.
-4. Mark asPerReceipt charges clearly.
+1. Select the BEST ocean freight rate from the available options. Pick the most appropriate rate matching the container type (${containerType}). If none match exactly, pick the closest and note the mismatch.
+2. Select relevant other charges for this shipment type (${shipmentDir}). For import include: Agency Clearance Fee, THC, Shipping Line Charges, Form M/Documentation, Son Fee, PAAR, Scanning Fee. For export: export doc fee, THC, NXP form, VGM, stuffing fee.
+3. HAULAGE RULE — always commit to a rate if haulage rates are provided:
+   - FIRST look for a rate where destCity exactly matches a place name mentioned in the raw POD string (e.g. POD "Alaba Intl Market" → prefer destCity="Alaba"). Use that rate even if its origin terminal differs from the ocean discharge port.
+   - If no destCity matches, pick the rate from the terminal that matches the ocean discharge port and the closest destination.
+   - Set hasSuggestedHaulage=true and fill selectedHaulageRateId and haulageAmount with the actual number from the chosen rate.
+   - Only leave haulageAmount null if the haulage rates array is completely empty.
+4. Mark asPerReceipt=true only for charges where price is genuinely variable (THC, demurrage, scanning).
 5. Use exchange rate ${exchangeRate} NGN/USD for cost calculations.
 
 Respond with ONLY valid JSON in this exact format:
