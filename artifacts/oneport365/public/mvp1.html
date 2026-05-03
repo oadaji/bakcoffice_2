@@ -1622,12 +1622,9 @@ tr.trow.sel td{background:#eef6e6}
                 <!-- QUOTE HEADER -->
                 <div style="padding:24px 28px 20px;border-bottom:1px solid #f0f0f0">
                   <div style="display:flex;align-items:flex-start;justify-content:space-between">
-                    <div style="display:flex;align-items:center;gap:10px">
-                      <div style="width:38px;height:38px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;color:#fff;font-weight:700">⬡</div>
-                      <div>
-                        <div style="font-size:16px;font-weight:700;color:#1C3829">OnePort <span style="color:var(--accent)">365</span></div>
-                        <div style="font-size:10px;color:#8a9e8a;margin-top:1px">Meydan Grandstand, 6th floor, Meydan Road, Nad Al Sheba, Dubai, U.A.E</div>
-                      </div>
+                    <div style="display:flex;flex-direction:column;gap:4px">
+                      <img src="/oneport365-logo.png" alt="OnePort 365" style="height:48px;width:auto;object-fit:contain;display:block">
+                      <div style="font-size:10px;color:#8a9e8a">Meydan Grandstand, 6th floor, Meydan Road, Nad Al Sheba, Dubai, U.A.E</div>
                     </div>
                     <div style="text-align:right">
                       <div id="qp-num" style="font-size:14px;font-weight:700;color:var(--accent-dark)">QUOTE-2604-0040</div>
@@ -3721,6 +3718,13 @@ function downloadPDF() {
 
   // Clone the rendered quote
   const clone = preview.cloneNode(true);
+
+  // Make image src paths absolute so they load in the popup window
+  clone.querySelectorAll('img').forEach(img => {
+    if (img.getAttribute('src') && !img.src.startsWith('data:')) {
+      img.src = img.src; // forces browser to resolve to absolute URL
+    }
+  });
 
   // Strip interactive-only elements that shouldn't appear in print
   ['qp-ocean-options-panel','qp-available-charges-panel','qp-ai-notes','qb-sync-status'].forEach(id => {
