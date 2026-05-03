@@ -684,6 +684,17 @@ function showApp() {
   const app = document.getElementById('app');
   app.style.display = 'flex';
   switchTab('ocean');
+  // Pre-load counts for all other tabs so badges show immediately
+  ['import','export','other'].forEach(tab => {
+    fetch(ENDPOINTS[tab])
+      .then(r => r.ok ? r.json() : [])
+      .then(data => {
+        allData[tab] = data;
+        const el = document.getElementById('cnt-' + tab);
+        if (el) el.textContent = data.length;
+      })
+      .catch(() => {});
+  });
 }
 window.onload = () => { if (sessionStorage.getItem(SKEY) === '1') showApp(); else document.getElementById('gate').style.display = 'flex'; };
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });

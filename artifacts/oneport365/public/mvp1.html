@@ -4406,6 +4406,10 @@ function renderInboxList() {
   const partners  = rfqData.filter(r => r.emailType === 'rate-reply');
   const outbound  = rfqData.filter(r => r.emailType === 'outbound');
 
+  // Update RFQ nav badge with live count
+  const rfqBadge = document.getElementById('new-count');
+  if (rfqBadge) rfqBadge.textContent = rfqData.filter(r => r.emailType !== 'outbound').length;
+
   // Deduplicate customers by emailId — keep first occurrence (lowest groupIndex)
   const seenEmailIds = new Set();
   const uniqueCustomers = customers.filter(r => {
@@ -4919,8 +4923,10 @@ function epCancel() {
 }
 
 // Init — load from API
-document.addEventListener('DOMContentLoaded', () => {
-  loadInbox();
+document.addEventListener('DOMContentLoaded', async () => {
+  await loadInbox();
+  // After inbox data is loaded, also populate Deals count without switching screens
+  renderDealsTable();
   // Populate quotes badge immediately without waiting for screen 4
   fetch('/api/quotes').then(r=>r.json()).then(qs=>{
     if(Array.isArray(qs)){
