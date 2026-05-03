@@ -5,6 +5,7 @@ import rfqsRouter from "./rfqs";
 import { gmailRouter } from "./gmail";
 import { partnersRouter } from "./partners";
 import { ratesRouter } from "./rates";
+import { quotesRouter } from "./quotes";
 
 const router: IRouter = Router();
 
@@ -14,5 +15,6 @@ router.use(rfqsRouter);
 router.use(gmailRouter);
 router.use(partnersRouter);
 router.use(ratesRouter);
+router.use(quotesRouter);
 
 export default router;

@@ -396,6 +396,7 @@ tr.trow.sel td{background:#eef6e6}
     <div class="nav-item active" id="st1" onclick="showScreen(1)">✉ RFQ <span class="nav-badge" id="new-count">8</span></div>
     <div class="nav-item" id="st2" onclick="showScreen(2)">Deals <span class="nav-badge" id="deals-count">0</span></div>
     <a class="nav-item" id="st3" href="/rates.html" style="text-decoration:none">$ Rates</a>
+    <div class="nav-item" id="st4" onclick="showScreen(4)">📄 Quotes <span class="nav-badge" id="quotes-count">0</span></div>
     <div class="nav-right">
       <div class="t-status"><div class="t-status-dot"></div>monitoring sales@oneport365.com</div>
       <div class="user-chip" onclick="toggleUserMenu()" style="position:relative">
@@ -1690,6 +1691,9 @@ tr.trow.sel td{background:#eef6e6}
                   <div style="text-align:right;padding:10px 0 0;font-size:13px;font-weight:600;color:#1a2e1a">Sub Total: <span id="qp-origin-subtotal" style="color:var(--warn);font-family:monospace;font-size:14px"></span></div>
                 </div>
 
+                <!-- AI NOTES BANNER -->
+                <div id="qp-ai-notes" style="display:none;margin:0 28px 0;padding:10px 14px;background:#f0f7ff;border:1px solid #bfdbfe;border-radius:8px;font-size:11px;color:#1e40af;line-height:1.6;margin-bottom:0"></div>
+
                 <!-- NOTICE BOX -->
                 <div style="padding:16px 28px;border-bottom:1px solid #f0f0f0">
                   <div style="background:#1C3829;border-radius:8px;padding:14px 16px;display:flex;gap:10px">
@@ -2894,12 +2898,33 @@ function saveBuildRateDraft(){
   alert(msg);
 }
 
-function convertToQuote(){
-  const rfq=document.getElementById('br-rfq')?.value;
+async function convertToQuote(){
+  const rfqRef=document.getElementById('br-rfq')?.value;
   const sell=document.getElementById('br-sell-price')?.textContent;
   if(sell==='—'||!sell){alert('Complete the rate builder before converting to a quote.');return;}
-  if(!rfq){alert('Select an RFQ to attach this quote to.');return;}
-  alert(`Quote prepared for ${rfq}\nSell price: ${sell}\n\n(Quote generation coming soon — this will create a client-facing PDF quote)`);
+  if(!rfqRef){alert('Select an RFQ to attach this quote to.');return;}
+  // Find the RFQ id from rfqData
+  const rfqObj = Array.isArray(rfqData) ? rfqData.find(r=>r.ref===rfqRef||r.id===rfqRef) : null;
+  if (!rfqObj) { openGenerateQuoteModal(); return; }
+  const margin = Number(document.getElementById('br-margin-pct')?.value)||13;
+  const fx = Number(document.getElementById('br-fx')?.value)||1600;
+  const btn = document.querySelector('[onclick="convertToQuote()"]');
+  if(btn){btn.disabled=true;btn.textContent='Generating…';}
+  try {
+    const r = await fetch('/api/quotes/generate', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({rfqId: rfqObj.id, marginPct:margin, exchangeRate:fx, save:true})
+    });
+    if(!r.ok){const e=await r.json();throw new Error(e.error||'Failed');}
+    const quote = await r.json();
+    showScreen(4);
+    await loadQuotes();
+    if(quote.id) selectQuoteById(quote.id);
+  } catch(e){
+    alert('Quote generation failed: '+e.message);
+  } finally {
+    if(btn){btn.disabled=false;btn.textContent='Convert to Quote →';}
+  }
 }
 
 // ---- Add / Edit Rate modal ----
@@ -3362,7 +3387,7 @@ function showScreen(n) {
   if(tab) tab.classList.add('active');
   if(n===2) { renderDealsTable(); setTimeout(()=>selectRFQ(0, document.querySelector('#deals-tbody .trow')), 80); }
   if(n===3) setTimeout(()=>loadDBRates(), 50);
-  if(n===4) setTimeout(()=>{ renderQuoteList(); selectQuote('QUOTE-2604-0040', null); }, 50);
+  if(n===4) setTimeout(()=>loadQuotes(), 50);
   if(n===5) setTimeout(()=>showSettingsTab('criteria'), 50);
 }
 
@@ -3394,67 +3419,32 @@ function showRatesSub(tab) {
 
 
 
-// -- QUOTES DATA --
-const QUOTES_DATA = [
-  { id:'QUOTE-2604-0040', rfq:'RFQ-2604-0040', status:'sent',
-    customer:'Grace Benson', company:'Bioscape Commodities Africa', email:'grace.benson@bioscapeafrica.com',
-    commodity:'PKC (Palm Kernel Cake)', serviceType:'Export Ocean Freight | FCL',
-    pol:'Apapa (NGAPP) Nigeria', pod:'Catania (ITCTA) Italy', container:'40FT x 3',
-    haulage:'Haulage At Origin', stuffing:'Lagos, Nigeria',
-    carrier:'MSC', transit:22, freeDays:14,
-    oceanUSD:1820, baf:140, caf:60, ebs:0,
-    originCharges:[
-      {basis:'Agency Service Fee', qty:120000, desc:'Per Container'},
-      {basis:'THC', qty:107000, desc:'Per Container'},
-      {basis:'Shipping Local Charges', qty:32000, desc:'Per Container'},
-      {basis:'COO', qty:52000, desc:'Per BL'},
-      {basis:'Fumigation Certificate', qty:15000, desc:'Per BL'},
-      {basis:'Phytosanitary', qty:35000, desc:'Per Container'},
-      {basis:'Container Dressing', qty:80000, desc:'Per Container'},
-      {basis:'Trucking Sagamu - Apapa', qty:850000, desc:'Per Container'},
-      {basis:'EPT', qty:40000, desc:'Per Container'},
-      {basis:'VAT', qty:9000, desc:'Per Container', comment:'7.5% of Agency Fee'},
-    ],
-    created:'26 Apr 2026', sent:'26 Apr 2026', qbSynced:true },
+// -- QUOTES DATA (live from API) --
+let QUOTES_DATA = [];
+let currentQuoteDbId = null;
 
-  { id:'QUOTE-2604-0038', rfq:'RFQ-2604-0038', status:'approved',
-    customer:'Demir Güzel', company:'Sarten Packaging A.Ş.', email:'demirguzel@sarten.com.tr',
-    commodity:'Aerosol cans — empty (HS 73102191)', serviceType:'Import Ocean Freight | FCL',
-    pol:'Ambarlı (TRIST) Turkey', pod:'Apapa (NGAPP) Nigeria', container:'20FT x 1',
-    haulage:'Haulage At Destination', stuffing:'Istanbul, Turkey',
-    carrier:'MSC', transit:16, freeDays:14,
-    oceanUSD:1850, baf:130, caf:70, ebs:0,
-    originCharges:[
-      {basis:'Agency Service Fee', qty:120000, desc:'Per Container'},
-      {basis:'THC', qty:107000, desc:'Per Container'},
-      {basis:'Shipping Local Charges', qty:32000, desc:'Per Container'},
-      {basis:'Documentation Fee', qty:15000, desc:'Per BL'},
-      {basis:'Customs Clearance', qty:80000, desc:'Per Shipment'},
-      {basis:'NESS / Port Levy', qty:25000, desc:'Per Container'},
-      {basis:'Trucking Lagos', qty:850000, desc:'Per Container'},
-      {basis:'VAT', qty:9000, desc:'Per Container', comment:'7.5% of Agency Fee'},
-    ],
-    created:'24 Apr 2026', sent:'24 Apr 2026', qbSynced:true },
+async function loadQuotes() {
+  try {
+    const r = await fetch('/api/quotes');
+    QUOTES_DATA = await r.json();
+    if (!Array.isArray(QUOTES_DATA)) QUOTES_DATA = [];
+    const badge = document.getElementById('quotes-count');
+    if (badge) badge.textContent = QUOTES_DATA.length;
+    renderQuoteList();
+    if (QUOTES_DATA.length) selectQuoteById(QUOTES_DATA[0].id);
+  } catch(e) {
+    console.error('Failed to load quotes', e);
+  }
+}
 
-  { id:'QUOTE-2604-0037', rfq:'RFQ-2604-0037', status:'draft',
-    customer:'Emeka Eze', company:'Royal Foam Nigeria', email:'emeka.eze@royalfoamng.com',
-    commodity:'Polyol & Isocyanate — DG Class 6.1', serviceType:'Import Ocean Freight | FCL | DG',
-    pol:'Qingdao (CNTAO) China', pod:'Apapa (NGAPP) Nigeria', container:'20FT x 9',
-    haulage:'Haulage At Destination', stuffing:'Qingdao, China',
-    carrier:'MSC', transit:50, freeDays:14,
-    oceanUSD:4450, baf:180, caf:65, ebs:150,
-    originCharges:[
-      {basis:'Agency Service Fee', qty:120000, desc:'Per Container'},
-      {basis:'THC', qty:107000, desc:'Per Container'},
-      {basis:'Shipping Local Charges', qty:32000, desc:'Per Container'},
-      {basis:'DG Surcharge', qty:45000, desc:'Per Container', comment:'Class 6.1'},
-      {basis:'Customs Clearance', qty:80000, desc:'Per Shipment'},
-      {basis:'NESS / Port Levy', qty:25000, desc:'Per Container'},
-      {basis:'Trucking Lagos', qty:850000, desc:'Per Container'},
-      {basis:'VAT', qty:9000, desc:'Per Container', comment:'7.5% of Agency Fee'},
-    ],
-    created:'28 Apr 2026', sent:null, qbSynced:false },
-];
+function selectQuoteById(dbId) {
+  const q = QUOTES_DATA.find(x => x.id === dbId);
+  if (!q) return;
+  currentQuoteDbId = q.id;
+  currentQuoteId = q.quoteRef;
+  renderQuoteList();
+  renderQuotePreview(q);
+}
 
 let currentQuoteId = 'QUOTE-2604-0040';
 
@@ -3463,21 +3453,35 @@ function renderQuoteList(filter) {
   if(!list) return;
   const statusBg = {draft:'#f3f4f6', sent:'#dbeafe', approved:'#dcfce7', rejected:'#fee2e2'};
   const statusFg = {draft:'#4b5563', sent:'#1e40af', approved:'#166534', rejected:'#991b1b'};
-  const filtered = filter && filter !== 'all' ? QUOTES_DATA.filter(q=>q.status===filter) : QUOTES_DATA;
-  list.innerHTML = filtered.map(q => `
-    <div onclick="selectQuote('${q.id}',this)" style="padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer;border-left:3px solid ${q.id===currentQuoteId?'var(--accent)':'transparent'};background:${q.id===currentQuoteId?'var(--accent-light)':''}">
+  const data = Array.isArray(QUOTES_DATA) ? QUOTES_DATA : [];
+  const filtered = filter && filter !== 'all' ? data.filter(q=>q.status===filter) : data;
+  if (!filtered.length) {
+    list.innerHTML = `<div style="padding:24px 16px;text-align:center;color:var(--text3);font-size:12px">
+      No quotes yet.<br><br>
+      <button onclick="openGenerateQuoteModal()" style="padding:6px 14px;font-size:11px;cursor:pointer;border-radius:6px;border:none;background:var(--accent);color:#fff;font-family:Inter,sans-serif">+ Generate Quote</button>
+    </div>`;
+    return;
+  }
+  list.innerHTML = filtered.map(q => {
+    const isActive = q.id === currentQuoteDbId;
+    const created = q.createdAt ? new Date(q.createdAt).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'2-digit'}) : '—';
+    const polShort = (q.pol||'').split('(')[0].trim() || q.polCode || '—';
+    const podShort = (q.pod||'').split('(')[0].trim() || q.podCode || '—';
+    const ctrLabel = q.containerType ? `${q.containerType} × ${q.containerQty||1}` : '—';
+    return `<div onclick="selectQuoteById(${q.id})" style="padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer;border-left:3px solid ${isActive?'var(--accent)':'transparent'};background:${isActive?'var(--accent-light)':''}">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:6px">
-        <span style="font-size:11px;font-weight:600;color:var(--accent-dark);font-family:monospace">${q.id}</span>
-        <span style="font-size:10px;padding:1px 7px;border-radius:10px;font-weight:500;background:${statusBg[q.status]};color:${statusFg[q.status]}">${q.status}</span>
+        <span style="font-size:11px;font-weight:600;color:var(--accent-dark);font-family:monospace">${q.quoteRef||'—'}</span>
+        <span style="font-size:10px;padding:1px 7px;border-radius:10px;font-weight:500;background:${statusBg[q.status]||'#f3f4f6'};color:${statusFg[q.status]||'#4b5563'}">${q.status}</span>
       </div>
-      <div style="font-size:12px;font-weight:500;color:var(--text);margin-top:3px">${q.company}</div>
-      <div style="font-size:11px;color:var(--text3);margin-top:1px">${q.pol.split('(')[0].trim()} → ${q.pod.split('(')[0].trim()}</div>
+      <div style="font-size:12px;font-weight:500;color:var(--text);margin-top:3px">${escHtml(q.companyName||q.customerName||'Unknown')}</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:1px">${escHtml(polShort)} → ${escHtml(podShort)}</div>
       <div style="display:flex;justify-content:space-between;margin-top:4px">
-        <span style="font-size:10px;color:var(--text3)">${q.container}</span>
-        <span style="font-size:10px;color:var(--text3)">${q.created}</span>
+        <span style="font-size:10px;color:var(--text3)">${ctrLabel}</span>
+        <span style="font-size:10px;color:var(--text3)">${created}</span>
       </div>
-      ${q.qbSynced ? '<div style="font-size:9px;color:#0277bd;margin-top:3px">● QB Synced</div>' : ''}
-    </div>`).join('');
+      ${q.hasSuggestedHaulage ? '<div style="font-size:9px;color:#0277bd;margin-top:3px">🚛 Haulage included</div>' : ''}
+    </div>`;
+  }).join('');
 }
 
 function filterQuotes(filter, tabEl) {
@@ -3489,78 +3493,104 @@ function filterQuotes(filter, tabEl) {
   renderQuoteList(filter);
 }
 
-function selectQuote(id, el) {
-  currentQuoteId = id;
-  renderQuoteList();
-  const q = QUOTES_DATA.find(x => x.id === id);
-  if(!q) return;
-
-  document.getElementById('qv-title').textContent = q.id;
-  document.getElementById('qv-meta').textContent = q.customer + ' · ' + q.company + ' · ' + q.pol.split('(')[0].trim() + ' → ' + q.pod.split('(')[0].trim();
-
+function renderQuotePreview(q) {
+  if (!q) return;
   const statusBg = {draft:'#f3f4f6', sent:'#dbeafe', approved:'#dcfce7', rejected:'#fee2e2'};
   const statusFg = {draft:'#4b5563', sent:'#1e40af', approved:'#166534', rejected:'#991b1b'};
-  document.getElementById('qv-status-badge').innerHTML = `<span style="font-size:11px;padding:3px 10px;border-radius:10px;font-weight:500;background:${statusBg[q.status]};color:${statusFg[q.status]}">${q.status}</span>`;
+  const created = q.createdAt ? new Date(q.createdAt).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}) : '—';
+  const polShort = (q.pol||'').split('(')[0].trim() || q.polCode || '—';
+  const podShort = (q.pod||'').split('(')[0].trim() || q.podCode || '—';
+  const ctrLabel = q.containerType ? `${q.containerType} × ${q.containerQty||1}` : '—';
+  const ocean = q.oceanLine && typeof q.oceanLine === 'object' ? q.oceanLine : {};
+  const originCharges = Array.isArray(q.originCharges) ? q.originCharges : [];
+  const destCharges = Array.isArray(q.destCharges) ? q.destCharges : [];
+  const haulage = q.haulage && typeof q.haulage === 'object' ? q.haulage : null;
+  const fx = Number(q.exchangeRate)||1600;
 
-  // Quote preview
-  document.getElementById('qp-num').textContent = q.id;
-  document.getElementById('qp-date').textContent = 'Issued: ' + q.created;
-  document.getElementById('qp-ctr-header').textContent = q.container.split(' ')[0];
-  document.getElementById('qp-origin-ctr-header').textContent = q.container.split(' ')[0];
+  document.getElementById('qv-title').textContent = q.quoteRef||'—';
+  document.getElementById('qv-meta').textContent = (q.customerName||'') + (q.companyName?' · '+q.companyName:'') + ' · ' + polShort + ' → ' + podShort;
+  document.getElementById('qv-status-badge').innerHTML = `<span style="font-size:11px;padding:3px 10px;border-radius:10px;font-weight:500;background:${statusBg[q.status]||'#f3f4f6'};color:${statusFg[q.status]||'#4b5563'}">${q.status}</span>`;
 
-  // Booking details grid
-  const bookingFields = [
-    ['Company Name', q.company], ['Customer Name', q.customer],
-    ['Email Address', q.email], ['Commodity', q.commodity]
-  ];
-  const bookingFields2 = [
-    ['Service Type', q.serviceType], ['Port of Loading', q.pol],
-    ['Destination Port', q.pod], ['Container Size', q.container]
-  ];
-  const mkField = ([label,val]) => `<div><div style="font-size:9px;color:#8a9e8a;margin-bottom:3px;text-transform:uppercase;letter-spacing:.03em">${label}</div><div style="font-size:12px;color:#1a2e1a;font-weight:500">${val}</div></div>`;
-  document.getElementById('qp-booking').innerHTML = bookingFields.map(mkField).join('');
-  document.getElementById('qp-booking2').innerHTML = bookingFields2.map(mkField).join('');
+  document.getElementById('qp-num').textContent = q.quoteRef||'—';
+  document.getElementById('qp-date').textContent = 'Issued: ' + created;
+  document.getElementById('qp-ctr-header').textContent = q.containerType||'Size';
+  document.getElementById('qp-origin-ctr-header').textContent = q.containerType||'Size';
 
-  // Ocean freight
-  const oceanTotal = q.oceanUSD + q.baf + q.caf + (q.ebs||0);
-  document.getElementById('qp-ocean-tbody').innerHTML = `
+  const mkField = ([label,val]) => `<div><div style="font-size:9px;color:#8a9e8a;margin-bottom:3px;text-transform:uppercase;letter-spacing:.03em">${label}</div><div style="font-size:12px;color:#1a2e1a;font-weight:500">${escHtml(String(val||'—'))}</div></div>`;
+  document.getElementById('qp-booking').innerHTML = [
+    ['Company Name', q.companyName||'—'], ['Customer Name', q.customerName||'—'],
+    ['Email Address', q.customerEmail||'—'], ['Commodity', q.commodity||'—']
+  ].map(mkField).join('');
+  document.getElementById('qp-booking2').innerHTML = [
+    ['RFQ Reference', q.rfqRef||'—'], ['Port of Loading', q.pol||q.polCode||'—'],
+    ['Destination Port', q.pod||q.podCode||'—'], ['Container', ctrLabel]
+  ].map(mkField).join('');
+
+  // Ocean freight row
+  const oceanAmt = Number(ocean.amount)||0;
+  const carrier = ocean.carrier || q.carrier || 'TBD';
+  const transit = ocean.transitTime||'—';
+  const freeDays = ocean.freeTime||'—';
+  document.getElementById('qp-ocean-tbody').innerHTML = oceanAmt ? `
     <tr>
-      <td style="padding:9px 10px;border:1px solid #e4e8e4;font-weight:600">${q.carrier}</td>
-      <td style="padding:9px 10px;border:1px solid #e4e8e4;font-size:11px;color:#4a5e4a">${q.pol.split('(')[0].trim()} -<br>${q.pod.split('(')[0].trim()}</td>
-      <td style="padding:9px 10px;border:1px solid #e4e8e4;text-align:center">1</td>
-      <td style="padding:9px 10px;border:1px solid #e4e8e4;text-align:center;font-weight:600">${q.oceanUSD.toLocaleString()}</td>
-      <td style="padding:9px 10px;border:1px solid #e4e8e4;text-align:right;font-family:monospace;font-weight:700;color:var(--accent-dark)">$${oceanTotal.toLocaleString()}</td>
-      <td style="padding:9px 10px;border:1px solid #e4e8e4;font-size:11px">Per Container<br><span style="font-size:10px;color:#8a9e8a">incl. BAF $${q.baf} · CAF $${q.caf}${q.ebs?' · EBS $'+q.ebs:''}</span></td>
-      <td style="padding:9px 10px;border:1px solid #e4e8e4;text-align:center">${q.transit} days</td>
-      <td style="padding:9px 10px;border:1px solid #e4e8e4;text-align:center">${q.freeDays}</td>
-      <td style="padding:9px 10px;border:1px solid #e4e8e4;font-size:10px;color:#8a9e8a">Freetime: 2 days demurrage and ${q.freeDays>10?'4':'2'} days detention / subject to Vessel Availability</td>
-    </tr>`;
-  document.getElementById('qp-ocean-subtotal').textContent = '$' + oceanTotal.toLocaleString();
+      <td style="padding:9px 10px;border:1px solid #e4e8e4;font-weight:600">${escHtml(carrier)}</td>
+      <td style="padding:9px 10px;border:1px solid #e4e8e4;font-size:11px;color:#4a5e4a">${escHtml(polShort)} →<br>${escHtml(podShort)}</td>
+      <td style="padding:9px 10px;border:1px solid #e4e8e4;text-align:center">${q.containerQty||1}</td>
+      <td style="padding:9px 10px;border:1px solid #e4e8e4;text-align:center;font-weight:600">${oceanAmt.toLocaleString()}</td>
+      <td style="padding:9px 10px;border:1px solid #e4e8e4;text-align:right;font-family:monospace;font-weight:700;color:var(--accent-dark)">$${oceanAmt.toLocaleString()}</td>
+      <td style="padding:9px 10px;border:1px solid #e4e8e4;font-size:11px">Per Container<br><span style="font-size:10px;color:#8a9e8a">All-in rate · ${ocean.currency||'USD'}</span></td>
+      <td style="padding:9px 10px;border:1px solid #e4e8e4;text-align:center">${transit}</td>
+      <td style="padding:9px 10px;border:1px solid #e4e8e4;text-align:center">${freeDays}</td>
+      <td style="padding:9px 10px;border:1px solid #e4e8e4;font-size:10px;color:#8a9e8a">Subject to vessel availability</td>
+    </tr>` : '<tr><td colspan="9" style="padding:12px;text-align:center;color:#8a9e8a;font-size:11px">No ocean rate selected</td></tr>';
+  document.getElementById('qp-ocean-subtotal').textContent = oceanAmt ? '$'+oceanAmt.toLocaleString() : '—';
 
-  // Origin charges
-  const originTotal = q.originCharges.reduce((s,c) => s+c.qty, 0);
-  document.getElementById('qp-origin-tbody').innerHTML = q.originCharges.map(c => `
-    <tr>
-      <td style="padding:8px 10px;border:1px solid #e4e8e4">${c.basis}</td>
+  // Origin charges + haulage
+  const allLocalCharges = [...originCharges];
+  if (haulage) {
+    allLocalCharges.push({
+      itemName: `Haulage / Trucking (${haulage.terminalName||''} → ${haulage.destCity||''})`,
+      amount: haulage.amount, currency: haulage.currency||'NGN', asPerReceipt: !haulage.amount,
+      basis: 'Per Container', category: 'haulage'
+    });
+  }
+  const originNGN = allLocalCharges.filter(c=>!c.asPerReceipt&&(c.currency==='NGN'||!c.currency)).reduce((s,c)=>s+Number(c.amount||0),0);
+  const originUSD = allLocalCharges.filter(c=>!c.asPerReceipt&&c.currency==='USD').reduce((s,c)=>s+Number(c.amount||0),0);
+  document.getElementById('qp-origin-tbody').innerHTML = allLocalCharges.length ? allLocalCharges.map(c => {
+    const amt = c.asPerReceipt ? 'As per receipt' : (c.currency==='NGN'?'₦':'$')+Number(c.amount||0).toLocaleString();
+    return `<tr>
+      <td style="padding:8px 10px;border:1px solid #e4e8e4">${escHtml(c.itemName||c.basis||'—')}</td>
       <td style="padding:8px 10px;border:1px solid #e4e8e4;text-align:center">1</td>
-      <td style="padding:8px 10px;border:1px solid #e4e8e4;text-align:center">${c.qty.toLocaleString()}</td>
-      <td style="padding:8px 10px;border:1px solid #e4e8e4;text-align:right;font-family:monospace;font-weight:500">${c.qty.toLocaleString()}</td>
-      <td style="padding:8px 10px;border:1px solid #e4e8e4;font-size:11px;color:#4a5e4a">${c.desc}</td>
-      <td style="padding:8px 10px;border:1px solid #e4e8e4;font-size:10px;color:#8a9e8a">${c.comment||''}</td>
-    </tr>`).join('');
-  document.getElementById('qp-origin-subtotal').textContent = String.fromCharCode(8358) + originTotal.toLocaleString();
+      <td style="padding:8px 10px;border:1px solid #e4e8e4;text-align:center">${q.containerQty||1}</td>
+      <td style="padding:8px 10px;border:1px solid #e4e8e4;text-align:right;font-family:monospace;font-weight:500">${c.asPerReceipt?'APR':amt}</td>
+      <td style="padding:8px 10px;border:1px solid #e4e8e4;font-size:11px;color:#4a5e4a">${escHtml(c.basis||'Per Container')}</td>
+      <td style="padding:8px 10px;border:1px solid #e4e8e4;font-size:10px;color:#8a9e8a">${c.asPerReceipt?'As per receipt':''}</td>
+    </tr>`;
+  }).join('') : '<tr><td colspan="6" style="padding:12px;text-align:center;color:#8a9e8a;font-size:11px">No local charges</td></tr>';
+  const subLabel = originNGN ? '₦'+originNGN.toLocaleString() : '';
+  const subUSDLabel = originUSD ? ' + $'+originUSD.toLocaleString() : '';
+  document.getElementById('qp-origin-subtotal').textContent = (subLabel+subUSDLabel)||'As per receipt';
+
+  // AI notes banner
+  const banner = document.getElementById('qp-ai-notes');
+  if (banner) { banner.style.display = q.aiNotes ? 'block' : 'none'; banner.textContent = '🤖 ' + (q.aiNotes||''); }
 }
 
-function newQuote() {
-  alert('New quote — select from an approved Deal to auto-populate');
+function selectQuote(id, el) {
+  // Legacy shim — find by quoteRef
+  const q = QUOTES_DATA.find(x => x.quoteRef === id || x.id === id);
+  if (q) selectQuoteById(q.id);
 }
 
-function sendQuote() {
-  const q = QUOTES_DATA.find(x => x.id === currentQuoteId);
-  if(q) { q.status = 'sent'; q.sent = new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}); renderQuoteList(); selectQuote(currentQuoteId, null); }
+function newQuote() { openGenerateQuoteModal(); }
+
+async function sendQuote() {
+  if (!currentQuoteDbId) return;
+  await fetch('/api/quotes/'+currentQuoteDbId, {method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:'sent'})});
+  await loadQuotes();
   const c = document.getElementById('qb-sync-status');
-  c.style.display = 'flex'; document.getElementById('qb-sync-text').textContent = 'Quote sent to customer · syncing to QuickBooks as estimate…';
-  setTimeout(()=>{ document.getElementById('qb-sync-text').textContent = '✓ Sent to customer · QuickBooks estimate created'; setTimeout(()=>c.style.display='none',3000); },1500);
+  if(c){ c.style.display='flex'; document.getElementById('qb-sync-text').textContent='Quote sent to customer · syncing to QuickBooks as estimate…';
+    setTimeout(()=>{document.getElementById('qb-sync-text').textContent='✓ Sent to customer · QuickBooks estimate created';setTimeout(()=>c.style.display='none',3000);},1500); }
 }
 
 function downloadPDF() {
@@ -3568,11 +3598,65 @@ function downloadPDF() {
 }
 
 function syncQuickbooks() {
-  const q = QUOTES_DATA.find(x => x.id === currentQuoteId);
-  if(q) q.qbSynced = true;
   const c = document.getElementById('qb-sync-status');
-  c.style.display = 'flex'; document.getElementById('qb-sync-text').textContent = 'Syncing to QuickBooks as estimate…';
-  setTimeout(()=>{ document.getElementById('qb-sync-text').textContent = '✓ QuickBooks estimate created successfully'; renderQuoteList(); setTimeout(()=>c.style.display='none',3000); },1500);
+  if(c){ c.style.display='flex'; document.getElementById('qb-sync-text').textContent='Syncing to QuickBooks as estimate…';
+    setTimeout(()=>{document.getElementById('qb-sync-text').textContent='✓ QuickBooks estimate created successfully';setTimeout(()=>c.style.display='none',3000);},1500); }
+}
+
+// ── GENERATE QUOTE MODAL ──
+async function openGenerateQuoteModal() {
+  const modal = document.getElementById('gen-quote-modal');
+  if (!modal) return;
+  // Load open RFQs
+  const sel = document.getElementById('gqm-rfq-select');
+  sel.innerHTML = '<option value="">Loading RFQs…</option>';
+  try {
+    const r = await fetch('/api/rfqs');
+    const rfqs = await r.json();
+    const open = rfqs.filter(x => x.status !== 'replied' || rfqs.length < 5);
+    sel.innerHTML = '<option value="">Select an RFQ…</option>' + open.map(rfq => {
+      const fields = Array.isArray(rfq.fields) ? rfq.fields : [];
+      const pol = fields.find(f=>f.k?.toLowerCase().includes('pol'))?.v || '';
+      const pod = fields.find(f=>f.k?.toLowerCase().includes('pod'))?.v || '';
+      const route = pol && pod ? ` · ${pol}→${pod}` : '';
+      return `<option value="${rfq.id}">${escHtml(rfq.ref)}${route}</option>`;
+    }).join('');
+  } catch(e) { sel.innerHTML = '<option value="">Failed to load RFQs</option>'; }
+  document.getElementById('gqm-error').style.display = 'none';
+  document.getElementById('gqm-spinner').style.display = 'none';
+  document.getElementById('gqm-actions').style.display = 'flex';
+  modal.style.display = 'flex';
+}
+
+function closeGenerateQuoteModal() {
+  const modal = document.getElementById('gen-quote-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+async function runGenerateQuote() {
+  const rfqId = parseInt(document.getElementById('gqm-rfq-select').value);
+  const margin = parseFloat(document.getElementById('gqm-margin').value)||13;
+  const fx = parseFloat(document.getElementById('gqm-fx').value)||1600;
+  const errEl = document.getElementById('gqm-error');
+  if (!rfqId) { errEl.textContent='Please select an RFQ.'; errEl.style.display='block'; return; }
+  errEl.style.display = 'none';
+  document.getElementById('gqm-spinner').style.display = 'flex';
+  document.getElementById('gqm-actions').style.display = 'none';
+  try {
+    const r = await fetch('/api/quotes/generate', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({rfqId, marginPct:margin, exchangeRate:fx, save:true})
+    });
+    if (!r.ok) { const e = await r.json(); throw new Error(e.error||'Generation failed'); }
+    const quote = await r.json();
+    closeGenerateQuoteModal();
+    await loadQuotes();
+    if (quote.id) selectQuoteById(quote.id);
+  } catch(e) {
+    errEl.textContent = 'Error: ' + e.message; errEl.style.display = 'block';
+    document.getElementById('gqm-spinner').style.display = 'none';
+    document.getElementById('gqm-actions').style.display = 'flex';
+  }
 }
 
 
@@ -5066,7 +5150,72 @@ async function deleteRate(id) {
   await loadRatesDb();
 }
 
-
 </script>
+
+<!-- ── GENERATE QUOTE MODAL ── -->
+<div id="gen-quote-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9000;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:14px;width:500px;max-width:95vw;box-shadow:0 16px 48px rgba(0,0,0,.25);overflow:hidden">
+    <!-- Header -->
+    <div style="background:#1C3829;padding:18px 22px;display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div style="font-size:15px;font-weight:700;color:#fff">Generate Quote with AI</div>
+        <div style="font-size:11px;color:rgba(255,255,255,.6);margin-top:2px">Claude selects rates, adds local charges & haulage</div>
+      </div>
+      <button onclick="closeGenerateQuoteModal()" style="background:rgba(255,255,255,.1);border:none;color:#fff;width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:16px;line-height:28px;text-align:center">×</button>
+    </div>
+
+    <!-- Body -->
+    <div style="padding:22px">
+      <!-- RFQ selector -->
+      <div style="margin-bottom:16px">
+        <label style="font-size:11px;font-weight:600;color:#4a5e4a;display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em">Select RFQ</label>
+        <select id="gqm-rfq-select" style="width:100%;border:1px solid #d0d8d0;border-radius:8px;padding:9px 12px;font-size:13px;font-family:Inter,sans-serif;color:#1a2e1a;outline:none;background:#fff">
+          <option value="">Loading…</option>
+        </select>
+      </div>
+
+      <!-- Settings row -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+        <div>
+          <label style="font-size:11px;font-weight:600;color:#4a5e4a;display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em">Margin %</label>
+          <input id="gqm-margin" type="number" value="13" min="0" max="100" style="width:100%;border:1px solid #d0d8d0;border-radius:8px;padding:9px 12px;font-size:13px;font-family:Inter,sans-serif;color:#1a2e1a;outline:none;box-sizing:border-box">
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:600;color:#4a5e4a;display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em">FX Rate (NGN/USD)</label>
+          <input id="gqm-fx" type="number" value="1600" style="width:100%;border:1px solid #d0d8d0;border-radius:8px;padding:9px 12px;font-size:13px;font-family:Inter,sans-serif;color:#1a2e1a;outline:none;box-sizing:border-box">
+        </div>
+      </div>
+
+      <!-- What Claude does -->
+      <div style="background:#f0f7ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px 14px;margin-bottom:16px;font-size:11px;color:#1e40af;line-height:1.7">
+        <div style="font-weight:600;margin-bottom:4px">🤖 Claude will automatically:</div>
+        <div>• Match ocean freight rates for the RFQ lane</div>
+        <div>• Add relevant import/export local charges from your rate database</div>
+        <div>• Suggest haulage if delivery is inland Nigeria</div>
+        <div>• Calculate total cost and sell price at the margin above</div>
+      </div>
+
+      <!-- Error -->
+      <div id="gqm-error" style="display:none;background:#fee2e2;border:1px solid #fca5a5;border-radius:8px;padding:10px 12px;font-size:11px;color:#991b1b;margin-bottom:12px"></div>
+
+      <!-- Spinner -->
+      <div id="gqm-spinner" style="display:none;align-items:center;justify-content:center;gap:10px;padding:16px;color:#5a9132;font-size:13px;font-weight:500">
+        <div style="width:20px;height:20px;border:3px solid #d0e8c0;border-top-color:#5a9132;border-radius:50%;animation:spin .8s linear infinite"></div>
+        Claude is building your quote…
+      </div>
+
+      <!-- Actions -->
+      <div id="gqm-actions" style="display:flex;gap:8px;justify-content:flex-end">
+        <button onclick="closeGenerateQuoteModal()" style="padding:9px 18px;font-size:12px;cursor:pointer;border-radius:8px;border:1px solid #d0d8d0;background:#fff;color:#4a5e4a;font-family:Inter,sans-serif;font-weight:500">Cancel</button>
+        <button onclick="runGenerateQuote()" style="padding:9px 20px;font-size:12px;font-weight:600;cursor:pointer;border-radius:8px;border:none;background:#1C3829;color:#fff;font-family:Inter,sans-serif">✨ Generate Quote</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+
 </body>
 </html>
