@@ -130,3 +130,21 @@ export const otherCharges = pgTable("other_charges", {
 });
 
 export type OtherCharge = typeof otherCharges.$inferSelect;
+
+// ── PARTNER OUTREACH ─────────────────────────────────────────────────────────
+export const partnerOutreach = pgTable("partner_outreach", {
+  id: serial("id").primaryKey(),
+  partnerIds: jsonb("partner_ids").notNull().default([]),
+  partnerNames: jsonb("partner_names").notNull().default([]),
+  partnerEmails: jsonb("partner_emails").notNull().default([]),
+  routes: jsonb("routes").notNull().default([]),
+  subject: text("subject").notNull(),
+  body: text("body").notNull(),
+  status: text("status").notNull().default("sent"),
+  responseNotes: text("response_notes"),
+  respondedAt: timestamp("responded_at"),
+  sentAt: timestamp("sent_at").notNull().defaultNow(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export type PartnerOutreach = typeof partnerOutreach.$inferSelect;

@@ -7,6 +7,7 @@ import { partnersRouter } from "./partners";
 import { ratesRouter } from "./rates";
 import { quotesRouter } from "./quotes";
 import seedRouter from "./seed";
+import { outreachRouter } from "./outreach";
 
 const router: IRouter = Router();
 
@@ -18,5 +19,6 @@ router.use(partnersRouter);
 router.use(ratesRouter);
 router.use(quotesRouter);
 router.use(seedRouter);
+router.use(outreachRouter);
 
 export default router;

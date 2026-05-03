@@ -151,7 +151,7 @@ tr.row-expiring-soon td{background:#fffbeb}
 .apr-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;color:var(--info);font-weight:500;font-style:italic}
 
 /* CONTACT PARTNER MODAL */
-.cp-modal-box{width:680px}
+.cp-modal-box{width:720px}
 .cp-steps{display:flex;align-items:center;gap:0;padding:14px 20px;background:#f8faf8;border-bottom:1px solid var(--border);flex-shrink:0}
 .cp-step{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:500;color:var(--text3);flex:1}
 .cp-step.active{color:var(--accent-dark);font-weight:600}
@@ -173,6 +173,22 @@ tr.row-expiring-soon td{background:#fffbeb}
 .cp-send-result.ok{background:#dcfce7;color:#166534;border:1px solid #bbf7d0}
 .cp-send-result.err{background:#fee2e2;color:#991b1b;border:1px solid #fecaca}
 .partner-tag{display:inline-flex;align-items:center;gap:3px;font-size:9px;padding:1px 6px;border-radius:8px;background:#ede9fe;color:#6d28d9;font-weight:600;white-space:nowrap}
+.cp-route-row{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end;padding:8px 10px;background:#f8faf8;border:1px solid var(--border);border-radius:8px}
+.cp-route-remove{background:none;border:none;color:var(--danger);cursor:pointer;font-size:16px;padding:2px 6px;border-radius:4px;line-height:1}
+.cp-route-remove:hover{background:#fee2e2}
+.cp-suggest-chip{display:inline-flex;align-items:center;gap:4px;font-size:10px;padding:3px 8px;border-radius:12px;background:#ede9fe;color:#6d28d9;border:1px solid #ddd6fe;cursor:pointer;font-weight:500;transition:all .1s;white-space:nowrap}
+.cp-suggest-chip:hover{background:#ddd6fe;border-color:#a78bfa}
+.cp-suggest-chip.expiring{background:#fef3c7;color:#92400e;border-color:#fde68a}
+.cp-suggest-chip.expiring:hover{background:#fde68a}
+.cp-hist-row{padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:#fff;display:flex;flex-direction:column;gap:6px}
+.cp-hist-row:hover{border-color:var(--border2)}
+.cp-hist-status{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;padding:2px 8px;border-radius:8px}
+.cp-hist-status.sent{background:#dbeafe;color:#1e40af}
+.cp-hist-status.responded{background:#dcfce7;color:#166534}
+.cp-hist-status.closed{background:#f3f4f6;color:#6b7280}
+.cp-hist-modal-box{width:760px;max-height:85vh}
+.cp-hist-notes{width:100%;border:1px solid var(--border2);border-radius:6px;padding:6px 10px;font-size:11px;font-family:inherit;resize:vertical;min-height:60px;outline:none;box-sizing:border-box}
+.cp-hist-notes:focus{border-color:var(--accent)}
 </style>
 </head>
 <body>
@@ -232,6 +248,7 @@ tr.row-expiring-soon td{background:#fffbeb}
           <p>International sea freight rates between ports — per container type</p>
         </div>
         <div class="panel-hd-right">
+          <button class="btn" onclick="openOutreachHistory()" style="border-color:#c4b5fd;color:#7c3aed;background:#faf5ff;font-size:11px">📋 Outreach History</button>
           <button class="btn" onclick="openContactPartner()" style="border-color:#a78bfa;color:#6d28d9;background:#faf5ff">✉ Contact Partner</button>
           <button class="btn" onclick="exportCsv('ocean')">↓ Export CSV</button>
           <button class="btn btn-primary" onclick="openModal('ocean', null)">+ Add Rate</button>
@@ -522,32 +539,33 @@ tr.row-expiring-soon td{background:#fffbeb}
     </div>
     <!-- Step 1: Route Details -->
     <div class="modal-body" id="cp-body-1">
-      <div class="form-section">Shipment Route</div>
-      <div class="form-grid">
-        <div class="form-field">
-          <label class="form-label">Port of Loading (POL) *</label>
-          <input class="form-input" id="cp-pol" placeholder="e.g. NGAPP – Apapa, Lagos">
-        </div>
-        <div class="form-field">
-          <label class="form-label">Port of Discharge (POD) *</label>
-          <input class="form-input" id="cp-pod" placeholder="e.g. CNSHA – Shanghai">
-        </div>
+      <!-- Auto-suggest strip -->
+      <div id="cp-suggest-strip" style="display:none;flex-direction:column;gap:6px;padding:10px 12px;background:#faf5ff;border:1px solid #e9d5ff;border-radius:8px;margin-bottom:4px">
+        <div style="font-size:10px;font-weight:700;color:#6d28d9;letter-spacing:.04em">⚡ AUTO-SUGGESTED — expired / expiring-soon routes in your database</div>
+        <div id="cp-suggest-chips" style="display:flex;flex-wrap:wrap;gap:6px"></div>
       </div>
-      <div class="form-section" style="margin-top:4px">Cargo Details</div>
+      <!-- Route rows -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+        <div class="form-section" style="margin:0">Trade Lane Routes *</div>
+        <button class="btn" style="font-size:10px;padding:3px 10px" onclick="cpAddRoute()">+ Add Route</button>
+      </div>
+      <div id="cp-routes-container" style="display:flex;flex-direction:column;gap:6px"></div>
+      <!-- Shared cargo details -->
+      <div class="form-section" style="margin-top:8px">Cargo Details (applies to all routes)</div>
       <div class="form-grid cols3">
         <div class="form-field">
           <label class="form-label">Equipment Type</label>
           <select class="form-select" id="cp-equip">
-            <option value="20ft/40ft/40hc">20FT / 40FT / 40HC (all)</option>
-            <option value="20ft">20FT only</option>
-            <option value="40ft">40FT only</option>
-            <option value="40hc">40HC only</option>
+            <option value="20FT / 40FT / 40HC (all)">20FT / 40FT / 40HC (all)</option>
+            <option value="20FT only">20FT only</option>
+            <option value="40FT only">40FT only</option>
+            <option value="40HC only">40HC only</option>
           </select>
         </div>
         <div class="form-field">
           <label class="form-label">Commodity Type</label>
           <select class="form-select" id="cp-commodity">
-            <option value="General Cargo">General Cargo (FAK)</option>
+            <option value="General Cargo (FAK)">General Cargo (FAK)</option>
             <option value="Hazardous (DG)">Hazardous (DG)</option>
             <option value="Refrigerated (Reefer)">Refrigerated (Reefer)</option>
             <option value="Oversized / Breakbulk">Oversized / Breakbulk</option>
@@ -596,6 +614,23 @@ tr.row-expiring-soon td{background:#fffbeb}
       <button class="btn" id="cp-btn-cancel" onclick="closeContactPartner()">Cancel</button>
       <button class="btn" id="cp-btn-back" style="display:none" onclick="cpBack()">← Back</button>
       <button class="btn btn-primary" id="cp-btn-next" onclick="cpNext()">Next →</button>
+    </div>
+  </div>
+</div>
+
+<!-- OUTREACH HISTORY MODAL -->
+<div class="modal-overlay" id="cp-hist-modal" style="display:none" onclick="if(event.target===this)document.getElementById('cp-hist-modal').style.display='none'">
+  <div class="modal-box cp-hist-modal-box">
+    <div class="modal-hd">
+      <span class="modal-title">📋 Outreach History</span>
+      <button class="modal-close" onclick="document.getElementById('cp-hist-modal').style.display='none'">✕</button>
+    </div>
+    <div class="modal-body" id="cp-hist-body">
+      <div style="text-align:center;padding:32px;color:var(--text3)">Loading…</div>
+    </div>
+    <div class="modal-ft">
+      <button class="btn" onclick="document.getElementById('cp-hist-modal').style.display='none'">Close</button>
+      <button class="btn btn-primary" onclick="openContactPartner();document.getElementById('cp-hist-modal').style.display='none'">✉ New Outreach</button>
     </div>
   </div>
 </div>
@@ -1188,16 +1223,129 @@ fetch('/api/quotes').then(r=>r.json()).then(qs=>{
 let cpStep = 1;
 let cpPartners = [];
 let cpSelectedIds = new Set();
+let cpRouteCounter = 0;
 
+// ── Route rows ────────────────────────────────────────────────────────────────
+function cpAddRoute(pol = '', pod = '') {
+  const id = ++cpRouteCounter;
+  const row = document.createElement('div');
+  row.className = 'cp-route-row';
+  row.id = 'cp-rr-' + id;
+  row.innerHTML = `
+    <div class="form-field" style="margin:0">
+      <label class="form-label">POL (Port of Loading)</label>
+      <input class="form-input" id="cp-pol-${id}" placeholder="e.g. NGAPP" value="${esc(pol)}">
+    </div>
+    <div class="form-field" style="margin:0">
+      <label class="form-label">POD (Port of Discharge)</label>
+      <input class="form-input" id="cp-pod-${id}" placeholder="e.g. CNSHA" value="${esc(pod)}">
+    </div>
+    <button class="cp-route-remove" onclick="cpRemoveRoute(${id})" title="Remove route">✕</button>`;
+  document.getElementById('cp-routes-container').appendChild(row);
+  cpSyncRemoveButtons();
+}
+
+function cpRemoveRoute(id) {
+  const el = document.getElementById('cp-rr-' + id);
+  if (el) el.remove();
+  cpSyncRemoveButtons();
+}
+
+function cpSyncRemoveButtons() {
+  const rows = document.querySelectorAll('.cp-route-row');
+  rows.forEach(r => {
+    const btn = r.querySelector('.cp-route-remove');
+    if (btn) btn.style.display = rows.length > 1 ? '' : 'none';
+  });
+}
+
+function cpGetRoutes() {
+  const rows = document.querySelectorAll('.cp-route-row');
+  return Array.from(rows).map(r => {
+    const id = r.id.replace('cp-rr-', '');
+    return {
+      pol: (document.getElementById('cp-pol-' + id)?.value || '').trim(),
+      pod: (document.getElementById('cp-pod-' + id)?.value || '').trim(),
+    };
+  });
+}
+
+// ── Auto-suggest from expired / expiring-soon ocean rates ────────────────────
+function cpBuildSuggestions() {
+  const ocean = allData['ocean'] || [];
+  if (!ocean.length) return;
+  const today = new Date();
+  const soonMs = 45 * 24 * 60 * 60 * 1000; // 45 days
+
+  const routeMap = new Map();
+  for (const r of ocean) {
+    if (!r.expiryDate) continue;
+    const exp = new Date(r.expiryDate);
+    const isExpired = exp < today;
+    const isExpiringSoon = !isExpired && (exp - today) < soonMs;
+    if (!isExpired && !isExpiringSoon) continue;
+    const key = `${r.polCode}→${r.podCode}`;
+    if (!routeMap.has(key)) routeMap.set(key, { pol: r.polCode, pod: r.podCode, count: 0, expired: 0, expiring: 0 });
+    const entry = routeMap.get(key);
+    entry.count++;
+    if (isExpired) entry.expired++;
+    else entry.expiring++;
+  }
+
+  if (!routeMap.size) return;
+
+  // Sort by frequency desc
+  const sorted = Array.from(routeMap.values()).sort((a, b) => b.count - a.count).slice(0, 10);
+
+  const chips = document.getElementById('cp-suggest-chips');
+  chips.innerHTML = sorted.map(rt => {
+    const cls = rt.expired > 0 ? 'expiring' : '';
+    const label = rt.expired > 0 ? `${rt.pol}→${rt.pod} (${rt.expired} expired)` : `${rt.pol}→${rt.pod} (expiring)`;
+    return `<span class="cp-suggest-chip ${cls}" onclick="cpApplySuggestion('${rt.pol}','${rt.pod}')">${label}</span>`;
+  }).join('');
+  document.getElementById('cp-suggest-strip').style.display = 'flex';
+}
+
+function cpApplySuggestion(pol, pod) {
+  // Check if this route already exists
+  const existing = cpGetRoutes();
+  const already = existing.some(r => r.pol === pol && r.pod === pod);
+  if (already) return;
+  // Fill the first empty row or add a new one
+  const rows = document.querySelectorAll('.cp-route-row');
+  for (const row of rows) {
+    const id = row.id.replace('cp-rr-', '');
+    const polEl = document.getElementById('cp-pol-' + id);
+    const podEl = document.getElementById('cp-pod-' + id);
+    if (polEl && podEl && !polEl.value.trim() && !podEl.value.trim()) {
+      polEl.value = pol;
+      podEl.value = pod;
+      return;
+    }
+  }
+  cpAddRoute(pol, pod);
+}
+
+// ── Modal lifecycle ───────────────────────────────────────────────────────────
 async function openContactPartner() {
   cpStep = 1;
   cpSelectedIds.clear();
-  document.getElementById('cp-pol').value = '';
-  document.getElementById('cp-pod').value = '';
+  cpRouteCounter = 0;
+  document.getElementById('cp-routes-container').innerHTML = '';
   document.getElementById('cp-notes').value = '';
   document.getElementById('cp-validity').value = '';
+  document.getElementById('cp-suggest-strip').style.display = 'none';
+  document.getElementById('cp-suggest-chips').innerHTML = '';
   document.getElementById('cp-send-result').style.display = 'none';
   document.getElementById('cp-send-result').innerHTML = '';
+  const cancelBtn = document.getElementById('cp-btn-cancel');
+  cancelBtn.textContent = 'Cancel';
+  cancelBtn.onclick = closeContactPartner;
+  const nextBtn = document.getElementById('cp-btn-next');
+  nextBtn.onclick = cpNext;
+  nextBtn.disabled = false;
+  cpAddRoute(); // start with one empty row
+  cpBuildSuggestions();
   cpRenderStep();
   document.getElementById('cp-modal').style.display = 'flex';
   // Load partners in background
@@ -1234,9 +1382,11 @@ function cpRenderStep() {
 
 function cpNext() {
   if (cpStep === 1) {
-    const pol = document.getElementById('cp-pol').value.trim();
-    const pod = document.getElementById('cp-pod').value.trim();
-    if (!pol || !pod) { alert('Please enter both POL and POD to continue.'); return; }
+    const routes = cpGetRoutes();
+    const valid = routes.filter(r => r.pol && r.pod);
+    if (!valid.length) { alert('Please enter at least one POL and POD route.'); return; }
+    const incomplete = routes.filter(r => (r.pol && !r.pod) || (!r.pol && r.pod));
+    if (incomplete.length) { alert('Each route must have both a POL and a POD.'); return; }
     cpStep = 2;
     cpRenderStep();
     cpRenderPartners();
@@ -1300,26 +1450,29 @@ function cpUpdateSelCount() {
 }
 
 function cpBuildEmailPreview() {
-  const pol = document.getElementById('cp-pol').value.trim();
-  const pod = document.getElementById('cp-pod').value.trim();
+  const routes = cpGetRoutes().filter(r => r.pol && r.pod);
   const equip = document.getElementById('cp-equip').value;
   const commodity = document.getElementById('cp-commodity').value;
   const validity = document.getElementById('cp-validity').value;
   const notes = document.getElementById('cp-notes').value.trim();
   const today = new Date().toLocaleDateString('en-GB', { day:'2-digit', month:'long', year:'numeric' });
-
   const selected = cpPartners.filter(p => cpSelectedIds.has(p.id));
-  const names = selected.map(p => p.name).join(', ');
 
-  // Populate recipients summary
   document.getElementById('cp-recipients-summary').innerHTML =
     `<strong>Sending to:</strong> ${selected.map(p => `${esc(p.name)} &lt;${esc(p.email)}&gt;`).join(' · ')}`;
 
-  // Auto-generate subject
-  const subject = `Rate Request — ${pol} to ${pod} | OnePort 365`;
+  // Subject: list first few routes
+  const routeLabel = routes.length === 1
+    ? `${routes[0].pol}–${routes[0].pod}`
+    : `${routes[0].pol}–${routes[0].pod} + ${routes.length - 1} more`;
+  const subject = `Rate Request — ${routeLabel} | OnePort 365`;
   document.getElementById('cp-subject').value = subject;
 
-  // Auto-generate email body
+  // Route table for email
+  const routeLines = routes.map((r, i) =>
+    `  ${i + 1}. POL: ${r.pol}   →   POD: ${r.pod}`
+  ).join('\n');
+
   const validityLine = validity ? `\nValidity Required: Rates valid through ${validity}\n` : '';
   const notesLine = notes ? `\nSpecial Requirements:\n${notes}\n` : '';
   const body = `Dear ${selected.length === 1 ? selected[0].name : 'Team'},
@@ -1329,20 +1482,21 @@ Please find below a rate request on behalf of OnePort 365.
 REQUEST DETAILS
 ---------------
 Date: ${today}
-Port of Loading (POL): ${pol}
-Port of Discharge (POD): ${pod}
-Equipment Type: ${equip.toUpperCase()}
-Commodity: ${commodity}${validityLine}${notesLine}
-Please provide your best all-in rates (inclusive of ocean freight, surcharges, and any applicable local charges) for the above trade lane.
+Equipment Type: ${equip}
+Commodity: ${commodity}${validityLine}
 
-Kindly reply with your rates in the following format:
-- Equipment type
-- 20FT rate (if applicable)
-- 40FT rate (if applicable)
-- 40HC rate (if applicable)
-- Carrier / Service name
-- Transit time
-- Valid from / to dates
+TRADE LANE${routes.length > 1 ? 'S' : ''} REQUESTED
+${'-'.repeat(24)}
+${routeLines}
+${notesLine}
+Please provide your best all-in ocean freight rates (inclusive of surcharges and applicable local charges) for each trade lane above.
+
+Kindly reply with rates in the following format per route:
+  • POL → POD
+  • 20FT rate  /  40FT rate  /  40HC rate
+  • Carrier / Service
+  • Transit time
+  • Valid from / Valid to
 
 We look forward to your prompt response.
 
@@ -1355,38 +1509,49 @@ sales@oneport365.com`;
 
 async function cpSendEmails() {
   const selected = cpPartners.filter(p => cpSelectedIds.has(p.id));
+  const routes = cpGetRoutes().filter(r => r.pol && r.pod);
+  const equip = document.getElementById('cp-equip').value;
+  const commodity = document.getElementById('cp-commodity').value;
   const subject = document.getElementById('cp-subject').value.trim();
   const body = document.getElementById('cp-email-body').value.trim();
   if (!subject || !body) { alert('Subject and email body are required.'); return; }
 
   const btn = document.getElementById('cp-btn-next');
   btn.textContent = 'Sending…'; btn.disabled = true;
-
   const resultEl = document.getElementById('cp-send-result');
   resultEl.style.display = 'none';
 
   try {
-    const r = await fetch('/api/gmail/send-outreach', {
+    // Send emails
+    const sendRes = await fetch('/api/gmail/send-outreach', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ recipients: selected.map(p => ({ name: p.name, email: p.email })), subject, body }),
+    });
+    const sendData = await sendRes.json();
+    const allOk = sendData.results?.every(x => x.ok);
+    const sent = sendData.results?.filter(x => x.ok).length ?? 0;
+    const failed = sendData.results?.filter(x => !x.ok) ?? [];
+
+    // Save to outreach history regardless of partial failure
+    const fullRoutes = routes.map(r => ({ pol: r.pol, pod: r.pod, equip, commodity }));
+    await fetch('/api/partner-outreach', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        recipients: selected.map(p => ({ name: p.name, email: p.email })),
-        subject,
-        body,
+        partnerIds: selected.map(p => p.id),
+        partnerNames: selected.map(p => p.name),
+        partnerEmails: selected.map(p => p.email),
+        routes: fullRoutes, subject, body,
       }),
-    });
-    const data = await r.json();
-    const allOk = data.results?.every(x => x.ok);
-    const sent = data.results?.filter(x => x.ok).length ?? 0;
-    const failed = data.results?.filter(x => !x.ok) ?? [];
+    }).catch(() => {});
 
     if (allOk) {
       resultEl.className = 'cp-send-result ok';
-      resultEl.innerHTML = `✓ Rate request sent to ${sent} partner${sent!==1?'s':''}! They will reply to sales@oneport365.com. Rates received will be added to the database.`;
+      resultEl.innerHTML = `✓ Rate request sent to ${sent} partner${sent!==1?'s':''}! Recorded in outreach history. Partners will reply to your Gmail.`;
     } else {
       resultEl.className = 'cp-send-result err';
-      const failList = failed.map(f => f.email).join(', ');
-      resultEl.innerHTML = `⚠ Sent to ${sent} partner${sent!==1?'s':''}. Failed for: ${failList}`;
+      resultEl.innerHTML = `⚠ Sent to ${sent} partner${sent!==1?'s':''}. Failed for: ${failed.map(f=>f.email).join(', ')}`;
     }
     resultEl.style.display = 'flex';
     btn.textContent = 'Done ✓';
@@ -1399,6 +1564,95 @@ async function cpSendEmails() {
     btn.textContent = '✉ Send Email';
     btn.disabled = false;
   }
+}
+
+// ── OUTREACH HISTORY ─────────────────────────────────────────────────────────
+async function openOutreachHistory() {
+  document.getElementById('cp-hist-modal').style.display = 'flex';
+  document.getElementById('cp-hist-body').innerHTML = '<div style="text-align:center;padding:32px;color:var(--text3)">Loading…</div>';
+  try {
+    const r = await fetch('/api/partner-outreach');
+    const rows = r.ok ? await r.json() : [];
+    renderOutreachHistory(rows);
+  } catch {
+    document.getElementById('cp-hist-body').innerHTML = '<div style="padding:24px;color:var(--danger)">Failed to load history.</div>';
+  }
+}
+
+function renderOutreachHistory(rows) {
+  const body = document.getElementById('cp-hist-body');
+  if (!rows.length) {
+    body.innerHTML = `<div style="text-align:center;padding:40px">
+      <div style="font-size:32px;margin-bottom:10px">📭</div>
+      <div style="font-size:13px;font-weight:600;color:var(--text2)">No outreach sent yet</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:4px">Use "Contact Partner" to send your first rate request</div>
+    </div>`;
+    return;
+  }
+  const statusLabel = { sent: '📤 Sent', responded: '✅ Responded', closed: '🔒 Closed' };
+  body.innerHTML = rows.map(row => {
+    const routes = (row.routes || []).map(rt => `${rt.pol}→${rt.pod}`).join(', ');
+    const partners = (row.partnerNames || []).join(', ');
+    const sentAt = new Date(row.sentAt).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
+    const status = row.status || 'sent';
+    return `<div class="cp-hist-row" id="cph-${row.id}">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex-wrap:wrap">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:2px">${esc(row.subject)}</div>
+          <div style="font-size:10px;color:var(--text3)">📅 ${sentAt} · To: ${esc(partners)}</div>
+          <div style="font-size:10px;color:var(--accent-dark);margin-top:2px">🛳 Routes: ${esc(routes)}</div>
+        </div>
+        <span class="cp-hist-status ${status}">${statusLabel[status] || status}</span>
+      </div>
+      ${row.responseNotes ? `<div style="font-size:10px;font-style:italic;color:var(--text3);background:#f8faf8;border-radius:6px;padding:5px 8px">💬 ${esc(row.responseNotes)}</div>` : ''}
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+        ${status !== 'responded' ? `<button class="btn" style="font-size:10px;padding:2px 10px;border-color:#86efac;color:#166534" onclick="cpMarkStatus(${row.id},'responded')">✅ Mark Responded</button>` : ''}
+        ${status !== 'closed' ? `<button class="btn" style="font-size:10px;padding:2px 10px" onclick="cpMarkStatus(${row.id},'closed')">🔒 Close</button>` : ''}
+        <button class="btn" style="font-size:10px;padding:2px 10px" onclick="cpToggleNotes(${row.id},'${esc(row.responseNotes||'')}')">💬 ${row.responseNotes ? 'Edit Notes' : 'Add Notes'}</button>
+      </div>
+      <div id="cphn-${row.id}" style="display:none;flex-direction:column;gap:6px">
+        <textarea class="cp-hist-notes" id="cpht-${row.id}" placeholder="Enter response notes, rates received, follow-up actions…">${esc(row.responseNotes||'')}</textarea>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-primary" style="font-size:10px;padding:3px 12px" onclick="cpSaveNotes(${row.id})">Save Notes</button>
+          <button class="btn" style="font-size:10px;padding:3px 12px" onclick="cpToggleNotes(${row.id})">Cancel</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function cpToggleNotes(id, current) {
+  const el = document.getElementById('cphn-' + id);
+  if (!el) return;
+  const isOpen = el.style.display !== 'none';
+  el.style.display = isOpen ? 'none' : 'flex';
+  if (!isOpen && current !== undefined) {
+    const ta = document.getElementById('cpht-' + id);
+    if (ta) ta.value = current;
+  }
+}
+
+async function cpSaveNotes(id) {
+  const notes = document.getElementById('cpht-' + id)?.value || '';
+  try {
+    await fetch(`/api/partner-outreach/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ responseNotes: notes }),
+    });
+    openOutreachHistory();
+  } catch { alert('Failed to save notes.'); }
+}
+
+async function cpMarkStatus(id, status) {
+  try {
+    await fetch(`/api/partner-outreach/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status }),
+    });
+    openOutreachHistory();
+  } catch { alert('Failed to update status.'); }
 }
 </script>
 </body>
