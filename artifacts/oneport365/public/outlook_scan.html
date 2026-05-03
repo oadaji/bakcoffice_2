@@ -112,6 +112,30 @@ html,body{height:100%;background:#f0f4f0;color:#1a1a1a;font-family:'Inter',sans-
 .ep-draft{font-size:10px;color:var(--text2);line-height:1.7;white-space:pre-wrap;font-family:monospace}
 .ep-timer{font-size:10px;color:var(--warn);background:#fffbeb;padding:2px 7px;border-radius:4px;font-weight:500}
 .ep-timer.sent{color:#166534;background:#dcfce7}
+/* THREAD BRIEF / SUMMARY TAB */
+.ep-tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--surface)}
+.ep-tab{flex:1;height:30px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;transition:all .12s;gap:4px}
+.ep-tab:hover{color:var(--text2);background:#f8faf8}
+.ep-tab.active{color:var(--accent-dark);border-bottom-color:var(--accent);font-weight:600}
+.sum-body{flex:1;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:10px;min-height:0}
+.sum-body::-webkit-scrollbar{width:3px}
+.sum-body::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+.sum-ai-badge{display:flex;align-items:center;gap:5px;font-size:9px;font-weight:600;color:var(--accent-dark);text-transform:uppercase;letter-spacing:.06em;opacity:.7}
+.sum-ai-icon{width:14px;height:14px;border-radius:3px;background:linear-gradient(135deg,var(--accent),var(--accent-dark));display:flex;align-items:center;justify-content:center;font-size:8px;color:#fff;flex-shrink:0}
+.sum-overview{font-size:11.5px;color:var(--text2);line-height:1.75;padding:10px 11px;background:#f8faf8;border:1px solid var(--border);border-radius:8px}
+.sum-lbl{font-size:9px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-top:2px}
+.sum-chips{display:flex;gap:4px;flex-wrap:wrap}
+.sum-chip{font-size:10px;padding:2px 8px;border-radius:10px;background:#e8f5e0;color:var(--accent-dark);font-weight:500;white-space:nowrap}
+.sum-chip.warn{background:#fef3c7;color:#92400e}
+.sum-chip.info{background:#dbeafe;color:#1e40af}
+.sum-chip.gray{background:#f3f4f6;color:#4b5563}
+.sum-points{display:flex;flex-direction:column;gap:0;background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.sum-point{display:flex;gap:8px;font-size:11px;color:var(--text2);line-height:1.55;padding:7px 10px;border-bottom:1px solid var(--border)}
+.sum-point:last-child{border-bottom:none}
+.sum-dot{width:5px;height:5px;border-radius:50%;background:var(--accent);flex-shrink:0;margin-top:5px}
+.sum-next{background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 11px}
+.sum-next-lbl{font-size:9px;font-weight:600;color:#92400e;text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px;display:flex;align-items:center;gap:4px}
+.sum-next-text{font-size:11px;color:#78350f;line-height:1.65}
 
 /* SCREENS 2 + 3 */
 #s2{flex-direction:column;overflow-y:auto;background:var(--bg);justify-content:flex-start;align-items:stretch}
@@ -401,10 +425,14 @@ tr.trow.sel td{background:#eef6e6}
       <!-- COL 3: EXTRACTION PANEL -->
       <div class="col-extract">
         <div class="ep-hd">
-          <span class="ep-title">Extracted Details</span>
+          <span class="ep-title" id="ep-title-label">Extracted Details</span>
           <span class="ep-rfqnum" id="ep-num">RFQ-2604-0040</span>
         </div>
-        <div class="ep-body">
+        <div class="ep-tabs">
+          <div id="ep-tab-extract" class="ep-tab active" onclick="showEpTab('extract')">Extracted</div>
+          <div id="ep-tab-summary" class="ep-tab" onclick="showEpTab('summary')">✦ Brief</div>
+        </div>
+        <div class="ep-body" id="ep-body">
           <div id="ep-fields"></div>
           <div id="ep-missing-wrap">
             <span class="ep-section-lbl missing-lbl">Missing Info</span>
@@ -423,6 +451,7 @@ tr.trow.sel td{background:#eef6e6}
           </div>
           <div id="ep-actions-wrap" style="margin-top:12px"></div>
         </div>
+        <div id="ep-summary-body" class="sum-body" style="display:none"></div>
       </div>
 
         </div><!-- end email sub-panel -->
@@ -2816,7 +2845,19 @@ const extractions = [
       {k:'Quantity',v:'not specified',ok:false},
     ],
     missing:['Incoterm — FOB, EXW or CIF?','Number of 40FT containers needed'],
-    draft:`Dear Grace,\n\nThank you for your enquiry.\nTo prepare rates for all three\ndestinations we need:\n\n· Incoterm — FOB, EXW or CIF?\n· Number of 40FT containers\n\nPlease reply and we will revert\nwith rates shortly.\n\nBest regards,\nCommercial Team · OnePort 365` },
+    draft:`Dear Grace,\n\nThank you for your enquiry.\nTo prepare rates for all three\ndestinations we need:\n\n· Incoterm — FOB, EXW or CIF?\n· Number of 40FT containers\n\nPlease reply and we will revert\nwith rates shortly.\n\nBest regards,\nCommercial Team · OnePort 365`,
+    summary:{
+      overview:'First-contact enquiry from an agricultural exporter requesting rates for PKC (Palm Kernel Cake) export from Lagos to three European destinations.',
+      chips:[{l:'Customer RFQ'},{l:'3 destinations',t:'info'},{l:'Missing info',t:'warn'}],
+      points:[
+        'PKC is a bulk agricultural commodity — GC, no hazmat complications',
+        'Three separate PODs (Catania, Milazzo, Aarhus) will need three individual rate quotes',
+        'Bioscape Commodities Africa Ltd is an established Lagos-based exporter',
+        'Grace is the shipper — direct contact, professional tone',
+        'Incoterm and container count are missing — auto-follow-up queued to send',
+      ],
+      next:'Follow-up queued (3 min). Once incoterm + qty confirmed, route to pricing.'
+    }},
 
   // 1 - Demir Güzel / Sarten - Customer RFQ (complete)
   { num:'RFQ-2604-0038', type:'customer-rfq',
@@ -2832,7 +2873,19 @@ const extractions = [
       {k:'Quantity',v:'1–2 × 20FT monthly',ok:true},
     ],
     missing:[],
-    draft:null },
+    draft:null,
+    summary:{
+      overview:'Referred enquiry from a major Turkish industrial packaging manufacturer. Well-structured DDP request with all details present. Strong recurring account potential.',
+      chips:[{l:'Customer RFQ'},{l:'DDP service',t:'info'},{l:'All info present'}],
+      points:[
+        'Sarten Packaging is a large Turkish manufacturer — referred by Mitsui partners (in CC)',
+        'DDP delivery to Ikeja, Lagos — Nigeria customs clearance is a core requirement',
+        'Volume: 1–2 × 20FT per month — could become a high-value recurring account',
+        'Aerosol cans (HS 73102191) — GC, no DG classification needed',
+        'All shipment fields complete — no follow-up needed, ready to price',
+      ],
+      next:'All details present. Proceed to DDP all-in rate sourcing immediately.'
+    }},
 
   // 2 - Kayode / Eat n Go - Internal RFQ
   { num:'RFQ-2604-0039', type:'internal-rfq',
@@ -2847,7 +2900,19 @@ const extractions = [
       {k:'Incoterm',v:'D2D (door to door)',ok:true},
     ],
     missing:['POD — destination port or address','Commodity type','Cargo class (GC or DG?)'],
-    draft:`Dear Kayode,\n\nTo complete the D2D quote for\nEat n Go we need:\n\n· POD — delivery address in Nigeria\n· Commodity / cargo description\n· Cargo class — GC or DG?\n\nPlease confirm so we can proceed.\n\nThanks,\nCommercial Team · OnePort 365` },
+    draft:`Dear Kayode,\n\nTo complete the D2D quote for\nEat n Go we need:\n\n· POD — delivery address in Nigeria\n· Commodity / cargo description\n· Cargo class — GC or DG?\n\nPlease confirm so we can proceed.\n\nThanks,\nCommercial Team · OnePort 365`,
+    summary:{
+      overview:'Internal staff request from Kayode Akintade on behalf of Eat n Go. Full cargo details are in an attached PDF — the email body has limited information.',
+      chips:[{l:'Internal RFQ',t:'warn'},{l:'Attachment needed',t:'warn'}],
+      points:[
+        'Requested by Senior Strategic Partnership Lead — priority internal request',
+        'Hamburg (DEHAM) confirmed as POL, D2D door-to-door service requested',
+        'POD, commodity, and cargo class are only in the attached PDF (not parsed)',
+        '40FT × 1 container type confirmed in the email body',
+        'Contact Kayode directly or parse the attachment to complete the record',
+      ],
+      next:'Open attachment Eat_n_Go_shipment_details.pdf to extract missing fields.'
+    }},
 
   // 3 - May Zhao / OceanFavor - Rate reply
   { num:'RFQ-2603-0021', type:'rate-reply',
@@ -2860,7 +2925,19 @@ const extractions = [
       {k:'Status',v:'Rates received — review attachment',ok:true},
     ],
     missing:[],
-    draft:null },
+    draft:null,
+    summary:{
+      overview:'Rate reply from OceanFavor International for the Arc Ride shipment RFQ. All-in quotation attached including local charges, haulage, and telex release fee.',
+      chips:[{l:'Rate reply',t:'info'},{l:'Attachment'},{l:'All-in pricing'}],
+      points:[
+        'OceanFavor International is a regular partner — May Zhao handles overseas operations',
+        'Quotation covers local charges + haulage + telex release (comprehensive all-in)',
+        'Original request was sent by Daniel Willoughby (Danielw@oneport365.com)',
+        'Reply from overseas@oceanfavor.com — standard OceanFavor contact channel',
+        'Attachment must be opened to extract the actual rate figures for logging',
+      ],
+      next:'Open attachment, extract rate figures, and log against Arc Ride RFQ in Deals.'
+    }},
 
   // 4 - Summer Mo / Jaylead - Rate reply
   { num:'RFQ-2603-0018', type:'rate-reply',
@@ -2874,7 +2951,19 @@ const extractions = [
       {k:'Rates',v:'Approximate — no booking confirmed',ok:false},
     ],
     missing:['MSDS certificate — 2026 version required before booking'],
-    draft:null },
+    draft:null,
+    summary:{
+      overview:'Partial rate reply from Jaylead Logistics for China-to-Africa freight. EXW pricing with approximate rates — not confirmed. Critical blocker: MSDS certificate expired.',
+      chips:[{l:'Rate reply',t:'info'},{l:'MSDS expired',t:'warn'},{l:'Approx rates',t:'warn'}],
+      points:[
+        'Jaylead Logistics (Summer Mo) quoting EXW — customer must arrange origin charges',
+        'Rates are approximate — Jaylead has no confirmed container booking yet',
+        'B/L Telex release: USD 65 | Overweight: +USD 10 per 1,000kg above 20T',
+        '⚠ MSDS certificate expired December 2025 — 2026 version required before booking',
+        'Summer notes thin profit margins — limited room for further negotiation',
+      ],
+      next:'Request 2026 MSDS cert from the shipper before confirming booking with Jaylead.'
+    }},
 
   // 5 - Chinedu - Titan Cargo - Outbound sent
   { num:'RFQ-2604-0035', type:'outbound',
@@ -2888,7 +2977,19 @@ const extractions = [
       {k:'Awaiting',v:'Titan confirmation on DG cargo',ok:false},
     ],
     missing:['Titan Cargo to confirm if DG cargo accepted at these rates'],
-    draft:null },
+    draft:null,
+    summary:{
+      overview:'Outbound email sent by Chinedu to Titan Cargo (Antwerp) with target pricing for Belgium → Apapa. The thread began with Titan asking about DG cargo classification.',
+      chips:[{l:'Outbound sent',t:'gray'},{l:'Awaiting reply',t:'warn'}],
+      points:[
+        'Chinedu Enworom (Senior Pricing) is managing this partner negotiation',
+        'Target rates: €3,050 (20FT) and €3,350 (40FT) — all-in EXW',
+        'Kristof Jansen had asked about IMO class and UN number — DG classification query',
+        'Chinedu confirmed cargo is GC (harmless) in this reply',
+        'Titan Cargo is a key Antwerp partner — handles Belgium/EU-origin shipments',
+      ],
+      next:'Follow up with Titan if no reply in 24h. Awaiting DG cargo acceptance confirmation.'
+    }},
 
   // 6 - Royal Foam / Emeka Eze - DG chemicals (complete)
   { num:'RFQ-2604-0036', type:'customer-rfq',
@@ -2904,7 +3005,20 @@ const extractions = [
       {k:'Ready date',v:'28 April 2026',ok:true},
     ],
     missing:[],
-    draft:null },
+    draft:null,
+    summary:{
+      overview:'Large-volume DG chemical import from Royal Foam Nigeria. 9 × 20FT of Class 6.1 foam raw materials from Qingdao to Apapa. Supplier ready to load 28 April — urgent.',
+      chips:[{l:'Customer RFQ'},{l:'DG Class 6.1',t:'warn'},{l:'9 × 20FT',t:'info'}],
+      points:[
+        'Royal Foam Nigeria is an established foam mattress manufacturer — industrial importer',
+        'Supplier: Yiwu Fuyang Chemical Co Ltd, Qingdao (CNTAO)',
+        'Class 6.1 DG cargo — not all carriers accept; carrier selection is critical',
+        'MSDS and full DG documentation available from previous shipments',
+        'Daylight Shipping is the Nigeria-side customs clearing agent',
+        'CIF incoterm — OnePort handles all freight from origin port to Apapa',
+      ],
+      next:'Identify DG-approved carriers for Qingdao → Apapa. 9 × 20FT is a significant revenue deal.'
+    }},
 
   // 7 - Tunde Fashola / Dankuru - ceramic tiles (info needed)
   { num:'RFQ-2604-0035', type:'customer-rfq',
@@ -2920,7 +3034,20 @@ const extractions = [
       {k:'Loading port',v:'Foshan — confirm Guangzhou or Nansha',ok:false},
     ],
     missing:['Exact container quantity — 1 or 2 × 40FT?','Confirm incoterm — FOB, EXW or CIF?','Nearest loading port to Foshan factory'],
-    draft:`Dear Tunde,\n\nThank you for your enquiry.\nTo prepare your quote we need:\n\n· How many 40FT containers?\n· Incoterm — FOB, EXW or CIF?\n· Loading port — Guangzhou (CNCAN)\n  or Nansha (CNNSN)?\n\nPlease reply and we will come\nback with rates.\n\nBest regards,\nCommercial Team · OnePort 365` },
+    draft:`Dear Tunde,\n\nThank you for your enquiry.\nTo prepare your quote we need:\n\n· How many 40FT containers?\n· Incoterm — FOB, EXW or CIF?\n· Loading port — Guangzhou (CNCAN)\n  or Nansha (CNNSN)?\n\nPlease reply and we will come\nback with rates.\n\nBest regards,\nCommercial Team · OnePort 365`,
+    summary:{
+      overview:'Multi-forwarded email from a first-time shipper importing ceramic tiles from Foshan to Lagos Island. Customer is unfamiliar with freight — approach with care and simple language.',
+      chips:[{l:'Customer RFQ'},{l:'First-time shipper',t:'warn'},{l:'Forwarded ×2',t:'gray'}],
+      points:[
+        'Email forwarded at least twice before reaching OnePort — came through an intermediary',
+        'Tunde wants to import ~18,000 ceramic tiles ("2 trucks worth") from his supplier',
+        'Factory in Foshan, Guangdong — nearest ports are Guangzhou (CNCAN) or Nansha (CNNSN)',
+        'He mentions FOB but says he doesn\'t fully understand it — education needed',
+        'Volume may need 1 or 2 × 40FT — must confirm before quoting',
+        'Delivery to Lagos Island warehouse — inland trucking may be needed',
+      ],
+      next:'Reply in plain language. Confirm container count, incoterm, and Foshan loading port.'
+    }},
 
   // 8 - Chinwe Obi - cold informal enquiry (info needed)
   { num:'RFQ-2604-0034', type:'customer-rfq',
@@ -2936,7 +3063,20 @@ const extractions = [
       {k:'Volume',v:'not specified — "bags of goods"',ok:false},
     ],
     missing:['Approx volume or weight (CBM or kg)','Pickup address in London','Service type — LCL or groupage?'],
-    draft:`Dear Chinwe,\n\nThank you for reaching out!\nTo give you an accurate price:\n\n· Approx volume or weight of goods\n  (cubic metres or kg)\n· Your collection address in London\n\nWe will guide you through the\nfull process from pickup to\ndelivery at Alaba market.\n\nBest regards,\nCommercial Team · OnePort 365` },
+    draft:`Dear Chinwe,\n\nThank you for reaching out!\nTo give you an accurate price:\n\n· Approx volume or weight of goods\n  (cubic metres or kg)\n· Your collection address in London\n\nWe will guide you through the\nfull process from pickup to\ndelivery at Alaba market.\n\nBest regards,\nCommercial Team · OnePort 365`,
+    summary:{
+      overview:'Cold lead from word-of-mouth referral. First-time exporter shipping secondhand clothes and shoes from London to Alaba Market, Lagos. Very informal — a phone call may be more effective.',
+      chips:[{l:'Customer RFQ'},{l:'LCL likely',t:'gray'},{l:'Phone lead',t:'info'}],
+      points:[
+        'Referred by Adaeze Nwosu — an existing happy customer, strong trust signal',
+        'Goods: secondhand children\'s clothes and shoes from UK charity shops',
+        'Destination: Alaba International Market, Lagos — popular secondhand goods hub',
+        'Volume completely unknown — described as "a lot of bags"',
+        'LCL or groupage service most likely appropriate for this shipment size',
+        'UK phone number provided: +447823109456 — a call may close faster than email',
+      ],
+      next:'Send warm, jargon-free email or call directly. Ask for approx volume and London pickup address.'
+    }},
 
   // 9 - Adaeze Nwosu - sesame seeds export (complete)
   { num:'RFQ-2604-0033', type:'customer-rfq',
@@ -2952,7 +3092,20 @@ const extractions = [
       {k:'Ready date',v:'First week of May 2026',ok:true},
     ],
     missing:[],
-    draft:null },
+    draft:null,
+    summary:{
+      overview:'Clean, professional export RFQ from an experienced Kano-based agro exporter. Sesame seeds to Rotterdam — quarterly shipper with strong repeat potential. All info present.',
+      chips:[{l:'Customer RFQ'},{l:'All info present'},{l:'Repeat potential',t:'info'}],
+      points:[
+        'Nwosu Agro Commodities ships sesame seeds quarterly — high lifetime value account',
+        '4 × 20FT from Apapa (NGAPP) to Rotterdam (NLRTM) — well-serviced trade lane',
+        'FOB incoterm — customer handles origin charges, OnePort handles ocean freight',
+        'HS code 12074010 provided — food grade, non-hazardous, no special docs needed',
+        'Cargo ready first week of May 2026 — tight deadline, act quickly',
+        'Customer hinted at a long-term contract if rates are competitive',
+      ],
+      next:'All fields complete. Get Apapa → Rotterdam 20FT FOB rates immediately.'
+    }},
 
   // 10 - Moses Dafiaghor / Saro Agro - Ningbo import (complete)
   { num:'RFQ-2604-0032', type:'customer-rfq',
@@ -2968,7 +3121,20 @@ const extractions = [
       {k:'Note',v:'Repeat shipment — previous OnePort customer',ok:true},
     ],
     missing:[],
-    draft:null },
+    draft:null,
+    summary:{
+      overview:'Repeat OnePort customer placing a straightforward agrochemical import from Ningbo to Apapa. Single 20FT, all details provided. Customer knows the process — move fast.',
+      chips:[{l:'Customer RFQ'},{l:'Repeat customer',t:'info'},{l:'All info present'}],
+      points:[
+        'Saro Agro Sciences has shipped with OnePort before on this exact route',
+        'Agrochemical products in small packings (net weight ≤300g per unit)',
+        '20FT × 1 from Ningbo (CNNGB) to Apapa (NGAPP) — high-frequency trade lane',
+        'FOB origin — customer arranges China-side loading, OnePort handles ocean leg',
+        'Customer is specifically asking about free days at Apapa and local charges',
+        'GC cargo, no DG — straightforward booking with no special cert requirements',
+      ],
+      next:'Quote quickly — repeat customer. Include transit time, free days, and Apapa local charges.'
+    }},
 ];
 
 let epTimerInterval = null;
@@ -3078,6 +3244,61 @@ function renderExtraction(i) {
   } else {
     aw.innerHTML = `<button class="btn btn-sm" style="width:100%;color:var(--text3)" disabled>Complete info to get rates</button>`;
   }
+
+  // Render summary data and reset to Extracted tab
+  renderSummary(i);
+  showEpTab('extract');
+}
+
+function showEpTab(tab) {
+  const body = document.getElementById('ep-body');
+  const sumBody = document.getElementById('ep-summary-body');
+  const tabExtract = document.getElementById('ep-tab-extract');
+  const tabSummary = document.getElementById('ep-tab-summary');
+  if (!body || !sumBody || !tabExtract || !tabSummary) return;
+  if (tab === 'summary') {
+    body.style.display = 'none';
+    sumBody.style.display = 'flex';
+    tabExtract.classList.remove('active');
+    tabSummary.classList.add('active');
+  } else {
+    body.style.display = '';
+    sumBody.style.display = 'none';
+    tabExtract.classList.add('active');
+    tabSummary.classList.remove('active');
+  }
+}
+
+function renderSummary(i) {
+  const sumEl = document.getElementById('ep-summary-body');
+  if (!sumEl) return;
+  const ex = extractions[i];
+  if (!ex || !ex.summary) {
+    sumEl.innerHTML = `<div style="font-size:11px;color:var(--text3);text-align:center;padding:24px 0">No summary available</div>`;
+    return;
+  }
+  const s = ex.summary;
+  const chipsHtml = (s.chips || []).map(c =>
+    `<span class="sum-chip${c.t ? ' ' + c.t : ''}">${c.l}</span>`
+  ).join('');
+  const pointsHtml = (s.points || []).map(p =>
+    `<div class="sum-point"><div class="sum-dot"></div><div>${p}</div></div>`
+  ).join('');
+
+  sumEl.innerHTML = `
+    <div class="sum-ai-badge">
+      <div class="sum-ai-icon">✦</div>
+      Thread Brief
+    </div>
+    <div class="sum-overview">${s.overview}</div>
+    ${chipsHtml ? `<div class="sum-chips">${chipsHtml}</div>` : ''}
+    <div class="sum-lbl">Key points</div>
+    <div class="sum-points">${pointsHtml}</div>
+    ${s.next ? `<div class="sum-next">
+      <div class="sum-next-lbl">→ Next step</div>
+      <div class="sum-next-text">${s.next}</div>
+    </div>` : ''}
+  `;
 }
 
 function startEpTimer() {
