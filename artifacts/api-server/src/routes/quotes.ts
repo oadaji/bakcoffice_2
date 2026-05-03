@@ -18,8 +18,62 @@ function fieldVal(fields: unknown[], key: string): string {
   return (f as any)?.v ?? "";
 }
 
+// Extract a 5-letter IATA/LOCODE port code from a raw field value.
+// Handles: "Apapa (NGAPP)", "London, UK", "Lagos, Nigeria", plain codes, etc.
+function extractPortCode(raw: string): string {
+  if (!raw) return "";
+  // Prefer an explicit 5-letter uppercase code inside parentheses
+  const parenCode = raw.match(/\(([A-Za-z]{5})\)/);
+  if (parenCode) return parenCode[1].toUpperCase();
+  // Or a standalone 5-letter code word
+  const standalone = raw.match(/\b([A-Z]{5})\b/);
+  if (standalone) return standalone[1];
+  // City / country name → port code mapping
+  const MAP: Record<string, string> = {
+    "london": "GBFXT", "felixstowe": "GBFXT", "southampton": "GBSOU",
+    "apapa": "NGAPP", "lagos": "NGAPP", "tin can": "NGTCN", "onne": "NGONE",
+    "calabar": "NGCBQ", "warri": "NGWAR",
+    "rotterdam": "NLRTM", "hamburg": "DEHAM", "gdansk": "PLGDN",
+    "antwerp": "BEANR", "barcelona": "ESBCN", "catania": "ITCTG",
+    "milan": "ITMIL", "aarhus": "DKAAR",
+    "shanghai": "CNSHA", "ningbo": "CNNGB", "qingdao": "CNTAO",
+    "foshan": "CNSHA", "guangzhou": "CNSHA", "shenzhen": "CNSHA",
+    "china": "CNSHA",
+    "singapore": "SGSIN",
+    "dubai": "AEJEA", "jebel ali": "AEJEA", "sharjah": "AEJEA",
+    "istanbul": "TRIST", "ambarlı": "TRIST", "ambarli": "TRIST",
+    "new york": "USNYC", "los angeles": "USLA", "long beach": "USLA",
+    "san francisco": "USOAL", "oakland": "USOAL",
+    "tokyo": "JPTYO", "yokohama": "JPYOK",
+    "busan": "KRPUS",
+    "kaohsiung": "TWKHH", "taiwan": "TWKHH",
+    "mumbai": "INNSZ", "nhava sheva": "INNSZ", "india": "INNSZ",
+    "mombasa": "KEMBA", "kenya": "KEMBA",
+    "dar es salaam": "TZDAR", "tanzania": "TZDAR",
+    "vietnam": "VNHCM", "ho chi minh": "VNHCM",
+    "toronto": "CAYTO", "canada": "CAYTO",
+    "uk": "GBFXT", "germany": "DEHAM", "netherlands": "NLRTM",
+    "nigeria": "NGAPP", "south korea": "KRPUS", "korea": "KRPUS",
+    "japan": "JPYOK", "usa": "USNYC", "uae": "AEJEA",
+  };
+  const lower = raw.toLowerCase();
+  for (const [name, code] of Object.entries(MAP)) {
+    if (lower.includes(name)) return code;
+  }
+  return raw.toUpperCase().slice(0, 5);
+}
+
 function isNigeriaPort(code: string): boolean {
   return code?.startsWith("NG") ?? false;
+}
+
+// Also check the raw field text for Nigeria destination indicators
+function isNigeriaDestinationRaw(raw: string): boolean {
+  if (!raw) return false;
+  const lower = raw.toLowerCase();
+  return lower.includes("nigeria") || lower.includes("lagos") || lower.includes("apapa")
+    || lower.includes("onne") || lower.includes("tin can") || lower.includes("alaba")
+    || lower.includes("ngapp") || lower.includes("ngone") || lower.includes("ngtcn");
 }
 
 // GET /quotes
@@ -48,8 +102,10 @@ router.post("/quotes/generate", async (req, res) => {
 
     const fields: any[] = Array.isArray(rfq.fields) ? rfq.fields : [];
 
-    const polCode = fieldVal(fields, "POL") || fieldVal(fields, "origin port");
-    const podCode = fieldVal(fields, "POD") || fieldVal(fields, "destination port");
+    const rawPol = fieldVal(fields, "POL") || fieldVal(fields, "origin port");
+    const rawPod = fieldVal(fields, "POD") || fieldVal(fields, "destination port");
+    const polCode = extractPortCode(rawPol);
+    const podCode = extractPortCode(rawPod);
     const commodity = fieldVal(fields, "commodity") || fieldVal(fields, "cargo");
     const rawContainer = fieldVal(fields, "container") || fieldVal(fields, "equipment");
     const qtyStr = fieldVal(fields, "quantity") || fieldVal(fields, "qty") || "1";
@@ -62,45 +118,73 @@ router.post("/quotes/generate", async (req, res) => {
       : rawContainer.toUpperCase().includes("40") ? "40FT" : "20FT";
     const containerQty = Math.max(1, parseInt(qtyStr) || 1);
 
-    // 2. Determine shipment direction
-    const isImportToNigeria = isNigeriaPort(podCode);
-    const isExportFromNigeria = isNigeriaPort(polCode);
+    // 2. Determine shipment direction (check both extracted code AND raw text)
+    const isImportToNigeria = isNigeriaPort(podCode) || isNigeriaDestinationRaw(rawPod);
+    const isExportFromNigeria = isNigeriaPort(polCode) || isNigeriaDestinationRaw(rawPol);
     const shipmentDir = isImportToNigeria ? "import" : isExportFromNigeria ? "export" : "both";
 
-    // 3. Fetch matching ocean freight rates (POL/POD match with fuzzy)
+    // 3. Fetch matching ocean freight rates — try exact code match, then country-prefix, then all
     const allOcean = await db.select().from(oceanFreightRates)
       .where(and(eq(oceanFreightRates.archived, false)));
-    const polUpper = polCode.toUpperCase().slice(0, 5);
-    const podUpper = podCode.toUpperCase().slice(0, 5);
-    const matchedOcean = allOcean.filter(r => {
-      const polMatch = r.polCode?.toUpperCase().includes(polUpper) || polUpper.includes(r.polCode?.toUpperCase().slice(0, 3));
-      const podMatch = r.podCode?.toUpperCase().includes(podUpper) || podUpper.includes(r.podCode?.toUpperCase().slice(0, 3));
-      return polMatch && podMatch;
-    });
-    // Fallback: partial match on first 3 chars
-    const oceanPool = matchedOcean.length > 0 ? matchedOcean : allOcean.filter(r => {
-      return r.polCode?.toUpperCase().startsWith(polUpper.slice(0, 2))
-        || r.podCode?.toUpperCase().startsWith(podUpper.slice(0, 2));
-    }).slice(0, 10);
+
+    // Exact 5-letter code match (best)
+    let oceanPool = allOcean.filter(r =>
+      r.polCode?.toUpperCase() === polCode && r.podCode?.toUpperCase() === podCode
+    );
+    // Country-prefix match (first 2 chars = country code): GBFXT → GB*, NGAPP → NG*
+    if (oceanPool.length === 0) {
+      const polPfx = polCode.slice(0, 2);
+      const podPfx = podCode.slice(0, 2);
+      oceanPool = allOcean.filter(r =>
+        r.polCode?.toUpperCase().startsWith(polPfx) && r.podCode?.toUpperCase().startsWith(podPfx)
+      );
+    }
+    // Wide fallback: match on either end (POD = Nigeria destination, or POL = Nigeria origin)
+    if (oceanPool.length === 0 && isImportToNigeria) {
+      oceanPool = allOcean.filter(r => r.podCode?.toUpperCase().startsWith("NG")).slice(0, 15);
+    } else if (oceanPool.length === 0 && isExportFromNigeria) {
+      oceanPool = allOcean.filter(r => r.polCode?.toUpperCase().startsWith("NG")).slice(0, 15);
+    }
+    // Last resort: send a random sample so Claude can reason
+    if (oceanPool.length === 0) {
+      oceanPool = allOcean.slice(0, 15);
+    }
 
     // 4. Fetch applicable other charges
     const allOther = await db.select().from(otherCharges)
       .where(and(eq(otherCharges.archived, false)));
     const applicableCharges = allOther.filter(c => {
       const sType = c.shipmentType?.toLowerCase();
-      return sType === "both" || sType === shipmentDir || sType === "import" || sType === "export";
+      return sType === "both" || sType === shipmentDir;
     });
 
-    // 5. Fetch haulage rates if applicable
+    // 5. Fetch haulage rates — match by port code, with city-name fallback
     let haulagePool: any[] = [];
     if (isImportToNigeria) {
-      haulagePool = await db.select().from(haulageImportRates)
-        .where(and(eq(haulageImportRates.archived, false),
-          eq(haulageImportRates.portCode, podUpper)));
+      // Try by extracted port code first, then by all Lagos/Apapa port codes
+      const allImport = await db.select().from(haulageImportRates)
+        .where(eq(haulageImportRates.archived, false));
+      const nigeriaPodCode = isNigeriaPort(podCode) ? podCode : "NGAPP";
+      haulagePool = allImport.filter(r => r.portCode === nigeriaPodCode);
+      // Fallback: try matching destination city from the raw POD text
+      if (haulagePool.length === 0) {
+        haulagePool = allImport.filter(r =>
+          rawPod.toLowerCase().includes((r.destCity ?? "").toLowerCase()) ||
+          rawPod.toLowerCase().includes((r.destState ?? "").toLowerCase())
+        ).slice(0, 10);
+      }
+      // Last resort: any Apapa/Lagos import rates
+      if (haulagePool.length === 0) {
+        haulagePool = allImport.filter(r => r.portCode === "NGAPP" || r.portCode === "NGTCN").slice(0, 10);
+      }
     } else if (isExportFromNigeria) {
-      haulagePool = await db.select().from(haulageExportRates)
-        .where(and(eq(haulageExportRates.archived, false),
-          eq(haulageExportRates.portCode, polUpper)));
+      const allExport = await db.select().from(haulageExportRates)
+        .where(eq(haulageExportRates.archived, false));
+      const nigeriaPolCode = isNigeriaPort(polCode) ? polCode : "NGAPP";
+      haulagePool = allExport.filter(r => r.portCode === nigeriaPolCode);
+      if (haulagePool.length === 0) {
+        haulagePool = allExport.filter(r => r.portCode === "NGAPP" || r.portCode === "NGTCN").slice(0, 10);
+      }
     }
 
     // 6. Call Claude to build the quote
@@ -110,8 +194,8 @@ Given the following RFQ and available rates, build a complete freight quote.
 
 RFQ Details:
 - RFQ Ref: ${rfq.ref}
-- POL Code: ${polCode}
-- POD Code: ${podCode}
+- POL (raw): ${rawPol}  →  Extracted Code: ${polCode}
+- POD (raw): ${rawPod}  →  Extracted Code: ${podCode}
 - Commodity: ${commodity || "General Cargo"}
 - Container Type: ${containerType}
 - Container Qty: ${containerQty}
