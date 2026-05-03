@@ -189,6 +189,35 @@ tr.row-expiring-soon td{background:#fffbeb}
 .cp-hist-modal-box{width:760px;max-height:85vh}
 .cp-hist-notes{width:100%;border:1px solid var(--border2);border-radius:6px;padding:6px 10px;font-size:11px;font-family:inherit;resize:vertical;min-height:60px;outline:none;box-sizing:border-box}
 .cp-hist-notes:focus{border-color:var(--accent)}
+
+/* ── MARKET INTEL ─────────────────────────────────────────────────────────── */
+.mp-strip{background:#1a2e1a;border-bottom:1px solid rgba(255,255,255,.08);padding:0 16px;display:flex;align-items:stretch;gap:0;flex-shrink:0;overflow-x:auto;min-height:46px}
+.mp-card{display:flex;align-items:center;gap:10px;padding:0 14px;border-right:1px solid rgba(255,255,255,.08);cursor:default;white-space:nowrap}
+.mp-card:first-child{padding-left:0}
+.mp-lane{font-size:10px;color:rgba(255,255,255,.45);font-weight:500}
+.mp-rate{font-size:13px;font-weight:700;color:#fff;letter-spacing:-.01em}
+.mp-change{font-size:10px;font-weight:600;padding:1px 5px;border-radius:4px}
+.mp-change.up{background:rgba(220,38,38,.2);color:#fca5a5}
+.mp-change.down{background:rgba(34,197,94,.15);color:#86efac}
+.mp-change.flat{background:rgba(255,255,255,.08);color:rgba(255,255,255,.4)}
+.mp-source{font-size:9px;color:rgba(255,255,255,.25);font-style:italic}
+.mp-actions{margin-left:auto;display:flex;align-items:center;gap:8px;padding:0 0 0 14px;flex-shrink:0}
+.mp-empty{display:flex;align-items:center;gap:10px;padding:0 4px;font-size:11px;color:rgba(255,255,255,.35)}
+.mp-btn{font-size:10px;padding:3px 10px;border-radius:5px;border:1px solid rgba(255,255,255,.2);background:transparent;color:rgba(255,255,255,.7);cursor:pointer;white-space:nowrap;font-family:Inter,sans-serif}
+.mp-btn:hover{background:rgba(255,255,255,.1);color:#fff}
+.mp-btn-primary{background:#7AB648;border-color:#7AB648;color:#fff;font-weight:600}
+.mp-btn-primary:hover{background:#6aa33e}
+.mp-spinner{display:inline-block;width:10px;height:10px;border:2px solid rgba(255,255,255,.2);border-top-color:rgba(255,255,255,.7);border-radius:50%;animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.vs-mkt{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:600;padding:2px 6px;border-radius:5px;white-space:nowrap}
+.vs-mkt.above{background:#fee2e2;color:#991b1b}
+.vs-mkt.below{background:#dcfce7;color:#166534}
+.vs-mkt.near{background:#f1f5f9;color:#475569}
+
+/* Benchmark Modal */
+.bm-row{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--border);border-radius:7px;background:#fff}
+.bm-row:hover{border-color:var(--border2);background:#f8faf8}
 </style>
 </head>
 <body>
@@ -234,6 +263,16 @@ tr.row-expiring-soon td{background:#fffbeb}
     <div class="tab-btn" id="tab-other" onclick="switchTab('other')">📋 Other Charges <span class="tab-count" id="cnt-other">0</span></div>
     <div style="margin-left:auto;display:flex;align-items:center">
       <button class="btn" onclick="loadSampleData()" style="font-size:11px;color:var(--text3);border-style:dashed">✦ Load sample data</button>
+    </div>
+  </div>
+
+  <!-- MARKET PULSE STRIP (A + C) -->
+  <div class="mp-strip" id="mp-strip">
+    <div class="mp-empty" id="mp-empty">📡 <span>Market Pulse loading…</span></div>
+    <div class="mp-actions">
+      <span id="mp-updated" style="font-size:9px;color:rgba(255,255,255,.25)"></span>
+      <button class="mp-btn" onclick="openBenchmarkModal()" title="Manage manual benchmarks">⚙ Benchmarks</button>
+      <button class="mp-btn mp-btn-primary" id="mp-scrape-btn" onclick="triggerScrape()">⟳ Scrape Now</button>
     </div>
   </div>
 
@@ -313,9 +352,10 @@ tr.row-expiring-soon td{background:#fffbeb}
               <th onclick="setSortCol('ocean','transitTime')">Transit</th>
               <th onclick="setSortCol('ocean','expiryDate')">Expiry</th>
               <th onclick="setSortCol('ocean','partnerName')">Partner</th>
+              <th>vs Market</th>
               <th></th>
             </tr></thead>
-            <tbody id="tb-ocean"><tr><td colspan="15"><div class="empty-state"><div class="empty-icon">🌊</div><div class="empty-title">No rates yet</div><div class="empty-sub">Add your first ocean freight rate or load sample data above</div></div></td></tr></tbody>
+            <tbody id="tb-ocean"><tr><td colspan="16"><div class="empty-state"><div class="empty-icon">🌊</div><div class="empty-title">No rates yet</div><div class="empty-sub">Add your first ocean freight rate or load sample data above</div></div></td></tr></tbody>
           </table>
         </div>
         <div class="pagination" id="pg-ocean"></div>
@@ -650,6 +690,86 @@ tr.row-expiring-soon td{background:#fffbeb}
   </div>
 </div>
 
+<!-- BENCHMARK MODAL (Option C) -->
+<div class="modal-overlay" id="bm-modal" style="display:none" onclick="if(event.target===this)closeBenchmarkModal()">
+  <div class="modal-box" style="width:700px;max-height:88vh">
+    <div class="modal-hd">
+      <span class="modal-title">📊 Market Benchmarks</span>
+      <button class="modal-close" onclick="closeBenchmarkModal()">✕</button>
+    </div>
+    <div class="modal-body" style="gap:18px">
+      <!-- Existing benchmarks -->
+      <div>
+        <div class="form-section" style="margin-bottom:10px">Saved Benchmarks</div>
+        <div id="bm-list" style="display:flex;flex-direction:column;gap:7px"></div>
+      </div>
+      <!-- Add new -->
+      <div style="border-top:1px solid var(--border);padding-top:14px">
+        <div class="form-section" style="margin-bottom:12px">Add New Benchmark</div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:10px;line-height:1.5">
+          Enter rates from Drewry WCI, Freightos FBX, or any source. Add a West Africa adjustment % on top of the base index rate to get your estimated West Africa rate.
+        </div>
+        <div class="form-grid" style="gap:10px">
+          <div class="form-field span2">
+            <label class="form-label">Lane Name</label>
+            <input class="form-input" id="bm-lane" placeholder="e.g. China → Lagos (via Drewry WCI)">
+          </div>
+          <div class="form-field">
+            <label class="form-label">Origin Region (POL)</label>
+            <select class="form-select" id="bm-pol">
+              <option value="">Select…</option>
+              <option>Far East</option><option>N.Europe</option><option>Med</option>
+              <option>Americas</option><option>Middle East</option><option>South Asia</option><option>Global</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label class="form-label">Dest Region (POD)</label>
+            <select class="form-select" id="bm-pod">
+              <option value="">Select…</option>
+              <option>West Africa</option><option>East Africa</option><option>South Africa</option>
+              <option>N.Europe</option><option>Med</option><option>Far East</option><option>Americas</option><option>Global</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label class="form-label">Equipment</label>
+            <select class="form-select" id="bm-equip">
+              <option value="40ft">40FT</option><option value="20ft">20FT</option><option value="40hc">40HC</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label class="form-label">20FT Rate (USD)</label>
+            <input class="form-input" id="bm-r20" type="number" min="0" placeholder="e.g. 1200">
+          </div>
+          <div class="form-field">
+            <label class="form-label">40FT Rate (USD)</label>
+            <input class="form-input" id="bm-r40" type="number" min="0" placeholder="e.g. 2400">
+          </div>
+          <div class="form-field">
+            <label class="form-label">West Africa Adjustment %</label>
+            <input class="form-input" id="bm-wa" type="number" step="0.5" placeholder="e.g. 15 (adds 15% on top)" title="Adjust the global index up or down to estimate West Africa rates">
+          </div>
+          <div class="form-field">
+            <label class="form-label">Valid From</label>
+            <input class="form-input" id="bm-from" type="date">
+          </div>
+          <div class="form-field">
+            <label class="form-label">Source</label>
+            <input class="form-input" id="bm-source" placeholder="e.g. Drewry WCI, Freightos FBX">
+          </div>
+          <div class="form-field span2">
+            <label class="form-label">Notes</label>
+            <input class="form-input" id="bm-notes" placeholder="Optional notes">
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-ft">
+      <button class="btn" onclick="closeBenchmarkModal()">Close</button>
+      <button class="btn btn-primary" onclick="saveBenchmark()">+ Save Benchmark</button>
+    </div>
+  </div>
+</div>
+
 <!-- BULK BAR -->
 <div class="bulk-bar" id="bulk-bar">
   <span class="bulk-info" id="bulk-info">0 selected</span>
@@ -695,6 +815,8 @@ function showApp() {
       })
       .catch(() => {});
   });
+  // Load market intelligence (Options A, B, C)
+  loadMarketIntel();
 }
 window.onload = () => { if (sessionStorage.getItem(SKEY) === '1') showApp(); else document.getElementById('gate').style.display = 'flex'; };
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
@@ -861,7 +983,7 @@ function renderTable(tab) {
     const acts = `<td><div class="row-actions"><button class="row-btn" onclick="openModal('${tab}',${r.id})" title="Edit">✎</button><button class="row-btn del" onclick="deleteRate('${tab}',${r.id})" title="Delete">✕</button></div></td>`;
     if (tab === 'ocean') {
       const partnerCell = r.partnerName ? `<span class="partner-tag">⚡ ${esc(r.partnerName)}</span>` : `<span style="color:var(--text3)">—</span>`;
-      return `<tr class="${rc}"><td>${chk}</td><td><strong>${esc(r.carrier)}</strong></td><td><span class="chip chip-blue">${esc(r.polCode)}</span></td><td>${esc(r.originCountry||'—')}</td><td><span class="chip chip-green">${esc(r.podCode)}</span></td><td>${esc(r.destCountry||'—')}</td><td><span class="chip chip-gray">${esc(r.equipmentType?.toUpperCase()||'—')}</span></td><td>${equipTypeChip(r.rateType)}</td><td style="text-align:right">${fmtAmt(r.amount20ft, r.currency)}</td><td style="text-align:right">${fmtAmt(r.amount40ft, r.currency)}</td><td style="text-align:right">${fmtAmt(r.amount40hc, r.currency)}</td><td>${esc(r.transitTime||'—')}</td><td>${expiryHtml(r.expiryDate)}</td><td>${partnerCell}</td>${acts}</tr>`;
+      return `<tr class="${rc}"><td>${chk}</td><td><strong>${esc(r.carrier)}</strong></td><td><span class="chip chip-blue">${esc(r.polCode)}</span></td><td>${esc(r.originCountry||'—')}</td><td><span class="chip chip-green">${esc(r.podCode)}</span></td><td>${esc(r.destCountry||'—')}</td><td><span class="chip chip-gray">${esc(r.equipmentType?.toUpperCase()||'—')}</span></td><td>${equipTypeChip(r.rateType)}</td><td style="text-align:right">${fmtAmt(r.amount20ft, r.currency)}</td><td style="text-align:right">${fmtAmt(r.amount40ft, r.currency)}</td><td style="text-align:right">${fmtAmt(r.amount40hc, r.currency)}</td><td>${esc(r.transitTime||'—')}</td><td>${expiryHtml(r.expiryDate)}</td><td>${partnerCell}</td><td>${vsMarketHtml(r)}</td>${acts}</tr>`;
     } else if (tab === 'import') {
       return `<tr class="${rc}"><td>${chk}</td><td><strong>${esc(r.terminalName)}</strong></td><td><span class="chip chip-blue">${esc(r.portCode)}</span></td><td>${esc(r.originState||'—')}</td><td>${esc(r.destCity||'—')}</td><td><strong>${esc(r.destLga)}</strong></td><td>${esc(r.destState||'—')}</td><td><span class="chip chip-gray">${esc(r.shipmentType?.toUpperCase()||'—')}</span></td><td><span class="chip chip-gray">${esc(r.equipmentType?.toUpperCase()||'—')}</span></td><td>${esc(r.commodityType||'—')}</td><td>${esc(r.currency)}</td><td style="text-align:right"><strong>${fmtPrice(r.price, r.currency)}</strong></td>${acts}</tr>`;
     } else if (tab === 'export') {
@@ -1664,6 +1786,293 @@ async function cpMarkStatus(id, status) {
     });
     openOutreachHistory();
   } catch { alert('Failed to update status.'); }
+}
+
+// ── MARKET INTEL (Options A, B, C) ───────────────────────────────────────────
+let miSnapshots = [];   // scraped index snapshots
+let miBenchmarks = [];  // manual benchmarks
+
+async function loadMarketIntel() {
+  try {
+    const [snapRes, bmRes] = await Promise.all([
+      fetch('/api/market-intel/snapshots'),
+      fetch('/api/market-intel/benchmarks'),
+    ]);
+    miSnapshots  = snapRes.ok  ? await snapRes.json()  : [];
+    miBenchmarks = bmRes.ok    ? await bmRes.json()    : [];
+    renderMarketPulse();
+    renderTable('ocean'); // re-render to show vs-market column
+  } catch(e) {
+    document.getElementById('mp-empty').innerHTML = '📡 <span>Market Pulse unavailable</span>';
+  }
+}
+
+function renderMarketPulse() {
+  const strip = document.getElementById('mp-strip');
+  const emptyEl = document.getElementById('mp-empty');
+
+  // Combine snapshots + benchmarks into display cards
+  // Priority: manual benchmarks first (Option C), then scraped (Option A)
+  const cards = [];
+
+  // Manual benchmarks
+  miBenchmarks.slice(0, 6).forEach(b => {
+    const adj = parseFloat(b.waAdjustmentPct || 0);
+    const base = parseFloat(b.rate40ft || b.rate20ft || 0);
+    const adjusted = base > 0 ? base * (1 + adj / 100) : base;
+    cards.push({
+      lane: b.laneName,
+      rate: adjusted > 0 ? `$${Math.round(adjusted).toLocaleString()}` : '—',
+      suffix: adj !== 0 ? ` (+${adj}% WA)` : '',
+      wow: null, mom: null,
+      source: b.source || 'Manual',
+      isBenchmark: true,
+      updatedAt: b.updatedAt || b.createdAt,
+    });
+  });
+
+  // Scraped snapshots (deduplicated, max 8 total)
+  const seenLanes = new Set(miBenchmarks.map(b => b.laneName));
+  miSnapshots.forEach(s => {
+    if (cards.length >= 10) return;
+    if (seenLanes.has(s.tradeLane)) return;
+    seenLanes.add(s.tradeLane);
+    cards.push({
+      lane: s.tradeLane,
+      rate: s.rateUsd ? `$${Math.round(parseFloat(s.rateUsd)).toLocaleString()}` : '—',
+      suffix: '',
+      wow: s.wowChangePct ? parseFloat(s.wowChangePct) : null,
+      mom: s.momChangePct ? parseFloat(s.momChangePct) : null,
+      source: s.source,
+      isBenchmark: false,
+      updatedAt: s.scrapedAt,
+    });
+  });
+
+  if (!cards.length) {
+    emptyEl.style.display = 'flex';
+    emptyEl.innerHTML = '📡 <span>No market data yet — click <strong style="color:rgba(255,255,255,.6)">Scrape Now</strong> or add a benchmark</span>';
+    return;
+  }
+
+  emptyEl.style.display = 'none';
+
+  // Find most recent update time
+  const latest = cards.reduce((m, c) => c.updatedAt > m ? c.updatedAt : m, '');
+  if (latest) {
+    const d = new Date(latest);
+    const ago = timeSince(d);
+    document.getElementById('mp-updated').textContent = `Updated ${ago}`;
+  }
+
+  // Render cards (insert before mp-actions div)
+  const existing = strip.querySelectorAll('.mp-card');
+  existing.forEach(el => el.remove());
+  const actionsDiv = strip.querySelector('.mp-actions');
+
+  cards.forEach(c => {
+    const wowCls = c.wow === null ? 'flat' : c.wow > 0 ? 'up' : 'down';
+    const wowStr = c.wow !== null ? `${c.wow > 0 ? '+' : ''}${c.wow.toFixed(1)}% WoW` : '';
+    const card = document.createElement('div');
+    card.className = 'mp-card';
+    card.title = `Source: ${c.source}`;
+    card.innerHTML = `
+      <div>
+        <div class="mp-lane">${esc(c.lane)}</div>
+        <div style="display:flex;align-items:baseline;gap:6px">
+          <span class="mp-rate">${c.rate}${c.suffix ? `<span style="font-size:9px;font-weight:400;color:rgba(255,255,255,.4)">${c.suffix}</span>` : ''}</span>
+          ${wowStr ? `<span class="mp-change ${wowCls}">${wowStr}</span>` : ''}
+        </div>
+        <div class="mp-source">${c.isBenchmark ? '⚑ benchmark' : esc(c.source)}</div>
+      </div>`;
+    strip.insertBefore(card, actionsDiv);
+  });
+}
+
+function timeSince(date) {
+  const secs = Math.floor((Date.now() - date.getTime()) / 1000);
+  if (secs < 60) return 'just now';
+  if (secs < 3600) return `${Math.floor(secs/60)}m ago`;
+  if (secs < 86400) return `${Math.floor(secs/3600)}h ago`;
+  return `${Math.floor(secs/86400)}d ago`;
+}
+
+// Option A + B — trigger live scrape
+async function triggerScrape() {
+  const btn = document.getElementById('mp-scrape-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="mp-spinner"></span> Scraping…';
+  try {
+    const res = await fetch('/api/market-intel/scrape', { method: 'POST' });
+    const data = await res.json();
+    // Show carrier results in a brief toast
+    const carrierSummary = (data.results?.carriers || [])
+      .map(c => `${c.carrier}: ${c.ratesFound} rate${c.ratesFound !== 1 ? 's' : ''}${c.error ? ' (failed)' : ''}`)
+      .join(' · ');
+    if (carrierSummary) showToast(`Carrier scrape: ${carrierSummary}`, 5000);
+    await loadMarketIntel();
+  } catch(e) {
+    showToast('Scrape failed: ' + e.message, 4000);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '⟳ Scrape Now';
+  }
+}
+
+function showToast(msg, ms = 3000) {
+  let t = document.getElementById('mi-toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'mi-toast';
+    t.style.cssText = 'position:fixed;bottom:72px;left:50%;transform:translateX(-50%);background:#1a2e1a;color:#fff;font-size:11px;padding:8px 16px;border-radius:8px;z-index:9999;opacity:0;transition:opacity .2s;pointer-events:none;max-width:480px;text-align:center';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.opacity = '1';
+  clearTimeout(t._to);
+  t._to = setTimeout(() => { t.style.opacity = '0'; }, ms);
+}
+
+// Option C — vs-Market column helper
+function vsMarketHtml(rate) {
+  if (!rate.amount40ft && !rate.amount20ft) return '<span style="color:var(--text3)">—</span>';
+  const rateVal = parseFloat(rate.amount40ft || rate.amount20ft || 0);
+  if (!rateVal) return '<span style="color:var(--text3)">—</span>';
+
+  // Find best matching benchmark: by pol/pod region or origin/dest country
+  const originLC = (rate.originCountry || '').toLowerCase();
+  const destLC   = (rate.destCountry   || '').toLowerCase();
+
+  const polRegionMap = {
+    'china': 'Far East', 'india': 'Far East', 'south korea': 'Far East', 'japan': 'Far East',
+    'hong kong': 'Far East', 'vietnam': 'Far East', 'thailand': 'Far East', 'malaysia': 'Far East',
+    'united kingdom': 'N.Europe', 'germany': 'N.Europe', 'netherlands': 'N.Europe', 'france': 'N.Europe',
+    'belgium': 'N.Europe', 'spain': 'Med', 'italy': 'Med', 'turkey': 'Med', 'greece': 'Med',
+    'united states': 'Americas', 'usa': 'Americas', 'brazil': 'Americas', 'colombia': 'Americas',
+  };
+  const guessPolRegion = polRegionMap[originLC] || null;
+
+  // Try benchmarks first (Option C manual)
+  let best = null;
+  let bestScore = -1;
+  for (const bm of miBenchmarks) {
+    let score = 0;
+    if (guessPolRegion && bm.polRegion === guessPolRegion) score += 2;
+    if (bm.podRegion.toLowerCase().includes('africa') || bm.podRegion.toLowerCase().includes('nigeria')) score += 2;
+    if (score > bestScore) { bestScore = score; best = bm; }
+  }
+
+  // Fallback: use scraped snapshot closest to this lane
+  if (!best || bestScore < 1) {
+    const snap = miSnapshots.find(s =>
+      (guessPolRegion && s.polRegion === guessPolRegion) ||
+      s.tradeLane.toLowerCase().includes(originLC.split(' ')[0])
+    );
+    if (snap && snap.rateUsd) {
+      const marketRate = parseFloat(snap.rateUsd);
+      const adj = snap.wowChangePct ? 0 : 0; // no WA adjustment for index
+      return vsMarketChip(rateVal, marketRate, `${snap.source} index (proxy)`);
+    }
+    return '<span style="color:var(--text3);font-size:10px">no benchmark</span>';
+  }
+
+  const bmRate = parseFloat(best.rate40ft || best.rate20ft || 0);
+  if (!bmRate) return '<span style="color:var(--text3);font-size:10px">no benchmark</span>';
+
+  const adj = parseFloat(best.waAdjustmentPct || 0);
+  const adjustedMarket = bmRate * (1 + adj / 100);
+  return vsMarketChip(rateVal, adjustedMarket, best.laneName);
+}
+
+function vsMarketChip(yourRate, marketRate, label) {
+  const pct = ((yourRate - marketRate) / marketRate) * 100;
+  const absPct = Math.abs(pct).toFixed(1);
+  if (Math.abs(pct) < 3) {
+    return `<span class="vs-mkt near" title="vs ${label}">≈ market</span>`;
+  } else if (pct > 0) {
+    return `<span class="vs-mkt above" title="vs ${label}">+${absPct}% above</span>`;
+  } else {
+    return `<span class="vs-mkt below" title="vs ${label}">−${absPct}% below</span>`;
+  }
+}
+
+// ── BENCHMARK MODAL (Option C) ────────────────────────────────────────────────
+function openBenchmarkModal() {
+  document.getElementById('bm-modal').style.display = 'flex';
+  renderBenchmarkList();
+}
+function closeBenchmarkModal() {
+  document.getElementById('bm-modal').style.display = 'none';
+  clearBenchmarkForm();
+}
+
+function renderBenchmarkList() {
+  const body = document.getElementById('bm-list');
+  if (!miBenchmarks.length) {
+    body.innerHTML = '<div style="text-align:center;padding:24px;font-size:12px;color:var(--text3)">No benchmarks yet. Add one below.</div>';
+    return;
+  }
+  body.innerHTML = miBenchmarks.map(b => {
+    const adj = parseFloat(b.waAdjustmentPct || 0);
+    const adjStr = adj !== 0 ? ` <span style="color:var(--text3)">(+${adj}% WA adj)</span>` : '';
+    return `<div class="bm-row">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12px;font-weight:600;color:var(--text)">${esc(b.laneName)}</div>
+        <div style="font-size:10px;color:var(--text3)">${esc(b.polRegion)} → ${esc(b.podRegion)} · ${esc(b.equipType||'40ft')}</div>
+        <div style="font-size:11px;color:var(--text2);margin-top:2px">
+          ${b.rate20ft ? `20FT: <strong>$${Math.round(b.rate20ft).toLocaleString()}</strong>` : ''}
+          ${b.rate40ft ? ` &nbsp;40FT: <strong>$${Math.round(b.rate40ft).toLocaleString()}</strong>${adjStr}` : ''}
+          ${b.source ? ` <span style="color:var(--text3);font-size:9px">· ${esc(b.source)}</span>` : ''}
+        </div>
+      </div>
+      <button class="row-btn del" onclick="deleteBenchmark(${b.id})" title="Delete">✕</button>
+    </div>`;
+  }).join('');
+}
+
+async function saveBenchmark() {
+  const v = id => document.getElementById(id)?.value.trim();
+  const n = id => { const val = parseFloat(document.getElementById(id)?.value); return isNaN(val) ? null : val; };
+  const laneName = v('bm-lane');
+  const polRegion = v('bm-pol');
+  const podRegion = v('bm-pod');
+  if (!laneName || !polRegion || !podRegion) return alert('Lane name, Origin region, and Dest region are required.');
+  const body = {
+    laneName, polRegion, podRegion,
+    equipType: v('bm-equip') || '40ft',
+    rate20ft: n('bm-r20'),
+    rate40ft: n('bm-r40'),
+    waAdjustmentPct: n('bm-wa') || 0,
+    validFrom: v('bm-from') || null,
+    source: v('bm-source') || null,
+    notes: v('bm-notes') || null,
+  };
+  try {
+    const res = await fetch('/api/market-intel/benchmarks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    clearBenchmarkForm();
+    await loadMarketIntel();
+    renderBenchmarkList();
+    showToast('Benchmark saved');
+  } catch(e) { alert('Failed to save: ' + e.message); }
+}
+
+async function deleteBenchmark(id) {
+  if (!confirm('Delete this benchmark?')) return;
+  await fetch(`/api/market-intel/benchmarks/${id}`, { method: 'DELETE' });
+  await loadMarketIntel();
+  renderBenchmarkList();
+}
+
+function clearBenchmarkForm() {
+  ['bm-lane','bm-pol','bm-pod','bm-equip','bm-r20','bm-r40','bm-wa','bm-from','bm-source','bm-notes'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
 }
 </script>
 </body>

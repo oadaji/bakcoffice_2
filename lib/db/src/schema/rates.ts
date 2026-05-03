@@ -131,6 +131,44 @@ export const otherCharges = pgTable("other_charges", {
 
 export type OtherCharge = typeof otherCharges.$inferSelect;
 
+// ── MARKET INDEX SNAPSHOTS (Option A — scraped indices) ──────────────────────
+export const marketIndexSnapshots = pgTable("market_index_snapshots", {
+  id: serial("id").primaryKey(),
+  source: text("source").notNull(),          // 'xeneta', 'drewry', 'fbx', 'carrier'
+  tradeLane: text("trade_lane").notNull(),    // e.g. "Far East → N.Europe"
+  polRegion: text("pol_region"),             // origin region
+  podRegion: text("pod_region"),             // destination region
+  equipType: text("equip_type").notNull().default("40ft"),
+  rateUsd: numeric("rate_usd", { precision: 12, scale: 2 }),
+  wowChangePct: numeric("wow_change_pct", { precision: 6, scale: 2 }),
+  momChangePct: numeric("mom_change_pct", { precision: 6, scale: 2 }),
+  weekDate: date("week_date"),
+  rawData: jsonb("raw_data").notNull().default({}),
+  scrapedAt: timestamp("scraped_at").notNull().defaultNow(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export type MarketIndexSnapshot = typeof marketIndexSnapshots.$inferSelect;
+
+// ── RATE BENCHMARKS (Option C — manual market benchmarks) ────────────────────
+export const rateBenchmarks = pgTable("rate_benchmarks", {
+  id: serial("id").primaryKey(),
+  laneName: text("lane_name").notNull(),     // e.g. "China → Lagos"
+  polRegion: text("pol_region").notNull(),   // "Far East", "N.Europe", "Med", "Americas"
+  podRegion: text("pod_region").notNull(),   // "West Africa"
+  equipType: text("equip_type").notNull().default("40ft"),
+  rate20ft: numeric("rate_20ft", { precision: 12, scale: 2 }),
+  rate40ft: numeric("rate_40ft", { precision: 12, scale: 2 }),
+  waAdjustmentPct: numeric("wa_adjustment_pct", { precision: 6, scale: 2 }).default("0"),
+  validFrom: date("valid_from"),
+  source: text("source"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export type RateBenchmark = typeof rateBenchmarks.$inferSelect;
+
 // ── PARTNER OUTREACH ─────────────────────────────────────────────────────────
 export const partnerOutreach = pgTable("partner_outreach", {
   id: serial("id").primaryKey(),
