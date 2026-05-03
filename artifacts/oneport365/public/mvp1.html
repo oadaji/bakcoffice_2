@@ -3716,7 +3716,100 @@ async function sendQuote() {
 }
 
 function downloadPDF() {
-  alert('PDF generation — connects to backend in production.\nIn production this outputs the full branded OnePort 365 quote PDF with terms and conditions.');
+  const preview = document.getElementById('quote-preview');
+  if (!preview) { alert('No quote selected.'); return; }
+
+  // Clone the rendered quote
+  const clone = preview.cloneNode(true);
+
+  // Strip interactive-only elements that shouldn't appear in print
+  ['qp-ocean-options-panel','qp-available-charges-panel','qp-ai-notes','qb-sync-status'].forEach(id => {
+    const el = clone.querySelector('#'+id);
+    if (el) el.remove();
+  });
+  // Remove ✕ remove-charge buttons (they have float:right and onclick=removeChargeFromQuote)
+  clone.querySelectorAll('button[onclick^="removeChargeFromQuote"]').forEach(b => b.remove());
+
+  const q = QUOTES_DATA.find(x => x.id === currentQuoteDbId);
+  const quoteRef = q ? (q.quoteRef || 'Quote') : 'Quote';
+
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>${quoteRef} — OnePort 365</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --accent: #5a9a5a;
+      --accent-dark: #2d5a2d;
+      --warn: #c17f24;
+      --border: #e4e8e4;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: Inter, -apple-system, sans-serif;
+      font-size: 12px;
+      color: #1a2e1a;
+      background: #fff;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    @page {
+      size: A4;
+      margin: 14mm 14mm 16mm 14mm;
+    }
+    @media print {
+      body { margin: 0; }
+      .no-print { display: none !important; }
+    }
+    /* Reset the outer wrapper that had border/shadow/rounded corners */
+    #quote-preview {
+      max-width: 100% !important;
+      border: none !important;
+      border-radius: 0 !important;
+      box-shadow: none !important;
+      overflow: visible !important;
+    }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #e4e8e4 !important; }
+    /* Keep background colours in print */
+    tr[style*="background:#f5fdf5"] { background: #f5fdf5 !important; }
+    tr[style*="background:#f8faf8"] { background: #f8faf8 !important; }
+    div[style*="background:#1C3829"] { background: #1C3829 !important; color: rgba(255,255,255,.85) !important; }
+    div[style*="background:#1C3829"] * { color: rgba(255,255,255,.85) !important; }
+    /* Accent colours */
+    span[style*="color:var(--accent-dark)"],
+    span[style*="color:#2d5a2d"] { color: #2d5a2d !important; }
+    span[style*="color:var(--warn)"],
+    span[style*="color:#c17f24"] { color: #c17f24 !important; }
+    /* Page break hints */
+    .page-break-before { page-break-before: always; }
+    /* Make the totals section not break awkwardly */
+    #qp-ocean-options-panel, #qp-available-charges-panel { display: none !important; }
+    button { display: none !important; }
+  </style>
+</head>
+<body>
+  <div id="quote-preview">${clone.innerHTML}</div>
+  <script>
+    window.onload = function() {
+      // Small delay to allow fonts to load
+      setTimeout(function() { window.print(); }, 600);
+    };
+  <\/script>
+</body>
+</html>`;
+
+  const pw = window.open('', '_blank', 'width=900,height=700,scrollbars=yes');
+  if (!pw) {
+    alert('Pop-up blocked — please allow pop-ups for this site and try again.');
+    return;
+  }
+  pw.document.open();
+  pw.document.write(html);
+  pw.document.close();
 }
 
 function syncQuickbooks() {
