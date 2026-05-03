@@ -25,7 +25,34 @@ function locationsMatch(stored: string, query: string): boolean {
 
 router.get("/rates/ocean-freight", async (req, res) => {
   try {
-    const rows = await db.select().from(oceanFreightRates).where(eq(oceanFreightRates.archived, false));
+    const rows = await db
+      .select({
+        id: oceanFreightRates.id,
+        carrier: oceanFreightRates.carrier,
+        polCode: oceanFreightRates.polCode,
+        originCountry: oceanFreightRates.originCountry,
+        podCode: oceanFreightRates.podCode,
+        destCountry: oceanFreightRates.destCountry,
+        commodityType: oceanFreightRates.commodityType,
+        equipmentType: oceanFreightRates.equipmentType,
+        rateType: oceanFreightRates.rateType,
+        inclusionType: oceanFreightRates.inclusionType,
+        transitTime: oceanFreightRates.transitTime,
+        freeTime: oceanFreightRates.freeTime,
+        currency: oceanFreightRates.currency,
+        amount20ft: oceanFreightRates.amount20ft,
+        amount40ft: oceanFreightRates.amount40ft,
+        amount40hc: oceanFreightRates.amount40hc,
+        expiryDate: oceanFreightRates.expiryDate,
+        partnerId: oceanFreightRates.partnerId,
+        partnerName: partnersTable.name,
+        archived: oceanFreightRates.archived,
+        createdAt: oceanFreightRates.createdAt,
+        updatedAt: oceanFreightRates.updatedAt,
+      })
+      .from(oceanFreightRates)
+      .leftJoin(partnersTable, eq(oceanFreightRates.partnerId, partnersTable.id))
+      .where(eq(oceanFreightRates.archived, false));
     res.json(rows);
   } catch (err) {
     req.log.error({ err }, "Failed to list ocean freight rates");
@@ -57,6 +84,7 @@ router.post("/rates/ocean-freight", async (req, res) => {
       amount40ft: (b.amount40ft as string) ?? null,
       amount40hc: (b.amount40hc as string) ?? null,
       expiryDate: b.expiryDate as string,
+      partnerId: b.partnerId ? Number(b.partnerId) : null,
     }).returning();
     res.status(201).json(row);
   } catch (err) {
@@ -70,11 +98,12 @@ router.put("/rates/ocean-freight/:id", async (req, res) => {
     const id = parseInt(req.params.id, 10);
     const b = req.body as Record<string, unknown>;
     const patch: Record<string, unknown> = {};
-    const s = (k: string, dbk?: string) => { if (b[k] !== undefined) patch[dbk ?? k] = b[k] ?? null; };
+    const s = (k: string) => { if (b[k] !== undefined) patch[k] = b[k] ?? null; };
     s("carrier"); s("polCode"); s("originCountry"); s("podCode"); s("destCountry");
     s("commodityType"); s("equipmentType"); s("rateType"); s("inclusionType");
     s("transitTime"); s("freeTime"); s("currency");
     s("amount20ft"); s("amount40ft"); s("amount40hc"); s("expiryDate");
+    if (b.partnerId !== undefined) patch.partnerId = b.partnerId ? Number(b.partnerId) : null;
     patch.updatedAt = new Date();
     const [updated] = await db.update(oceanFreightRates).set(patch).where(eq(oceanFreightRates.id, id)).returning();
     if (!updated) { res.status(404).json({ error: "Rate not found" }); return; }

@@ -4,6 +4,7 @@ import { simpleParser } from "mailparser";
 import { Readable } from "stream";
 import { db, emailsTable, rfqsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
+import nodemailer from "nodemailer";
 
 // Strip angle brackets from Message-ID values for consistent storage
 function normaliseMessageId(raw: string | undefined): string | null {
@@ -250,6 +251,54 @@ router.post("/gmail/sync", async (req, res) => {
     try { await client.logout(); } catch {}
     res.status(500).json({ error: String(err) });
   }
+});
+
+// ── POST /api/gmail/send-outreach ─────────────────────────────────────────────
+// Send a rate-request email to one or more partners
+
+router.post("/gmail/send-outreach", async (req, res) => {
+  const { recipients, subject, body } = req.body as {
+    recipients: Array<{ name: string; email: string }>;
+    subject: string;
+    body: string;
+  };
+
+  if (!recipients?.length || !subject || !body) {
+    res.status(400).json({ error: "recipients, subject, and body are required" });
+    return;
+  }
+
+  const user = process.env.GMAIL_ADDRESS;
+  const pass = process.env.GMAIL_APP_PASSWORD;
+  if (!user || !pass) {
+    res.status(500).json({ error: "Gmail credentials not configured" });
+    return;
+  }
+
+  const transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: { user, pass },
+  });
+
+  const results: Array<{ email: string; ok: boolean; error?: string }> = [];
+
+  for (const recipient of recipients) {
+    try {
+      await transporter.sendMail({
+        from: `OnePort 365 Rates <${user}>`,
+        to: `${recipient.name} <${recipient.email}>`,
+        subject,
+        text: body,
+      });
+      results.push({ email: recipient.email, ok: true });
+    } catch (err) {
+      req.log.error({ err, email: recipient.email }, "Failed to send outreach email");
+      results.push({ email: recipient.email, ok: false, error: String(err) });
+    }
+  }
+
+  const allOk = results.every(r => r.ok);
+  res.status(allOk ? 200 : 207).json({ results });
 });
 
 export { router as gmailRouter };

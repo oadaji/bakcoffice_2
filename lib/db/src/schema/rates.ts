@@ -62,6 +62,7 @@ export const oceanFreightRates = pgTable("ocean_freight_rates", {
   amount40ft: numeric("amount_40ft", { precision: 12, scale: 2 }),
   amount40hc: numeric("amount_40hc", { precision: 12, scale: 2 }),
   expiryDate: date("expiry_date").notNull(),
+  partnerId: integer("partner_id").references(() => partnersTable.id),
   archived: boolean("archived").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
