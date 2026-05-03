@@ -1610,6 +1610,7 @@ tr.trow.sel td{background:#eef6e6}
                 <button onclick="syncQuickbooks()" style="padding:6px 12px;font-size:11px;font-weight:500;cursor:pointer;border-radius:6px;border:1px solid #0288d1;background:#e1f5fe;color:#0277bd;font-family:Inter,sans-serif">QB Sync</button>
                 <button onclick="sendQuote()" class="btn btn-primary btn-sm">✉ Send to customer</button>
                 <button onclick="downloadPDF()" class="btn btn-sm">↓ PDF</button>
+                <button onclick="deleteQuote()" style="padding:6px 12px;font-size:11px;font-weight:500;cursor:pointer;border-radius:6px;border:1px solid #fca5a5;background:#fee2e2;color:#dc2626;font-family:Inter,sans-serif">🗑 Delete</button>
               </div>
             </div>
 
@@ -3616,6 +3617,26 @@ function syncQuickbooks() {
   const c = document.getElementById('qb-sync-status');
   if(c){ c.style.display='flex'; document.getElementById('qb-sync-text').textContent='Syncing to QuickBooks as estimate…';
     setTimeout(()=>{document.getElementById('qb-sync-text').textContent='✓ QuickBooks estimate created successfully';setTimeout(()=>c.style.display='none',3000);},1500); }
+}
+
+async function deleteQuote() {
+  if (!currentQuoteDbId) return;
+  const q = QUOTES_DATA.find(x => x.id === currentQuoteDbId);
+  const label = q ? (q.quoteRef || `Quote #${q.id}`) : `Quote #${currentQuoteDbId}`;
+  if (!confirm(`Delete ${label}? This cannot be undone.`)) return;
+  try {
+    const r = await fetch('/api/quotes/' + currentQuoteDbId, { method: 'DELETE' });
+    if (!r.ok) throw new Error('Delete failed');
+    currentQuoteDbId = null;
+    currentQuoteId = null;
+    // Clear preview
+    document.getElementById('qv-title').textContent = '—';
+    document.getElementById('qv-meta').textContent = '';
+    document.getElementById('qv-status-badge').innerHTML = '';
+    await loadQuotes();
+  } catch(e) {
+    alert('Could not delete quote: ' + e.message);
+  }
 }
 
 // ── GENERATE QUOTE MODAL ──
