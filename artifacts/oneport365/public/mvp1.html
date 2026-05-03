@@ -4934,6 +4934,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       if(badge) badge.textContent=qs.length;
     }
   }).catch(()=>{});
+  // Hash-based routing: support links like /mvp1.html#quotes from other pages
+  const hash = window.location.hash;
+  if (hash === '#quotes') showScreen(4);
+  else if (hash === '#deals') showScreen(2);
+  else if (hash === '#pipeline') showScreen(3);
 });
 
 // Pipeline panel — uses shared rfqData from API
