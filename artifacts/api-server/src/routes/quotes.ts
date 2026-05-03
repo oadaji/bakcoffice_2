@@ -330,14 +330,15 @@ Respond with ONLY valid JSON in this exact format:
     const originChargesRaw: any[] = Array.isArray(ai.originCharges) ? ai.originCharges : [];
     const destChargesRaw: any[] = Array.isArray(ai.destCharges) ? ai.destCharges : [];
 
-    // Calculate totals
+    // Calculate totals (include both originCharges and destCharges)
     const fx = Number(exchangeRate) || 1600;
-    const originNGN = originChargesRaw.filter(c => !c.asPerReceipt && c.currency === "NGN")
+    const allChargesRaw = [...originChargesRaw, ...destChargesRaw];
+    const chargesNGN = allChargesRaw.filter(c => !c.asPerReceipt && (c.currency === "NGN" || !c.currency))
       .reduce((s, c) => s + (Number(c.amount) || 0), 0);
-    const originUSD = originChargesRaw.filter(c => !c.asPerReceipt && c.currency === "USD")
+    const chargesUSD = allChargesRaw.filter(c => !c.asPerReceipt && c.currency === "USD")
       .reduce((s, c) => s + (Number(c.amount) || 0), 0);
     const haulageNGN = haulageObj && !haulageObj.amount ? 0 : Number(haulageObj?.amount) || 0;
-    const totalCost = oceanAmount + originUSD + Math.round(originNGN / fx) + Math.round(haulageNGN / fx);
+    const totalCost = oceanAmount + chargesUSD + Math.round((chargesNGN + haulageNGN) / fx);
     const margin = Number(marginPct) / 100;
     const sellPrice = Math.round(totalCost * (1 + margin));
 
@@ -365,8 +366,10 @@ Respond with ONLY valid JSON in this exact format:
         transitTime: ai.transitTime ?? selectedOcean?.transitTime ?? "TBD",
         freeTime: ai.freeTime ?? selectedOcean?.freeTime ?? "TBD",
       },
+      oceanOptions: oceanPool.slice(0, 20),
       originCharges: originChargesRaw,
       destCharges: destChargesRaw,
+      availableCharges: applicableCharges.slice(0, 40),
       haulage: haulageObj,
       hasSuggestedHaulage: ai.hasSuggestedHaulage ?? !!haulageObj,
       exchangeRate: String(fx),
@@ -408,8 +411,9 @@ router.patch("/quotes/:id", async (req, res) => {
     const id = parseInt(req.params.id, 10);
     const b = req.body as Record<string, unknown>;
     const allowed = ["status", "notes", "aiNotes", "marginPct", "exchangeRate", "originCharges", "destCharges", "haulage",
-      "hasSuggestedHaulage", "oceanLine", "carrier", "sentAt", "totalCostUSD", "sellPriceUSD",
-      "pol", "pod", "polCode", "podCode", "commodity", "containerType", "containerQty", "customerName", "companyName", "customerEmail"];
+      "hasSuggestedHaulage", "oceanLine", "oceanOptions", "carrier", "sentAt", "totalCostUSD", "sellPriceUSD",
+      "pol", "pod", "polCode", "podCode", "commodity", "containerType", "containerQty", "customerName", "companyName",
+      "customerEmail", "availableCharges"];
     const patch: Record<string, unknown> = { updatedAt: new Date() };
     for (const k of allowed) { if (b[k] !== undefined) patch[k] = b[k]; }
     if (b.status === "sent" && !b.sentAt) patch.sentAt = new Date();

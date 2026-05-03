@@ -1665,6 +1665,7 @@ tr.trow.sel td{background:#eef6e6}
                     </thead>
                     <tbody id="qp-ocean-tbody"></tbody>
                   </table>
+                  <div id="qp-ocean-options-panel"></div>
                   <div style="text-align:right;padding:10px 0 0;font-size:13px;font-weight:600;color:#1a2e1a">Sub Total: <span id="qp-ocean-subtotal" style="color:var(--accent-dark);font-family:monospace;font-size:14px"></span></div>
                 </div>
 
@@ -1684,6 +1685,7 @@ tr.trow.sel td{background:#eef6e6}
                     </thead>
                     <tbody id="qp-origin-tbody"></tbody>
                   </table>
+                  <div id="qp-available-charges-panel"></div>
                   <div style="text-align:right;padding:10px 0 0;font-size:13px;font-weight:600;color:#1a2e1a">Sub Total: <span id="qp-origin-subtotal" style="color:var(--warn);font-family:monospace;font-size:14px"></span></div>
                 </div>
 
@@ -3544,12 +3546,17 @@ function renderQuotePreview(q) {
   ].map(mkField).join('');
 
   // Ocean freight row
+  const isDraft = q.status === 'draft';
+  const oceanOpts = Array.isArray(q.oceanOptions) ? q.oceanOptions : [];
+  const avCharges = Array.isArray(q.availableCharges) ? q.availableCharges : [];
+  const ctype = q.containerType || '20FT';
+  const marginPctNum = Number(q.marginPct) || 13;
   const oceanAmt = Number(ocean.amount)||0;
   const carrier = ocean.carrier || q.carrier || 'TBD';
   const transit = ocean.transitTime||'—';
   const freeDays = ocean.freeTime||'—';
   document.getElementById('qp-ocean-tbody').innerHTML = oceanAmt ? `
-    <tr>
+    <tr style="${isDraft?'background:#f5fdf5':''}">
       <td style="padding:9px 10px;border:1px solid #e4e8e4;font-weight:600">${escHtml(carrier)}</td>
       <td style="padding:9px 10px;border:1px solid #e4e8e4;font-size:11px;color:#4a5e4a">${escHtml(polShort)} →<br>${escHtml(podShort)}</td>
       <td style="padding:9px 10px;border:1px solid #e4e8e4;text-align:center">${q.containerQty||1}</td>
@@ -3562,21 +3569,84 @@ function renderQuotePreview(q) {
     </tr>` : '<tr><td colspan="9" style="padding:12px;text-align:center;color:#8a9e8a;font-size:11px">No ocean rate selected</td></tr>';
   document.getElementById('qp-ocean-subtotal').textContent = oceanAmt ? '$'+oceanAmt.toLocaleString() : '—';
 
-  // Origin charges + haulage
-  const allLocalCharges = [...originCharges];
+  // Ocean options panel (draft mode — all candidate rates)
+  const oceanOptPanel = document.getElementById('qp-ocean-options-panel');
+  if (oceanOptPanel) {
+    if (isDraft && oceanOpts.length > 0) {
+      const otherOpts = oceanOpts.filter(r => r.id !== (ocean.rateId || -999));
+      window._qpOceanOpts = otherOpts;
+      if (otherOpts.length > 0) {
+        const baseCost = Number(q.totalCostUSD) || 0;
+        const margin = marginPctNum / 100;
+        oceanOptPanel.innerHTML = `<div style="margin-top:10px">
+          <button onclick="(function(b){var inner=b.nextElementSibling;var open=inner.style.display!=='none';inner.style.display=open?'none':'block';b.innerHTML=open?'&#9658; ${otherOpts.length} other rate${otherOpts.length>1?'s':''} available &mdash; click to compare margins':'&#9660; ${otherOpts.length} other rate${otherOpts.length>1?'s':''} &mdash; click to collapse'})(this)"
+            style="font-size:11px;color:#1C3829;background:none;border:none;cursor:pointer;padding:4px 0;font-weight:600;letter-spacing:.01em">
+            &#9658; ${otherOpts.length} other rate${otherOpts.length>1?'s':''} available &mdash; click to compare margins
+          </button>
+          <div style="display:none;margin-top:8px;overflow-x:auto">
+            <table style="width:100%;border-collapse:collapse;font-size:11px">
+              <thead><tr style="background:#f8faf8">
+                <th style="padding:6px 8px;border:1px solid #e4e8e4;color:#8a9e8a;font-size:10px;font-weight:600;text-align:left">Carrier</th>
+                <th style="padding:6px 8px;border:1px solid #e4e8e4;color:#8a9e8a;font-size:10px;font-weight:600;text-align:left">Equip</th>
+                <th style="padding:6px 8px;border:1px solid #e4e8e4;color:#8a9e8a;font-size:10px;font-weight:600;text-align:center">Rate Type</th>
+                <th style="padding:6px 8px;border:1px solid #e4e8e4;color:#8a9e8a;font-size:10px;font-weight:600;text-align:right">Amount</th>
+                <th style="padding:6px 8px;border:1px solid #e4e8e4;color:#8a9e8a;font-size:10px;font-weight:600;text-align:center">Transit</th>
+                <th style="padding:6px 8px;border:1px solid #e4e8e4;color:#8a9e8a;font-size:10px;font-weight:600;text-align:center">Free Days</th>
+                <th style="padding:6px 8px;border:1px solid #e4e8e4;color:#8a9e8a;font-size:10px;font-weight:600;text-align:right">Est. Sell @ ${marginPctNum}%</th>
+                <th style="padding:6px 8px;border:1px solid #e4e8e4;color:#8a9e8a;font-size:10px;font-weight:600"></th>
+              </tr></thead>
+              <tbody>${otherOpts.map((r, idx) => {
+                let amt = 0;
+                if (ctype==='40HC') amt=Number(r.amount40hc)||0;
+                else if (ctype.includes('40')) amt=Number(r.amount40ft)||0;
+                else amt=Number(r.amount20ft)||0;
+                if (!amt) amt=Number(r.amount20ft||r.amount40ft||r.amount40hc)||0;
+                const newTotal = baseCost - oceanAmt + amt;
+                const sellEst = amt ? Math.round(newTotal*(1+margin)) : 0;
+                return `<tr onmouseover="this.style.background='#f0faf0'" onmouseout="this.style.background=''">
+                  <td style="padding:7px 8px;border:1px solid #e4e8e4;font-weight:500">${escHtml(r.carrier||'—')}</td>
+                  <td style="padding:7px 8px;border:1px solid #e4e8e4">${escHtml(r.equipmentType||ctype)}</td>
+                  <td style="padding:7px 8px;border:1px solid #e4e8e4;text-align:center">${escHtml(r.rateType||'—')}</td>
+                  <td style="padding:7px 8px;border:1px solid #e4e8e4;text-align:right;font-family:monospace">${amt?'$'+amt.toLocaleString():'—'}</td>
+                  <td style="padding:7px 8px;border:1px solid #e4e8e4;text-align:center">${escHtml(r.transitTime||'—')}</td>
+                  <td style="padding:7px 8px;border:1px solid #e4e8e4;text-align:center">${escHtml(String(r.freeTime||'—'))}</td>
+                  <td style="padding:7px 8px;border:1px solid #e4e8e4;text-align:right;font-family:monospace;color:var(--accent-dark);font-weight:700">${amt?'$'+sellEst.toLocaleString():'—'}</td>
+                  <td style="padding:7px 8px;border:1px solid #e4e8e4;text-align:center">
+                    <button onclick="selectOceanRate(window._qpOceanOpts[${idx}])"
+                      style="font-size:10px;padding:4px 10px;background:#1C3829;color:#fff;border:none;border-radius:4px;cursor:pointer;white-space:nowrap">Use this</button>
+                  </td>
+                </tr>`;
+              }).join('')}</tbody>
+            </table>
+          </div>
+        </div>`;
+      } else { oceanOptPanel.innerHTML = ''; }
+    } else { oceanOptPanel.innerHTML = ''; }
+  }
+
+  // Origin + dest charges + haulage (all shown together)
+  const allLocalCharges = [
+    ...originCharges.map((c, i) => ({ ...c, _origIdx: i, _srcArr: 'origin', _isHaulage: false })),
+    ...destCharges.map((c, i) => ({ ...c, _origIdx: i, _srcArr: 'dest', _isHaulage: false })),
+  ];
   if (haulage) {
     allLocalCharges.push({
       itemName: `Haulage / Trucking (${haulage.terminalName||''} → ${haulage.destCity||''})`,
       amount: haulage.amount, currency: haulage.currency||'NGN', asPerReceipt: !haulage.amount,
-      basis: 'Per Container', category: 'haulage'
+      basis: 'Per Container', category: 'haulage', _isHaulage: true
     });
   }
-  const originNGN = allLocalCharges.filter(c=>!c.asPerReceipt&&(c.currency==='NGN'||!c.currency)).reduce((s,c)=>s+Number(c.amount||0),0);
-  const originUSD = allLocalCharges.filter(c=>!c.asPerReceipt&&c.currency==='USD').reduce((s,c)=>s+Number(c.amount||0),0);
+  const allChargesNGN = allLocalCharges.filter(c=>!c._isHaulage&&!c.asPerReceipt&&(c.currency==='NGN'||!c.currency)).reduce((s,c)=>s+Number(c.amount||0),0);
+  const allChargesUSD = allLocalCharges.filter(c=>!c._isHaulage&&!c.asPerReceipt&&c.currency==='USD').reduce((s,c)=>s+Number(c.amount||0),0);
   document.getElementById('qp-origin-tbody').innerHTML = allLocalCharges.length ? allLocalCharges.map(c => {
     const amt = c.asPerReceipt ? 'As per receipt' : (c.currency==='NGN'?'₦':'$')+Number(c.amount||0).toLocaleString();
+    const rmBtn = (isDraft && !c._isHaulage)
+      ? `<button onclick="removeChargeFromQuote(${c._origIdx},'${c._srcArr}')" title="Remove charge"
+           style="float:right;font-size:12px;color:#bbb;background:none;border:none;cursor:pointer;line-height:1;padding:0 0 0 6px;margin-left:4px"
+           onmouseover="this.style.color='#e53e3e'" onmouseout="this.style.color='#bbb'">&#10005;</button>`
+      : '';
     return `<tr>
-      <td style="padding:8px 10px;border:1px solid #e4e8e4">${escHtml(c.itemName||c.basis||'—')}</td>
+      <td style="padding:8px 10px;border:1px solid #e4e8e4">${rmBtn}${escHtml(c.itemName||c.basis||'—')}</td>
       <td style="padding:8px 10px;border:1px solid #e4e8e4;text-align:center">1</td>
       <td style="padding:8px 10px;border:1px solid #e4e8e4;text-align:center">${q.containerQty||1}</td>
       <td style="padding:8px 10px;border:1px solid #e4e8e4;text-align:right;font-family:monospace;font-weight:500">${c.asPerReceipt?'APR':amt}</td>
@@ -3584,9 +3654,40 @@ function renderQuotePreview(q) {
       <td style="padding:8px 10px;border:1px solid #e4e8e4;font-size:10px;color:#8a9e8a">${c.asPerReceipt?'As per receipt':''}</td>
     </tr>`;
   }).join('') : '<tr><td colspan="6" style="padding:12px;text-align:center;color:#8a9e8a;font-size:11px">No local charges</td></tr>';
-  const subLabel = originNGN ? '₦'+originNGN.toLocaleString() : '';
-  const subUSDLabel = originUSD ? ' + $'+originUSD.toLocaleString() : '';
+  const subLabel = allChargesNGN ? '₦'+allChargesNGN.toLocaleString() : '';
+  const subUSDLabel = allChargesUSD ? ' + $'+allChargesUSD.toLocaleString() : '';
   document.getElementById('qp-origin-subtotal').textContent = (subLabel+subUSDLabel)||'As per receipt';
+
+  // Available charges panel (draft mode — add/remove charges)
+  const avPanel = document.getElementById('qp-available-charges-panel');
+  if (avPanel) {
+    if (isDraft && avCharges.length > 0) {
+      const usedNames = new Set([...(q.originCharges||[]),...(q.destCharges||[])].map(c=>(c.itemName||'').toLowerCase().trim()));
+      const unused = avCharges.filter(c=>!usedNames.has((c.itemName||'').toLowerCase().trim()));
+      window._qpAvailCharges = unused;
+      avPanel.innerHTML = `<div style="margin-top:10px">
+        <button onclick="(function(b){var inner=b.nextElementSibling;var open=inner.style.display!=='none';inner.style.display=open?'none':'block';b.innerHTML=open?'&#43; Add charges (${unused.length} available)':'&#9660; Available charges &mdash; click to collapse'})(this)"
+          style="font-size:11px;color:#1C3829;background:none;border:none;cursor:pointer;padding:4px 0;font-weight:600;letter-spacing:.01em">
+          &#43; Add charges (${unused.length} available)
+        </button>
+        <div style="display:none;margin-top:8px">
+          ${unused.length ? `<div style="display:flex;flex-direction:column;gap:5px">
+            ${unused.map((c,i)=>{
+              const amtLabel = c.asPerReceipt ? 'As per receipt' : (c.currency==='NGN'?'₦':'$')+Number(c.price||0).toLocaleString();
+              return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:#f8faf8;border:1px solid #e8ede8;border-radius:5px">
+                <div>
+                  <div style="font-size:12px;font-weight:500;color:#1a2e1a">${escHtml(c.itemName||'—')}</div>
+                  <div style="font-size:10px;color:#8a9e8a;margin-top:2px">${escHtml(c.itemCategory||'')}${c.itemCategory?' · ':''}${amtLabel}</div>
+                </div>
+                <button onclick="addChargeToQuote(window._qpAvailCharges[${i}])"
+                  style="font-size:11px;padding:5px 14px;background:#1C3829;color:#fff;border:none;border-radius:4px;cursor:pointer;white-space:nowrap;flex-shrink:0;margin-left:12px">+ Add</button>
+              </div>`;
+            }).join('')}
+          </div>` : '<div style="font-size:11px;color:#8a9e8a;padding:6px 0">All available charges are already included.</div>'}
+        </div>
+      </div>`;
+    } else { avPanel.innerHTML = ''; }
+  }
 
   // AI notes banner
   const banner = document.getElementById('qp-ai-notes');
@@ -3644,8 +3745,10 @@ async function regenerateQuote() {
     const patch = {
       carrier: fresh.carrier,
       oceanLine: fresh.oceanLine,
+      oceanOptions: fresh.oceanOptions,
       originCharges: fresh.originCharges,
       destCharges: fresh.destCharges,
+      availableCharges: fresh.availableCharges,
       haulage: fresh.haulage,
       hasSuggestedHaulage: fresh.hasSuggestedHaulage,
       totalCostUSD: fresh.totalCostUSD,
@@ -3665,6 +3768,81 @@ async function regenerateQuote() {
   } finally {
     if (btn) { btn.textContent = origText; btn.disabled = false; }
   }
+}
+
+function recalcQuoteTotals(q) {
+  const fx = Number(q.exchangeRate) || 1600;
+  const margin = Number(q.marginPct) / 100;
+  const oceanAmt = Number((q.oceanLine && q.oceanLine.amount) || 0);
+  const allC = [...(Array.isArray(q.originCharges)?q.originCharges:[]), ...(Array.isArray(q.destCharges)?q.destCharges:[])];
+  const haulage = q.haulage && typeof q.haulage === 'object' ? q.haulage : null;
+  const chargesNGN = allC.filter(c=>!c.asPerReceipt&&(c.currency==='NGN'||!c.currency)).reduce((s,c)=>s+Number(c.amount||0),0);
+  const chargesUSD = allC.filter(c=>!c.asPerReceipt&&c.currency==='USD').reduce((s,c)=>s+Number(c.amount||0),0);
+  const haulageNGN = haulage ? Number(haulage.amount||0) : 0;
+  const totalCost = oceanAmt + chargesUSD + Math.round((chargesNGN + haulageNGN) / fx);
+  const sellPrice = Math.round(totalCost * (1 + margin));
+  return { totalCostUSD: String(totalCost), sellPriceUSD: String(sellPrice) };
+}
+
+async function selectOceanRate(rateObj) {
+  const q = QUOTES_DATA.find(x => x.id === currentQuoteDbId);
+  if (!q || q.status !== 'draft') return;
+  const ct = q.containerType || '20FT';
+  let amt = 0;
+  if (ct === '40HC') amt = Number(rateObj.amount40hc) || 0;
+  else if (ct.includes('40')) amt = Number(rateObj.amount40ft) || 0;
+  else amt = Number(rateObj.amount20ft) || 0;
+  if (!amt) amt = Number(rateObj.amount20ft || rateObj.amount40ft || rateObj.amount40hc) || 0;
+  const newOceanLine = {
+    rateId: rateObj.id,
+    carrier: rateObj.carrier,
+    amount: amt,
+    currency: rateObj.currency || 'USD',
+    transitTime: rateObj.transitTime,
+    freeTime: rateObj.freeTime,
+  };
+  const updated = { ...q, oceanLine: newOceanLine };
+  const { totalCostUSD, sellPriceUSD } = recalcQuoteTotals(updated);
+  const r = await fetch('/api/quotes/' + currentQuoteDbId, {
+    method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ carrier: rateObj.carrier, oceanLine: newOceanLine, totalCostUSD, sellPriceUSD })
+  });
+  if (r.ok) { await loadQuotes(); selectQuoteById(currentQuoteDbId); }
+}
+
+async function addChargeToQuote(chargeObj) {
+  const q = QUOTES_DATA.find(x => x.id === currentQuoteDbId);
+  if (!q || q.status !== 'draft') return;
+  const charge = {
+    itemName: chargeObj.itemName,
+    amount: chargeObj.asPerReceipt ? null : Number(chargeObj.price || 0),
+    currency: chargeObj.currency || 'NGN',
+    asPerReceipt: !!(chargeObj.asPerReceipt || !chargeObj.price),
+    basis: chargeObj.applicableContainer ? 'Per Container' : 'Per Shipment',
+    category: chargeObj.itemCategory || 'other',
+  };
+  const newDest = [...(q.destCharges || []), charge];
+  const updated = { ...q, destCharges: newDest };
+  const { totalCostUSD, sellPriceUSD } = recalcQuoteTotals(updated);
+  const r = await fetch('/api/quotes/' + currentQuoteDbId, {
+    method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ destCharges: newDest, totalCostUSD, sellPriceUSD })
+  });
+  if (r.ok) { await loadQuotes(); selectQuoteById(currentQuoteDbId); }
+}
+
+async function removeChargeFromQuote(idx, srcArr) {
+  const q = QUOTES_DATA.find(x => x.id === currentQuoteDbId);
+  if (!q || q.status !== 'draft') return;
+  const key = srcArr === 'origin' ? 'originCharges' : 'destCharges';
+  const newCharges = (q[key] || []).filter((_, i) => i !== idx);
+  const updated = { ...q, [key]: newCharges };
+  const { totalCostUSD, sellPriceUSD } = recalcQuoteTotals(updated);
+  const r = await fetch('/api/quotes/' + currentQuoteDbId, {
+    method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ [key]: newCharges, totalCostUSD, sellPriceUSD })
+  });
+  if (r.ok) { await loadQuotes(); selectQuoteById(currentQuoteDbId); }
 }
 
 async function deleteQuote() {
