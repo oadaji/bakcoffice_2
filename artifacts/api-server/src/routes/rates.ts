@@ -435,6 +435,135 @@ router.delete("/rates/:id", async (req, res) => {
   }
 });
 
+// ── BULK CSV IMPORT ────────────────────────────────────────────────────────────
+
+router.post("/rates/ocean-freight/import", async (req, res) => {
+  try {
+    const rows = req.body as Record<string, unknown>[];
+    if (!Array.isArray(rows) || rows.length === 0) {
+      res.status(400).json({ error: "Expected non-empty array" }); return;
+    }
+    const values = rows.map(r => ({
+      carrier: String(r.carrier ?? ""),
+      polCode: String(r.polCode ?? ""),
+      podCode: String(r.podCode ?? ""),
+      originCountry: (r.originCountry as string) ?? null,
+      destCountry: (r.destCountry as string) ?? null,
+      commodityType: (r.commodityType as string) ?? "general",
+      equipmentType: (r.equipmentType as string) ?? "40ft",
+      rateType: (r.rateType as string) ?? "all_in",
+      inclusionType: (r.inclusionType as string) ?? null,
+      transitTime: (r.transitTime as string) ?? null,
+      freeTime: (r.freeTime as string) ?? null,
+      currency: (r.currency as string) ?? "USD",
+      amount20ft: r.amount20ft ? String(r.amount20ft) : null,
+      amount40ft: r.amount40ft ? String(r.amount40ft) : null,
+      amount40hc: r.amount40hc ? String(r.amount40hc) : null,
+      expiryDate: (r.expiryDate as string) ?? null,
+      partnerId: r.partnerId ? Number(r.partnerId) : null,
+    })).filter(r => r.carrier && r.polCode && r.podCode);
+    if (!values.length) {
+      res.status(400).json({ error: "No valid rows — carrier, polCode, podCode are required" }); return;
+    }
+    const inserted = await db.insert(oceanFreightRates).values(values).returning();
+    res.status(201).json({ imported: inserted.length });
+  } catch (err) {
+    req.log.error({ err }, "Failed to import ocean freight rates");
+    res.status(500).json({ error: "Failed to import", detail: String(err) });
+  }
+});
+
+router.post("/rates/haulage-import/import", async (req, res) => {
+  try {
+    const rows = req.body as Record<string, unknown>[];
+    if (!Array.isArray(rows) || rows.length === 0) {
+      res.status(400).json({ error: "Expected non-empty array" }); return;
+    }
+    const values = rows.map(r => ({
+      terminalName: String(r.terminalName ?? ""),
+      portCode: String(r.portCode ?? ""),
+      originState: (r.originState as string) ?? null,
+      destCity: (r.destCity as string) ?? null,
+      destLga: String(r.destLga ?? ""),
+      destState: (r.destState as string) ?? null,
+      shipmentType: (r.shipmentType as string) ?? "fcl",
+      equipmentType: (r.equipmentType as string) ?? "40ft",
+      commodityType: (r.commodityType as string) ?? "general",
+      currency: (r.currency as string) ?? "NGN",
+      price: String(r.price ?? "0"),
+    })).filter(r => r.terminalName && r.portCode && r.destLga && r.price);
+    if (!values.length) {
+      res.status(400).json({ error: "No valid rows — terminalName, portCode, destLga, price are required" }); return;
+    }
+    const inserted = await db.insert(haulageImportRates).values(values).returning();
+    res.status(201).json({ imported: inserted.length });
+  } catch (err) {
+    req.log.error({ err }, "Failed to import haulage import rates");
+    res.status(500).json({ error: "Failed to import", detail: String(err) });
+  }
+});
+
+router.post("/rates/haulage-export/import", async (req, res) => {
+  try {
+    const rows = req.body as Record<string, unknown>[];
+    if (!Array.isArray(rows) || rows.length === 0) {
+      res.status(400).json({ error: "Expected non-empty array" }); return;
+    }
+    const values = rows.map(r => ({
+      terminalName: String(r.terminalName ?? ""),
+      portCode: String(r.portCode ?? ""),
+      originState: String(r.originState ?? ""),
+      originCity: (r.originCity as string) ?? null,
+      originLga: String(r.originLga ?? ""),
+      destState: (r.destState as string) ?? null,
+      shipmentType: (r.shipmentType as string) ?? "fcl",
+      equipmentType: (r.equipmentType as string) ?? "40ft",
+      commodityType: (r.commodityType as string) ?? "general",
+      currency: (r.currency as string) ?? "NGN",
+      price: String(r.price ?? "0"),
+    })).filter(r => r.terminalName && r.portCode && r.originState && r.originLga && r.price);
+    if (!values.length) {
+      res.status(400).json({ error: "No valid rows — terminalName, portCode, originState, originLga, price are required" }); return;
+    }
+    const inserted = await db.insert(haulageExportRates).values(values).returning();
+    res.status(201).json({ imported: inserted.length });
+  } catch (err) {
+    req.log.error({ err }, "Failed to import haulage export rates");
+    res.status(500).json({ error: "Failed to import", detail: String(err) });
+  }
+});
+
+router.post("/rates/other-charges/import", async (req, res) => {
+  try {
+    const rows = req.body as Record<string, unknown>[];
+    if (!Array.isArray(rows) || rows.length === 0) {
+      res.status(400).json({ error: "Expected non-empty array" }); return;
+    }
+    const values = rows.map(r => {
+      const apr = r.asPerReceipt === "true" || r.asPerReceipt === true;
+      return {
+        itemName: String(r.itemName ?? ""),
+        shipmentType: (r.shipmentType as string) ?? "both",
+        itemCategory: String(r.itemCategory ?? "other"),
+        commodityType: (r.commodityType as string) ?? "FAK",
+        country: (r.country as string) ?? null,
+        currency: (r.currency as string) ?? "NGN",
+        price: apr ? null : (r.price ? String(r.price) : null),
+        asPerReceipt: apr,
+        expiryDate: (r.expiryDate as string) ?? null,
+      };
+    }).filter(r => r.itemName && r.itemCategory);
+    if (!values.length) {
+      res.status(400).json({ error: "No valid rows — itemName, itemCategory are required" }); return;
+    }
+    const inserted = await db.insert(otherCharges).values(values).returning();
+    res.status(201).json({ imported: inserted.length });
+  } catch (err) {
+    req.log.error({ err }, "Failed to import other charges");
+    res.status(500).json({ error: "Failed to import", detail: String(err) });
+  }
+});
+
 // ── REQUEST RATES FROM PARTNERS ───────────────────────────────────────────────
 
 router.post("/rfqs/:id/request-rates", async (req, res) => {
