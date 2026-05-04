@@ -3580,8 +3580,8 @@ function renderQuotePreview(q) {
   const marginPctNum = Number(q.marginPct) || 13;
   const oceanAmt = Number(ocean.amount)||0;
 
-  // Live-recalculate totals from components (never trust stored DB values alone)
-  const _liveCalc = recalcQuoteTotals(q);
+  // Live-recalculate totals from components — forward resolved marginPctNum so null q.marginPct works
+  const _liveCalc = recalcQuoteTotals({ ...q, marginPct: String(marginPctNum) });
   const _liveTotalCost = Number(_liveCalc.totalCostUSD) || 0;
   const _liveSellPrice = Number(_liveCalc.sellPriceUSD) || 0;
   const carrier = ocean.carrier || q.carrier || 'TBD';
@@ -3979,7 +3979,7 @@ async function regenerateQuote() {
 
 function recalcQuoteTotals(q) {
   const fx = Number(q.exchangeRate) || 1600;
-  const margin = Number(q.marginPct) / 100;
+  const margin = (Number(q.marginPct) || 13) / 100;
   const oceanAmt = Number((q.oceanLine && q.oceanLine.amount) || 0);
   const allC = [...(Array.isArray(q.originCharges)?q.originCharges:[]), ...(Array.isArray(q.destCharges)?q.destCharges:[])];
   const haulage = q.haulage && typeof q.haulage === 'object' ? q.haulage : null;
@@ -3995,8 +3995,8 @@ async function qpMarginUpdate() {
   const q = QUOTES_DATA.find(x => x.id === currentQuoteDbId);
   if (!q || q.status !== 'draft') return;
   const newMargin = Number(document.getElementById('qp-margin-input')?.value) || 0;
-  // Use live-calculated base cost so it works even if stored value is stale/null
-  const { totalCostUSD: liveTCStr } = recalcQuoteTotals({ ...q, marginPct: '0' });
+  // Recalc with margin=0 trick: totalCostUSD never depends on margin, so just read it directly
+  const { totalCostUSD: liveTCStr } = recalcQuoteTotals(q);
   const totalCost = Number(liveTCStr) || 0;
   const sellPrice = Math.round(totalCost * (1 + newMargin / 100));
   const marginAmt = sellPrice - totalCost;
