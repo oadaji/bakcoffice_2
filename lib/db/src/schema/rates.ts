@@ -186,3 +186,13 @@ export const partnerOutreach = pgTable("partner_outreach", {
 });
 
 export type PartnerOutreach = typeof partnerOutreach.$inferSelect;
+
+// ── APP SETTINGS (API keys, integration config) ───────────────────────────────
+export const appSettings = pgTable("app_settings", {
+  key: text("key").primaryKey(),
+  value: text("value"),
+  label: text("label"),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export type AppSetting = typeof appSettings.$inferSelect;

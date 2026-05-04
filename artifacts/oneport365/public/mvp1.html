@@ -1027,14 +1027,18 @@ tr.trow.sel td{background:#eef6e6}
             <span style="width:8px;height:8px;border-radius:50%;background:#2563eb;display:inline-block"></span>In-Haulage
             <span style="font-size:10px;padding:1px 6px;border-radius:10px;background:rgba(0,0,0,.07);font-weight:600">4</span>
           </div>
-          <div id="rtt-local" onclick="filterRateType('other')" style="display:flex;align-items:center;gap:6px;padding:9px 0;font-size:12px;cursor:pointer;flex:1;justify-content:center;color:#8a9e8a">
+          <div id="rtt-local" onclick="filterRateType('other')" style="display:flex;align-items:center;gap:6px;padding:9px 0;font-size:12px;cursor:pointer;flex:1;justify-content:center;color:#8a9e8a;border-right:1px solid #e4e8e4">
             <span style="width:8px;height:8px;border-radius:50%;background:#7c3aed;display:inline-block"></span>Other Charges
             <span style="font-size:10px;padding:1px 6px;border-radius:10px;background:rgba(0,0,0,.07);font-weight:600">12</span>
+          </div>
+          <div id="rtt-live" onclick="filterRateType('live')" style="display:flex;align-items:center;gap:6px;padding:9px 0;font-size:12px;cursor:pointer;flex:1;justify-content:center;color:#8a9e8a">
+            <span style="width:8px;height:8px;border-radius:50%;background:#f59e0b;display:inline-block"></span>⚡ Live Rates
           </div>
 
         </div>
 
-        <!-- SEARCH FILTERS -->
+        <!-- SEARCH FILTERS (hidden when Live Rates active) -->
+        <div id="rates-main-content">
         <div style="background:#fff;border:1px solid #e4e8e4;border-radius:8px;padding:14px;display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px;flex-shrink:0">
           <div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:100px">
             <span style="font-size:9px;font-weight:600;color:#8a9e8a;text-transform:uppercase;letter-spacing:.05em">Origin (POL)</span>
@@ -1150,6 +1154,89 @@ tr.trow.sel td{background:#eef6e6}
           </div>
 
         </div>
+        </div><!-- end rates-main-content -->
+
+        <!-- LIVE RATES SECTION (CMA-CGM + future carriers) -->
+        <div id="rates-live-content" style="display:none;flex-direction:column;gap:14px">
+
+          <!-- API Key Settings Card -->
+          <div style="background:#fff;border:1px solid #e4e8e4;border-radius:10px;overflow:hidden">
+            <div style="padding:12px 16px;background:#fffbeb;border-bottom:1px solid #fde68a;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+              <div style="display:flex;align-items:center;gap:10px">
+                <div style="width:32px;height:32px;border-radius:8px;background:#C00000;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                  <span style="color:#fff;font-size:13px;font-weight:700">C</span>
+                </div>
+                <div>
+                  <div style="font-size:13px;font-weight:700;color:#1a2e1a">CMA CGM Live Rates</div>
+                  <div style="font-size:11px;color:#92400e">Connect your CMA CGM API key to fetch real-time spot rates</div>
+                </div>
+              </div>
+              <div id="cma-status-badge" style="font-size:10px;font-weight:600;padding:3px 10px;border-radius:20px;background:#f1f5f9;color:#64748b">Not connected</div>
+            </div>
+            <div style="padding:14px 16px">
+              <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+                <div style="flex:1;min-width:220px">
+                  <div style="font-size:10px;font-weight:600;color:#8a9e8a;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">API Key</div>
+                  <input id="cma-api-key-input" type="password" placeholder="Paste your CMA CGM API key…" style="width:100%;box-sizing:border-box;border:1px solid #d0d8d0;border-radius:7px;padding:8px 10px;font-size:12px;font-family:Inter,sans-serif;outline:none;color:#1a2e1a;background:#fafbfa">
+                </div>
+                <button onclick="saveCmaKey()" style="padding:8px 16px;font-size:12px;font-weight:600;cursor:pointer;border-radius:7px;border:none;background:#C00000;color:#fff;font-family:Inter,sans-serif;white-space:nowrap">Save &amp; Test</button>
+                <button id="cma-clear-btn" onclick="clearCmaKey()" style="display:none;padding:8px 12px;font-size:11px;cursor:pointer;border-radius:7px;border:1px solid #fca5a5;background:#fff;color:#dc2626;font-family:Inter,sans-serif">Remove key</button>
+              </div>
+              <div id="cma-key-msg" style="display:none;margin-top:8px;font-size:11px;border-radius:6px;padding:8px 10px"></div>
+              <div style="margin-top:10px;padding-top:10px;border-top:1px solid #f0f4f0">
+                <div style="font-size:10px;color:#8a9e8a;line-height:1.6">
+                  Get your API key at <strong style="color:#C00000">developer.cma-cgm.com</strong> → My APIs → Spot Rate.
+                  The key is stored securely on the server and never exposed to the browser.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Rate Search -->
+          <div style="background:#fff;border:1px solid #e4e8e4;border-radius:10px;padding:14px">
+            <div style="font-size:12px;font-weight:600;color:#1a2e1a;margin-bottom:12px">Search Live Spot Rates</div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
+              <div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:100px">
+                <span style="font-size:9px;font-weight:600;color:#8a9e8a;text-transform:uppercase;letter-spacing:.05em">Origin Port (POL)</span>
+                <input id="lr-pol" type="text" placeholder="e.g. CNSHA" maxlength="10" style="border:1px solid #d0d8d0;border-radius:6px;padding:7px 9px;font-size:12px;font-family:Inter,sans-serif;outline:none;color:#1a2e1a;text-transform:uppercase">
+              </div>
+              <div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:100px">
+                <span style="font-size:9px;font-weight:600;color:#8a9e8a;text-transform:uppercase;letter-spacing:.05em">Destination Port (POD)</span>
+                <input id="lr-pod" type="text" placeholder="e.g. NGAPP" maxlength="10" style="border:1px solid #d0d8d0;border-radius:6px;padding:7px 9px;font-size:12px;font-family:Inter,sans-serif;outline:none;color:#1a2e1a;text-transform:uppercase">
+              </div>
+              <div style="display:flex;flex-direction:column;gap:4px;min-width:100px">
+                <span style="font-size:9px;font-weight:600;color:#8a9e8a;text-transform:uppercase;letter-spacing:.05em">Container</span>
+                <select id="lr-container" style="border:1px solid #d0d8d0;border-radius:6px;padding:7px 9px;font-size:12px;font-family:Inter,sans-serif;outline:none;background:#fff;color:#1a2e1a">
+                  <option value="40ft">40FT GP</option>
+                  <option value="20ft">20FT GP</option>
+                  <option value="40hc">40HC</option>
+                </select>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:4px;min-width:130px">
+                <span style="font-size:9px;font-weight:600;color:#8a9e8a;text-transform:uppercase;letter-spacing:.05em">Departure Date</span>
+                <input id="lr-date" type="date" style="border:1px solid #d0d8d0;border-radius:6px;padding:7px 9px;font-size:12px;font-family:Inter,sans-serif;outline:none;color:#1a2e1a">
+              </div>
+              <button onclick="fetchLiveRates()" style="padding:8px 18px;font-size:12px;font-weight:600;cursor:pointer;border-radius:7px;border:none;background:#1a6e2e;color:#fff;font-family:Inter,sans-serif;white-space:nowrap">Search</button>
+            </div>
+          </div>
+
+          <!-- Results -->
+          <div id="lr-results-wrap" style="display:none;background:#fff;border:1px solid #e4e8e4;border-radius:10px;overflow:hidden">
+            <div style="padding:10px 16px;border-bottom:1px solid #e4e8e4;display:flex;align-items:center;justify-content:space-between">
+              <span id="lr-results-title" style="font-size:12px;font-weight:600;color:#1a2e1a"></span>
+              <span id="lr-results-meta" style="font-size:10px;color:#8a9e8a"></span>
+            </div>
+            <div id="lr-results-body" style="overflow-x:auto"></div>
+          </div>
+
+          <!-- Error / loading -->
+          <div id="lr-spinner" style="display:none;background:#fff;border:1px solid #e4e8e4;border-radius:10px;padding:24px;text-align:center;color:#5a9132;font-size:13px;font-weight:500">
+            <div style="width:22px;height:22px;border:3px solid #d0e8c0;border-top-color:#5a9132;border-radius:50%;animation:spin .8s linear infinite;display:inline-block;vertical-align:middle;margin-right:8px"></div>
+            Fetching live rates from CMA CGM…
+          </div>
+          <div id="lr-error" style="display:none;background:#fee2e2;border:1px solid #fca5a5;border-radius:8px;padding:12px 14px;font-size:12px;color:#991b1b"></div>
+
+        </div><!-- end rates-live-content -->
 
         <!-- FEES EDITOR -->
         <div id="fee-editor" style="display:none;margin-top:14px;background:#fff;border:1px solid #e4e8e4;border-radius:10px;padding:16px">
@@ -2482,17 +2569,188 @@ function brPickPort(inputId, val, suggestId){
 
 function filterRateType(type){
   activeRateType=type;
-  const tabMap={'ocean':'contract','inhaulage':'spot','other':'local'};
+  const tabMap={'ocean':'contract','inhaulage':'spot','other':'local','live':'live'};
   Object.entries(tabMap).forEach(([t,id])=>{
     const el=document.getElementById('rtt-'+id); if(!el) return;
     const active=t===type;
-    el.style.background=active?'#eef6e6':'';
-    el.style.color=active?'#5a9132':'#8a9e8a';
+    el.style.background=active?(t==='live'?'#fffbeb':'#eef6e6'):'';
+    el.style.color=active?(t==='live'?'#92400e':'#5a9132'):'#8a9e8a';
     el.style.fontWeight=active?'600':'500';
-    el.style.borderBottom=active?'2px solid #7AB648':'';
+    el.style.borderBottom=active?(t==='live'?'2px solid #f59e0b':'2px solid #7AB648'):'';
   });
-  renderRatesTable();
+  const mainContent=document.getElementById('rates-main-content');
+  const liveContent=document.getElementById('rates-live-content');
+  if(type==='live'){
+    if(mainContent) mainContent.style.display='none';
+    if(liveContent){ liveContent.style.display='flex'; loadCmaKeyStatus(); }
+  } else {
+    if(mainContent) mainContent.style.display='block';
+    if(liveContent) liveContent.style.display='none';
+    renderRatesTable();
+  }
 }
+
+// ── CMA-CGM LIVE RATES ────────────────────────────────────────────────────────
+async function loadCmaKeyStatus(){
+  try {
+    const res=await fetch('/api/settings');
+    if(!res.ok) return;
+    const settings=await res.json();
+    const cma=settings.find(s=>s.key==='cma_cgm_api_key');
+    setCmaStatusBadge(cma?.isSet||false);
+    const clearBtn=document.getElementById('cma-clear-btn');
+    if(clearBtn) clearBtn.style.display=cma?.isSet?'block':'none';
+  } catch(e) { console.error('Failed to load settings',e); }
+}
+
+function setCmaStatusBadge(connected){
+  const badge=document.getElementById('cma-status-badge');
+  if(!badge) return;
+  if(connected){
+    badge.textContent='✓ Connected';
+    badge.style.background='#f0fdf4';
+    badge.style.color='#166534';
+    badge.style.border='1px solid #86efac';
+  } else {
+    badge.textContent='Not connected';
+    badge.style.background='#f1f5f9';
+    badge.style.color='#64748b';
+    badge.style.border='none';
+  }
+}
+
+async function saveCmaKey(){
+  const input=document.getElementById('cma-api-key-input');
+  const msgEl=document.getElementById('cma-key-msg');
+  const key=input?.value?.trim();
+  if(!key){ showCmaMsg('Enter your CMA CGM API key first','#fee2e2','#991b1b'); return; }
+  showCmaMsg('Saving and testing connection…','#f0f7ff','#1e40af');
+  try {
+    // Save key
+    const saveRes=await fetch('/api/settings/cma_cgm_api_key',{
+      method:'PUT',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({value:key,label:'CMA CGM API Key'})
+    });
+    if(!saveRes.ok) throw new Error('Save failed');
+    // Test connection
+    const testRes=await fetch('/api/rates/spot/cma-cgm/test',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({apiKey:key})
+    });
+    const testData=await testRes.json();
+    if(testData.ok){
+      showCmaMsg('✅ Connected! '+testData.message,'#f0fdf4','#166534');
+      setCmaStatusBadge(true);
+    } else {
+      showCmaMsg('⚠️ Key saved but test returned: '+testData.message,'#fffbeb','#92400e');
+      setCmaStatusBadge(true);
+    }
+    input.value='';
+    const clearBtn=document.getElementById('cma-clear-btn');
+    if(clearBtn) clearBtn.style.display='block';
+  } catch(err){
+    showCmaMsg('❌ Failed to save: '+err.message,'#fee2e2','#991b1b');
+  }
+}
+
+async function clearCmaKey(){
+  if(!confirm('Remove the CMA CGM API key?')) return;
+  await fetch('/api/settings/cma_cgm_api_key',{method:'DELETE'});
+  setCmaStatusBadge(false);
+  const clearBtn=document.getElementById('cma-clear-btn');
+  if(clearBtn) clearBtn.style.display='none';
+  showCmaMsg('API key removed','#f8faf8','#4a5e4a');
+}
+
+function showCmaMsg(text,bg,color){
+  const el=document.getElementById('cma-key-msg');
+  if(!el) return;
+  el.textContent=text;
+  el.style.background=bg;
+  el.style.color=color;
+  el.style.border='1px solid '+color+'44';
+  el.style.display='block';
+}
+
+async function fetchLiveRates(){
+  const pol=(document.getElementById('lr-pol')?.value||'').trim().toUpperCase();
+  const pod=(document.getElementById('lr-pod')?.value||'').trim().toUpperCase();
+  const container=document.getElementById('lr-container')?.value||'40ft';
+  const date=document.getElementById('lr-date')?.value||'';
+  if(!pol||!pod){ alert('Enter both origin (POL) and destination (POD) port codes.'); return; }
+  const spinner=document.getElementById('lr-spinner');
+  const errEl=document.getElementById('lr-error');
+  const resultsWrap=document.getElementById('lr-results-wrap');
+  spinner.style.display='block';
+  errEl.style.display='none';
+  resultsWrap.style.display='none';
+  try {
+    const params=new URLSearchParams({pol,pod,container});
+    if(date) params.set('date',date);
+    const res=await fetch('/api/rates/spot/cma-cgm?'+params.toString());
+    const data=await res.json();
+    if(!res.ok){
+      errEl.innerHTML='<strong>CMA CGM API error</strong><br>'+
+        (data.detail?.message||data.error||JSON.stringify(data.detail||data));
+      errEl.style.display='block';
+    } else {
+      renderLiveRates(data);
+      resultsWrap.style.display='block';
+    }
+  } catch(err){
+    errEl.textContent='Network error: '+err.message;
+    errEl.style.display='block';
+  }
+  spinner.style.display='none';
+}
+
+function renderLiveRates(data){
+  const title=document.getElementById('lr-results-title');
+  const meta=document.getElementById('lr-results-meta');
+  const body=document.getElementById('lr-results-body');
+  if(title) title.textContent=data.pol+' → '+data.pod+' ('+data.containerCode+')';
+  if(meta) meta.textContent='Source: CMA CGM · '+data.departureDate;
+  // Try to normalise different response shapes
+  let rows=[];
+  const d=data.data;
+  if(Array.isArray(d)) rows=d;
+  else if(d && Array.isArray(d.rates)) rows=d.rates;
+  else if(d && Array.isArray(d.sailings)) rows=d.sailings;
+  else if(d && d.totalPrice!==undefined) rows=[d]; // single result
+  if(!rows.length){
+    body.innerHTML='<div style="padding:24px;text-align:center;color:#8a9e8a;font-size:12px">No rates returned for this lane/date.<br><span style="font-size:10px">Try a different date or container type.</span></div>';
+    return;
+  }
+  const thS='text-align:left;padding:8px 10px;font-size:10px;font-weight:600;color:#8a9e8a;text-transform:uppercase;border-bottom:1px solid #e4e8e4;white-space:nowrap;background:#f8faf8';
+  const tdS='padding:8px 10px;border-bottom:1px solid #f0f4f0;font-size:12px;color:#1a2e1a';
+  body.innerHTML=`<table style="width:100%;border-collapse:collapse">
+    <thead><tr>
+      <th style="${thS}">Carrier / Service</th>
+      <th style="${thS}">Departure</th>
+      <th style="${thS}">Transit</th>
+      <th style="${thS}">Arrival</th>
+      <th style="${thS}">Rate</th>
+      <th style="${thS}">Currency</th>
+      <th style="${thS}">Valid Until</th>
+    </tr></thead>
+    <tbody>${rows.map(r=>`<tr>
+      <td style="${tdS}">${r.carrier||r.serviceName||r.vesselName||'CMA CGM'}</td>
+      <td style="${tdS}">${r.departureDate||r.etd||r.departure||'—'}</td>
+      <td style="${tdS}">${r.transitTime||r.transitDays||r.transit||'—'}</td>
+      <td style="${tdS}">${r.arrivalDate||r.eta||r.arrival||'—'}</td>
+      <td style="${tdS};font-weight:600;font-family:monospace;color:#5a9132">${r.totalPrice||r.rate||r.freight||r.amount||'—'}</td>
+      <td style="${tdS}">${r.currency||'USD'}</td>
+      <td style="${tdS}">${r.expiryDate||r.validUntil||r.validTo||'—'}</td>
+    </tr>`).join('')}</tbody>
+  </table>`;
+}
+
+// Initialise date picker with today
+(function initLiveDatePicker(){
+  const el=document.getElementById('lr-date');
+  if(el && !el.value) el.value=new Date().toISOString().split('T')[0];
+})();
 function filterRates(){renderRatesTable();}
 function clearRateFilters(){
   ['rf-ctr','rf-valid'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});

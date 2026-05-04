@@ -9,6 +9,7 @@ import { quotesRouter } from "./quotes";
 import seedRouter from "./seed";
 import { outreachRouter } from "./outreach";
 import { marketIntelRouter } from "./market-intel";
+import { settingsRouter } from "./settings";
 
 const router: IRouter = Router();
 
@@ -22,5 +23,6 @@ router.use(quotesRouter);
 router.use(seedRouter);
 router.use(outreachRouter);
 router.use(marketIntelRouter);
+router.use(settingsRouter);
 
 export default router;
