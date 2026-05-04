@@ -3579,6 +3579,11 @@ function renderQuotePreview(q) {
   const ctype = q.containerType || '20FT';
   const marginPctNum = Number(q.marginPct) || 13;
   const oceanAmt = Number(ocean.amount)||0;
+
+  // Live-recalculate totals from components (never trust stored DB values alone)
+  const _liveCalc = recalcQuoteTotals(q);
+  const _liveTotalCost = Number(_liveCalc.totalCostUSD) || 0;
+  const _liveSellPrice = Number(_liveCalc.sellPriceUSD) || 0;
   const carrier = ocean.carrier || q.carrier || 'TBD';
   const transit = ocean.transitTime||'—';
   const freeDays = ocean.freeTime||'—';
@@ -3603,7 +3608,7 @@ function renderQuotePreview(q) {
       const otherOpts = oceanOpts.filter(r => r.id !== (ocean.rateId || -999));
       window._qpOceanOpts = otherOpts;
       if (otherOpts.length > 0) {
-        const baseCost = Number(q.totalCostUSD) || 0;
+        const baseCost = _liveTotalCost;
         const margin = marginPctNum / 100;
         oceanOptPanel.innerHTML = `<div style="margin-top:10px">
           <button onclick="(function(b){var inner=b.nextElementSibling;var open=inner.style.display!=='none';inner.style.display=open?'none':'block';b.innerHTML=open?'&#9658; ${otherOpts.length} other rate${otherOpts.length>1?'s':''} available &mdash; click to compare margins':'&#9660; ${otherOpts.length} other rate${otherOpts.length>1?'s':''} &mdash; click to collapse'})(this)"
@@ -3716,20 +3721,18 @@ function renderQuotePreview(q) {
     } else { avPanel.innerHTML = ''; }
   }
 
-  // Quote summary — total cost, margin, sell price
-  const totalCostUSD = Number(q.totalCostUSD) || 0;
-  const sellPriceUSD = Number(q.sellPriceUSD) || 0;
-  const marginAmt = sellPriceUSD - totalCostUSD;
+  // Quote summary — total cost, margin, sell price (use live-calculated values)
+  const _liveMarginAmt = _liveSellPrice - _liveTotalCost;
   const totalCostEl = document.getElementById('qp-total-cost');
   const marginInputEl = document.getElementById('qp-margin-input');
   const marginAmtEl = document.getElementById('qp-margin-amt');
   const marginLblEl = document.getElementById('qp-margin-label');
   const sellPriceEl = document.getElementById('qp-sell-price');
-  if (totalCostEl) totalCostEl.textContent = totalCostUSD ? '$' + totalCostUSD.toLocaleString() : '—';
+  if (totalCostEl) totalCostEl.textContent = _liveTotalCost ? '$' + _liveTotalCost.toLocaleString() : '—';
   if (marginInputEl) { marginInputEl.value = marginPctNum; marginInputEl.disabled = q.status !== 'draft'; }
   if (marginLblEl) marginLblEl.textContent = `Margin (${marginPctNum}%)`;
-  if (marginAmtEl) marginAmtEl.textContent = marginAmt > 0 ? '+$' + marginAmt.toLocaleString() : '—';
-  if (sellPriceEl) sellPriceEl.textContent = sellPriceUSD ? '$' + sellPriceUSD.toLocaleString() : '—';
+  if (marginAmtEl) marginAmtEl.textContent = _liveMarginAmt > 0 ? '+$' + _liveMarginAmt.toLocaleString() : '—';
+  if (sellPriceEl) sellPriceEl.textContent = _liveSellPrice ? '$' + _liveSellPrice.toLocaleString() : '—';
 
   // AI notes banner
   const banner = document.getElementById('qp-ai-notes');
@@ -3992,7 +3995,9 @@ async function qpMarginUpdate() {
   const q = QUOTES_DATA.find(x => x.id === currentQuoteDbId);
   if (!q || q.status !== 'draft') return;
   const newMargin = Number(document.getElementById('qp-margin-input')?.value) || 0;
-  const totalCost = Number(q.totalCostUSD) || 0;
+  // Use live-calculated base cost so it works even if stored value is stale/null
+  const { totalCostUSD: liveTCStr } = recalcQuoteTotals({ ...q, marginPct: '0' });
+  const totalCost = Number(liveTCStr) || 0;
   const sellPrice = Math.round(totalCost * (1 + newMargin / 100));
   const marginAmt = sellPrice - totalCost;
 
