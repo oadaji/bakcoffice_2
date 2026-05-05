@@ -5358,10 +5358,11 @@ function renderExtraction(r) {
       aw.innerHTML = `<button class="btn btn-a btn-sm" style="width:100%">Parse &amp; save rates →</button>`;
     } else if (r.emailType === 'outbound') {
       aw.innerHTML = `<button class="btn btn-sm" style="width:100%">View RFQ thread →</button>`;
-    } else if (!missing.length) {
+    } else if (filledCount >= QUOTE_REQS.length) {
       aw.innerHTML = `<button class="btn btn-a btn-sm" style="width:100%" onclick="searchRates(${r.id})">Search rates →</button>`;
     } else {
-      aw.innerHTML = `<button class="btn btn-sm" style="width:100%;color:var(--text3)" disabled>Complete info to get rates</button>`;
+      const remaining = QUOTE_REQS.length - filledCount;
+      aw.innerHTML = `<button class="btn btn-sm" style="width:100%;color:var(--text3);cursor:not-allowed" disabled title="${remaining} required field${remaining===1?'':'s'} still missing">${remaining} required field${remaining===1?'':'s'} missing — complete to search rates</button>`;
       const rw = document.getElementById('ep-rates-wrap');
       const rl = document.getElementById('ep-rates-list');
       if (rw) rw.style.display = 'none';
