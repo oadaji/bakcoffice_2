@@ -134,7 +134,7 @@ html,body{height:100%;background:#f0f4f0;color:#1a1a1a;font-family:'Inter',sans-
 .ep-timer{font-size:10px;color:var(--warn);background:#fffbeb;padding:2px 7px;border-radius:4px;font-weight:500}
 .ep-timer.sent{color:#166534;background:#dcfce7}
 /* COMPOSE TRAY */
-.compose-tray{display:flex;flex-direction:column;flex-shrink:0;background:#fff;border-top:2px solid var(--accent);box-shadow:0 -3px 14px rgba(0,0,0,.08)}
+.compose-tray{display:flex;flex-direction:column;flex-shrink:0;background:#fff;box-shadow:0 -3px 14px rgba(0,0,0,.08);overflow:hidden}
 .compose-field-row{display:flex;align-items:center;gap:8px;padding:7px 16px;border-bottom:1px solid #f0f4f0;min-height:34px;flex-shrink:0}
 .compose-field-lbl{font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;width:50px;flex-shrink:0}
 
@@ -492,45 +492,57 @@ tr.trow.sel td{background:#eef6e6}
         <div class="detail-body" id="d-body"></div>
         <div id="d-thread"></div>
         <!-- OUTLOOK-STYLE INLINE COMPOSE TRAY -->
-        <div id="compose-tray" class="compose-tray" style="display:none">
-          <!-- countdown progress bar -->
-          <div style="height:3px;background:#e4e8e4;overflow:hidden;flex-shrink:0">
-            <div id="compose-progress" style="height:100%;background:var(--accent);transition:width 1s linear;width:100%"></div>
-          </div>
-          <!-- header -->
-          <div style="display:flex;align-items:center;gap:8px;padding:10px 16px 9px;border-bottom:1px solid #eef2ee;flex-shrink:0">
-            <span style="font-size:11px;font-weight:700;color:var(--accent-dark);display:flex;align-items:center;gap:5px">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z"/></svg>
-              Reply
-            </span>
-            <div style="flex:1"></div>
-            <span class="ep-timer" id="ep-timer">sends in 3:00</span>
-            <button onclick="epCancel()" title="Discard draft" style="border:none;background:none;cursor:pointer;color:var(--text3);font-size:15px;padding:0 0 0 10px;line-height:1;opacity:.7">✕</button>
-          </div>
-          <!-- From -->
-          <div class="compose-field-row">
-            <span class="compose-field-lbl">From</span>
-            <div style="flex:1;display:flex;align-items:center;gap:7px">
-              <div id="compose-from-avatar" style="width:22px;height:22px;border-radius:50%;background:var(--accent-dark);display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;color:#fff;flex-shrink:0;letter-spacing:0">OA</div>
-              <select id="compose-from" onchange="updateFromAvatar()" style="flex:1;border:none;outline:none;font-size:11px;color:var(--text2);font-family:Inter,sans-serif;background:transparent;cursor:pointer;min-width:0;padding:2px 0">
-                <option value="">Loading…</option>
-              </select>
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="color:var(--text3);flex-shrink:0;pointer-events:none"><polyline points="6 9 12 15 18 9"/></svg>
+        <div id="compose-tray" class="compose-tray" style="display:none;height:320px">
+          <!-- DRAG HANDLE — drag up/down to resize the tray vs email body -->
+          <div id="compose-resize-handle" title="Drag to resize" style="height:12px;background:#eef4ee;flex-shrink:0;cursor:ns-resize;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;position:relative;border-top:1px solid #d4ead4;user-select:none" onmouseenter="this.style.background='#e2efdf'" onmouseleave="this.style.background='#eef4ee'">
+            <!-- progress fill at very top -->
+            <div id="compose-progress" style="position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent);transition:width 1s linear;width:100%"></div>
+            <!-- grip dots -->
+            <div style="display:flex;gap:3px;margin-top:2px">
+              <div style="width:3px;height:3px;border-radius:50%;background:#a8c4a0"></div>
+              <div style="width:3px;height:3px;border-radius:50%;background:#a8c4a0"></div>
+              <div style="width:3px;height:3px;border-radius:50%;background:#a8c4a0"></div>
+              <div style="width:3px;height:3px;border-radius:50%;background:#a8c4a0"></div>
+              <div style="width:3px;height:3px;border-radius:50%;background:#a8c4a0"></div>
             </div>
           </div>
-          <!-- To -->
-          <div class="compose-field-row">
-            <span class="compose-field-lbl">To</span>
-            <span id="compose-to" style="font-size:11px;color:var(--text2);background:#f0f4f0;padding:2px 10px;border-radius:12px;max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+          <!-- scrollable compose area -->
+          <div style="flex:1;overflow-y:auto;display:flex;flex-direction:column;min-height:0">
+            <!-- header -->
+            <div style="display:flex;align-items:center;gap:8px;padding:10px 16px 9px;border-bottom:1px solid #eef2ee;flex-shrink:0;position:sticky;top:0;background:#fff;z-index:2">
+              <span style="font-size:11px;font-weight:700;color:var(--accent-dark);display:flex;align-items:center;gap:5px">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z"/></svg>
+                Reply
+              </span>
+              <div style="flex:1"></div>
+              <span class="ep-timer" id="ep-timer">sends in 3:00</span>
+              <button onclick="epCancel()" title="Discard draft" style="border:none;background:none;cursor:pointer;color:var(--text3);font-size:15px;padding:0 0 0 10px;line-height:1;opacity:.7">✕</button>
+            </div>
+            <!-- From -->
+            <div class="compose-field-row" style="flex-shrink:0">
+              <span class="compose-field-lbl">From</span>
+              <div style="flex:1;display:flex;align-items:center;gap:7px">
+                <div id="compose-from-avatar" style="width:22px;height:22px;border-radius:50%;background:var(--accent-dark);display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;color:#fff;flex-shrink:0;letter-spacing:0">OA</div>
+                <select id="compose-from" onchange="updateFromAvatar()" style="flex:1;border:none;outline:none;font-size:11px;color:var(--text2);font-family:Inter,sans-serif;background:transparent;cursor:pointer;min-width:0;padding:2px 0">
+                  <option value="">Loading…</option>
+                </select>
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="color:var(--text3);flex-shrink:0;pointer-events:none"><polyline points="6 9 12 15 18 9"/></svg>
+              </div>
+            </div>
+            <!-- To -->
+            <div class="compose-field-row" style="flex-shrink:0">
+              <span class="compose-field-lbl">To</span>
+              <span id="compose-to" style="font-size:11px;color:var(--text2);background:#f0f4f0;padding:2px 10px;border-radius:12px;max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+            </div>
+            <!-- Subject -->
+            <div class="compose-field-row" style="border-bottom:1px solid #e4e8e4;flex-shrink:0">
+              <span class="compose-field-lbl">Subject</span>
+              <input id="compose-subject" type="text" spellcheck="false" style="flex:1;border:none;outline:none;font-size:11px;font-weight:500;color:var(--text2);font-family:Inter,sans-serif;background:transparent;padding:2px 0" />
+            </div>
+            <!-- Body — grows to fill remaining space, scrolls if needed -->
+            <textarea id="ep-draft" spellcheck="true" style="flex:1;border:none;outline:none;resize:none;padding:14px 16px;font-size:12px;color:var(--text2);line-height:1.85;font-family:Inter,sans-serif;background:#fff;min-height:120px;width:100%;box-sizing:border-box;overflow-y:auto"></textarea>
           </div>
-          <!-- Subject -->
-          <div class="compose-field-row" style="border-bottom:1px solid #e4e8e4">
-            <span class="compose-field-lbl">Subject</span>
-            <input id="compose-subject" type="text" spellcheck="false" style="flex:1;border:none;outline:none;font-size:11px;font-weight:500;color:var(--text2);font-family:Inter,sans-serif;background:transparent;padding:2px 0" />
-          </div>
-          <!-- Body -->
-          <textarea id="ep-draft" spellcheck="true" style="flex:1;border:none;outline:none;resize:none;padding:14px 16px;font-size:12px;color:var(--text2);line-height:1.85;font-family:Inter,sans-serif;background:#fff;min-height:140px;width:100%;box-sizing:border-box"></textarea>
-          <!-- Footer toolbar -->
+          <!-- Footer toolbar — always pinned to bottom of tray -->
           <div style="display:flex;align-items:center;gap:8px;padding:11px 16px;border-top:1px solid #e8ede8;background:#f8faf8;flex-shrink:0">
             <button class="btn btn-primary btn-sm" onclick="epSendNow()" id="compose-send-btn" style="display:flex;align-items:center;gap:5px;font-size:12px;padding:7px 18px">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg> Send
@@ -5369,8 +5381,39 @@ function updateFromAvatar() {
   av.style.background = colors[email.length % colors.length];
 }
 
+function initComposeResize() {
+  const handle = document.getElementById('compose-resize-handle');
+  const tray = document.getElementById('compose-tray');
+  const colEmail = tray?.closest('.col-email');
+  if (!handle || !tray) return;
+  let resizing = false, startY = 0, startH = 0;
+  handle.addEventListener('mousedown', (e) => {
+    resizing = true;
+    startY = e.clientY;
+    startH = tray.getBoundingClientRect().height;
+    document.body.style.cursor = 'ns-resize';
+    document.body.style.userSelect = 'none';
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove', (e) => {
+    if (!resizing) return;
+    const delta = startY - e.clientY; // drag up → taller tray
+    const colH = colEmail ? colEmail.getBoundingClientRect().height : 800;
+    const newH = Math.max(160, Math.min(Math.round(colH * 0.78), startH + delta));
+    tray.style.height = newH + 'px';
+  });
+  document.addEventListener('mouseup', () => {
+    if (resizing) {
+      resizing = false;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    }
+  });
+}
+
 // Init — load from API
 document.addEventListener('DOMContentLoaded', async () => {
+  initComposeResize();
   loadEmailAccountsStatus();
   await loadInbox();
   // After inbox data is loaded, also populate Deals count without switching screens
