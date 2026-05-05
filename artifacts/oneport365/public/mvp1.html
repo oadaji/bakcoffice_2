@@ -84,10 +84,10 @@ html,body{height:100%;background:#f0f4f0;color:#1a1a1a;font-family:'Inter',sans-
 .detail-meta{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .detail-meta-from{font-size:11px;color:var(--text3)}
 .detail-meta-time{font-size:11px;color:var(--text3);margin-left:auto}
-.processing-bar{margin:10px 18px 0;padding:8px 12px;background:#eef6e6;border:1px solid #c8e6a0;border-radius:8px;display:flex;align-items:center;gap:8px;flex-shrink:0}
+.processing-bar{margin:12px 18px 0;padding:9px 13px;background:#eef6e6;border:1px solid #c8e6a0;border-radius:8px;display:flex;align-items:center;gap:8px;flex-shrink:0}
 .processing-bar-text{font-size:11px;color:var(--accent-dark);flex:1}
 .processing-badge{font-size:10px;padding:2px 8px;border-radius:4px;background:var(--accent);color:#fff;font-weight:500;white-space:nowrap;flex-shrink:0}
-.detail-body{padding:14px 18px;flex:1;overflow-y:auto;font-size:13px;color:var(--text2);line-height:1.8;min-height:0}
+.detail-body{padding:16px 20px;flex:1;overflow-y:auto;font-size:13px;color:var(--text2);line-height:1.85;min-height:0}
 .detail-body::-webkit-scrollbar{width:3px}
 .detail-body::-webkit-scrollbar-thumb{background:var(--border2)}
 .detail-actions{padding:10px 18px;border-top:1px solid var(--border);display:flex;gap:7px;flex-shrink:0}
@@ -116,10 +116,10 @@ html,body{height:100%;background:#f0f4f0;color:#1a1a1a;font-family:'Inter',sans-
 .ep-hd{padding:10px 14px;border-bottom:1px solid var(--border);background:var(--surface);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
 .ep-title{font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em}
 .ep-rfqnum{font-size:11px;color:var(--accent-dark);font-weight:600;background:var(--accent-light);padding:2px 8px;border-radius:4px}
-.ep-body{flex:1;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:0;min-height:0}
+.ep-body{flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:0;min-height:0}
 .ep-body::-webkit-scrollbar{width:3px}
 .ep-body::-webkit-scrollbar-thumb{background:var(--border2)}
-.ep-field{display:flex;justify-content:space-between;align-items:flex-start;padding:6px 0;border-bottom:1px solid var(--border);gap:8px}
+.ep-field{display:flex;justify-content:space-between;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--border);gap:8px}
 .ep-field:last-child{border-bottom:none}
 .ep-key{font-size:10px;color:var(--text3);font-weight:500;min-width:80px;flex-shrink:0;padding-top:1px}
 .ep-val{font-size:11px;color:var(--text);text-align:right;flex:1;line-height:1.4}
@@ -135,8 +135,8 @@ html,body{height:100%;background:#f0f4f0;color:#1a1a1a;font-family:'Inter',sans-
 .ep-timer.sent{color:#166534;background:#dcfce7}
 /* COMPOSE TRAY */
 .compose-tray{display:flex;flex-direction:column;flex-shrink:0;background:#fff;border-top:2px solid var(--accent);box-shadow:0 -3px 14px rgba(0,0,0,.08)}
-.compose-field-row{display:flex;align-items:center;gap:8px;padding:5px 14px;border-bottom:1px solid #f0f4f0;min-height:30px;flex-shrink:0}
-.compose-field-lbl{font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;width:46px;flex-shrink:0}
+.compose-field-row{display:flex;align-items:center;gap:8px;padding:7px 16px;border-bottom:1px solid #f0f4f0;min-height:34px;flex-shrink:0}
+.compose-field-lbl{font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;width:50px;flex-shrink:0}
 
 /* RATES PANEL */
 .rate-card{background:#fff;border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:7px}
@@ -498,7 +498,7 @@ tr.trow.sel td{background:#eef6e6}
             <div id="compose-progress" style="height:100%;background:var(--accent);transition:width 1s linear;width:100%"></div>
           </div>
           <!-- header -->
-          <div style="display:flex;align-items:center;gap:8px;padding:8px 14px 7px;border-bottom:1px solid #eef2ee;flex-shrink:0">
+          <div style="display:flex;align-items:center;gap:8px;padding:10px 16px 9px;border-bottom:1px solid #eef2ee;flex-shrink:0">
             <span style="font-size:11px;font-weight:700;color:var(--accent-dark);display:flex;align-items:center;gap:5px">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z"/></svg>
               Reply
@@ -529,9 +529,9 @@ tr.trow.sel td{background:#eef6e6}
             <input id="compose-subject" type="text" spellcheck="false" style="flex:1;border:none;outline:none;font-size:11px;font-weight:500;color:var(--text2);font-family:Inter,sans-serif;background:transparent;padding:2px 0" />
           </div>
           <!-- Body -->
-          <textarea id="ep-draft" spellcheck="true" style="flex:1;border:none;outline:none;resize:none;padding:12px 14px;font-size:12px;color:var(--text2);line-height:1.8;font-family:Inter,sans-serif;background:#fff;min-height:130px;width:100%;box-sizing:border-box"></textarea>
+          <textarea id="ep-draft" spellcheck="true" style="flex:1;border:none;outline:none;resize:none;padding:14px 16px;font-size:12px;color:var(--text2);line-height:1.85;font-family:Inter,sans-serif;background:#fff;min-height:140px;width:100%;box-sizing:border-box"></textarea>
           <!-- Footer toolbar -->
-          <div style="display:flex;align-items:center;gap:8px;padding:9px 14px;border-top:1px solid #e8ede8;background:#f8faf8;flex-shrink:0">
+          <div style="display:flex;align-items:center;gap:8px;padding:11px 16px;border-top:1px solid #e8ede8;background:#f8faf8;flex-shrink:0">
             <button class="btn btn-primary btn-sm" onclick="epSendNow()" id="compose-send-btn" style="display:flex;align-items:center;gap:5px;font-size:12px;padding:7px 18px">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg> Send
             </button>
@@ -4950,7 +4950,7 @@ function selEmail(rfqId, el) {
   renderBrief(renderTarget, currentGroupRfqs);
 }
 
-let briefOpen = true;
+let briefOpen = false;
 function toggleBrief() {
   briefOpen = !briefOpen;
   const body = document.getElementById('brief-body');
@@ -5035,10 +5035,10 @@ function renderBrief(r, groupRfqs) {
     ${next ? `<div class="brief-next"><div class="brief-next-lbl">→ Next step</div><div class="brief-next-text">${escHtml(next)}</div></div>` : ''}
   `;
 
-  // Always show open when switching emails
-  briefOpen = true;
-  body.style.display = 'flex';
-  if (chev) chev.textContent = '▴';
+  // Default collapsed when switching emails
+  briefOpen = false;
+  body.style.display = 'none';
+  if (chev) chev.textContent = '▾';
   card.style.display = '';
 }
 
