@@ -24,16 +24,18 @@ button{font-family:Inter,sans-serif;cursor:pointer}
 .gate-err{font-size:12px;color:#dc2626;min-height:16px}
 
 /* TOPNAV */
-.topnav{background:#1C3829;height:48px;display:flex;align-items:center;padding:0 16px;gap:0;flex-shrink:0}
-.logo-box{display:flex;align-items:center;margin-right:16px}
-.nav-item{padding:0 14px;height:48px;display:flex;align-items:center;font-size:12px;font-weight:500;color:rgba(255,255,255,.6);cursor:pointer;border-bottom:2px solid transparent;transition:color .15s;text-decoration:none;white-space:nowrap}
-.nav-item:hover{color:rgba(255,255,255,.9)}
-.nav-item.active{color:#fff;border-bottom-color:#7AB648;font-weight:600}
+.topnav{background:#1C3829;height:52px;display:flex;align-items:center;padding:0 20px;gap:0;flex-shrink:0}
+.logo-box{display:flex;align-items:center;gap:9px;padding-right:20px;border-right:1px solid rgba(255,255,255,.1);margin-right:6px;flex-shrink:0}
+.nav-item{padding:0 14px;height:52px;display:flex;align-items:center;font-size:12px;font-weight:400;color:rgba(255,255,255,.6);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;text-decoration:none;white-space:nowrap}
+.nav-item:hover{color:rgba(255,255,255,.9);background:rgba(255,255,255,.05)}
+.nav-item.active{color:#fff;border-bottom-color:#7AB648;font-weight:500}
 .nav-right{margin-left:auto;display:flex;align-items:center;gap:12px}
 .t-status{display:flex;align-items:center;gap:6px;font-size:11px;color:rgba(255,255,255,.5)}
 .t-status-dot{width:6px;height:6px;border-radius:50%;background:#7AB648}
 .user-chip{display:flex;align-items:center;gap:8px;padding:4px 12px;border:1px solid rgba(255,255,255,.2);border-radius:20px;cursor:pointer}
-.user-avatar{width:24px;height:24px;border-radius:50%;background:#7AB648;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff}
+.user-avatar{width:26px;height:26px;border-radius:50%;background:#7AB648;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:#fff}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.t-status-dot{animation:pulse 2s ease infinite}
 
 /* TAB BAR */
 .tab-bar{background:#fff;border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:0;flex-shrink:0;overflow-x:auto}
@@ -307,17 +309,18 @@ tr.row-expiring-soon td{background:#fffbeb}
   <!-- TOP NAV -->
   <div class="topnav">
     <div class="logo-box">
-      <img src="/oneport365_logo.png" alt="OnePort 365" style="height:26px;width:auto">
+      <img src="/oneport365_logo.png" alt="OnePort 365" style="height:28px;width:auto;display:block">
     </div>
-    <a class="nav-item" href="/mvp1.html">Deals</a>
+    <a class="nav-item" href="/mvp1.html">CRM</a>
     <a class="nav-item" href="/mvp1.html">✉ RFQ</a>
     <a class="nav-item active" href="/rates.html">$ Rates</a>
-    <a class="nav-item" href="/mvp1.html#quotes" id="nav-quotes">📄 Quotes <span id="quotes-nav-badge" style="font-size:10px;padding:1px 6px;border-radius:10px;background:rgba(255,255,255,.15);color:#fff;font-weight:600;margin-left:2px">0</span></a>
+    <a class="nav-item" href="/mvp1.html">📄 Quotes</a>
     <div class="nav-right">
-      <div class="t-status"><div class="t-status-dot"></div>monitoring sales@oneport365.com</div>
+      <div class="t-status"><div class="t-status-dot"></div>Live</div>
       <div class="user-chip">
         <div class="user-avatar">OA</div>
         <span style="font-size:11px;color:rgba(255,255,255,.85)">Okpanachi Adaji</span>
+        <span style="font-size:10px;color:rgba(255,255,255,.4);margin-left:2px">▾</span>
       </div>
     </div>
   </div>
@@ -856,7 +859,7 @@ tr.row-expiring-soon td{background:#fffbeb}
 
 <script>
 const PASS = 'X#9mK$vL2@nQ7pR!';
-const SKEY = 'op365-auth';
+const SKEY = 'op365_auth';
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
 let currentTab = 'ocean';
