@@ -5130,8 +5130,8 @@ function renderExtraction(r) {
     const missingEl = document.getElementById('ep-missing');
     if (missingEl) missingEl.innerHTML = missing.map(m => `<div class="ep-missing-item">⚠ ${escHtml(m)}</div>`).join('');
     if (draft) {
-      // Show compose tray in centre column
-      if (ct) ct.style.display = 'flex';
+      // Show compose tray only for non-replied RFQs; replied ones show it on demand via focusComposeTray()
+      if (ct) ct.style.display = r.status === 'replied' ? 'none' : 'flex';
       const draftEl = document.getElementById('ep-draft');
       const timerEl = document.getElementById('ep-timer');
       const countdownEl = document.getElementById('compose-countdown');
@@ -5370,10 +5370,10 @@ function updateFromAvatar() {
 function focusComposeTray() {
   const ct = document.getElementById('compose-tray');
   const draft = document.getElementById('ep-draft');
-  if (ct && ct.style.display !== 'none') {
-    ct.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    if (draft) { draft.focus(); draft.setSelectionRange(draft.value.length, draft.value.length); }
-  }
+  if (!ct) return;
+  if (ct.style.display === 'none') ct.style.display = 'flex';
+  ct.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  if (draft) { draft.focus(); draft.setSelectionRange(draft.value.length, draft.value.length); }
 }
 
 function initComposeResize() {
