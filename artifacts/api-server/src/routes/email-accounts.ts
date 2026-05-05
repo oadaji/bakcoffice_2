@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { ImapFlow } from "imapflow";
-import { db, emailAccounts } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { db, emailAccounts, emailsTable } from "@workspace/db";
+import { eq, desc } from "drizzle-orm";
 
 const router: IRouter = Router();
 
@@ -28,6 +28,16 @@ router.get("/email-accounts", async (req, res) => {
 
     // Also surface the env-var account if configured
     const envEmail = process.env.GMAIL_ADDRESS;
+    let envLastSynced: Date | null = null;
+    if (envEmail) {
+      // Use the most recently ingested email as a proxy for last sync time
+      const [latest] = await db
+        .select({ createdAt: emailsTable.createdAt })
+        .from(emailsTable)
+        .orderBy(desc(emailsTable.createdAt))
+        .limit(1);
+      envLastSynced = latest?.createdAt ?? null;
+    }
     const envAccounts = envEmail ? [{
       id: 0,
       label: "Default (env)",
@@ -36,7 +46,7 @@ router.get("/email-accounts", async (req, res) => {
       imapHost: null,
       imapPort: null,
       active: true,
-      lastSyncedAt: null,
+      lastSyncedAt: envLastSynced,
       lastError: null,
       createdAt: null,
       isEnvAccount: true,
