@@ -312,6 +312,32 @@ tr.trow.sel td{background:#eef6e6}
 
 /* THREAD REPLIES */
 .thread-reply{padding:16px 20px 14px}.thread-reply+.thread-reply{border-top:1px solid var(--border)}
+
+/* CONTACT PARTNER FOR RATES MODAL */
+.cp-modal-box{width:720px}
+.cp-steps{display:flex;align-items:center;gap:0;padding:14px 20px;background:#f8faf8;border-bottom:1px solid var(--border);flex-shrink:0}
+.cp-step{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:500;color:var(--text3);flex:1}
+.cp-step.active{color:var(--accent-dark);font-weight:600}
+.cp-step.done{color:var(--accent)}
+.cp-step-num{width:22px;height:22px;border-radius:50%;border:1.5px solid currentColor;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0}
+.cp-step.done .cp-step-num{background:var(--accent);border-color:var(--accent);color:#fff}
+.cp-step.active .cp-step-num{background:var(--accent-dark);border-color:var(--accent-dark);color:#fff}
+.cp-step-divider{width:24px;height:1.5px;background:var(--border2);margin:0 4px;flex-shrink:0}
+.cp-partner-item{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;transition:all .12s;background:#fff}
+.cp-partner-item:hover{border-color:var(--accent);background:var(--accent-light)}
+.cp-partner-item.selected{border-color:var(--accent);background:var(--accent-light)}
+.cp-partner-check{width:16px;height:16px;accent-color:var(--accent);flex-shrink:0;margin-top:1px;cursor:pointer}
+.cp-partner-name{font-size:12px;font-weight:600;color:var(--text)}
+.cp-partner-email{font-size:10px;color:var(--text3);margin-top:1px}
+.cp-partner-cats{display:flex;flex-wrap:wrap;gap:3px;margin-top:5px}
+.cp-email-preview{width:100%;min-height:180px;border:1px solid var(--border2);border-radius:7px;padding:10px 12px;font-size:11px;font-family:'Courier New',monospace;color:var(--text);background:#fafcfa;outline:none;resize:vertical;line-height:1.6;box-sizing:border-box}
+.cp-email-preview:focus{border-color:var(--accent);background:#fff}
+.cp-send-result{padding:10px 14px;border-radius:8px;font-size:12px;display:flex;align-items:flex-start;gap:8px}
+.cp-send-result.ok{background:#dcfce7;color:#166534;border:1px solid #bbf7d0}
+.cp-send-result.err{background:#fee2e2;color:#991b1b;border:1px solid #fecaca}
+.cp-route-row{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end;padding:8px 10px;background:#f8faf8;border:1px solid var(--border);border-radius:8px}
+.cp-route-remove{background:none;border:none;color:var(--danger);cursor:pointer;font-size:16px;padding:2px 6px;border-radius:4px;line-height:1}
+.cp-route-remove:hover{background:#fee2e2}
 .thread-original-divider{display:flex;align-items:center;gap:10px;padding:4px 20px;margin:0;color:var(--text3);font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;border-top:2px solid var(--accent-light)}
 .thread-reply-hd{display:flex;align-items:center;gap:8px;margin-bottom:8px}
 .thread-reply-badge{font-size:10px;font-weight:600;background:var(--accent-light);color:var(--accent-dark);padding:2px 8px;border-radius:10px}
@@ -5909,28 +5935,313 @@ async function searchRates(rfqId) {
   }
 }
 
+// ── Contact Partner for Rates modal state ────────────────────────────────────
+let cpStep = 1;
+let cpPartners = [];
+let cpSelectedIds = new Set();
+let cpRouteCounter = 0;
+
+function cpAddRoute(pol = '', pod = '') {
+  const id = ++cpRouteCounter;
+  const row = document.createElement('div');
+  row.className = 'cp-route-row';
+  row.id = 'cp-rr-' + id;
+  row.innerHTML = `
+    <div class="form-field" style="margin:0">
+      <label class="form-label">POL (Port of Loading)</label>
+      <input class="form-input" id="cp-pol-${id}" placeholder="e.g. NGAPP" value="${escHtml(pol)}">
+    </div>
+    <div class="form-field" style="margin:0">
+      <label class="form-label">POD (Port of Discharge)</label>
+      <input class="form-input" id="cp-pod-${id}" placeholder="e.g. CNSHA" value="${escHtml(pod)}">
+    </div>
+    <button class="cp-route-remove" onclick="cpRemoveRoute(${id})" title="Remove route">✕</button>`;
+  document.getElementById('cp-routes-container').appendChild(row);
+  cpSyncRemoveButtons();
+}
+
+function cpRemoveRoute(id) {
+  const el = document.getElementById('cp-rr-' + id);
+  if (el) el.remove();
+  cpSyncRemoveButtons();
+}
+
+function cpSyncRemoveButtons() {
+  const rows = document.querySelectorAll('.cp-route-row');
+  rows.forEach(r => {
+    const btn = r.querySelector('.cp-route-remove');
+    if (btn) btn.style.display = rows.length > 1 ? '' : 'none';
+  });
+}
+
+function cpGetRoutes() {
+  const rows = document.querySelectorAll('.cp-route-row');
+  return Array.from(rows).map(r => {
+    const id = r.id.replace('cp-rr-', '');
+    return {
+      pol: (document.getElementById('cp-pol-' + id)?.value || '').trim(),
+      pod: (document.getElementById('cp-pod-' + id)?.value || '').trim(),
+    };
+  });
+}
+
 async function emailPartners(rfqId) {
-  const btn = event.target;
-  btn.disabled = true;
-  btn.textContent = 'Sending…';
+  // Extract trade lane from the RFQ
+  const pol = rfqFieldVal(rfqId, 'POL');
+  const pod = rfqFieldVal(rfqId, 'POD');
+  const container = rfqFieldVal(rfqId, 'Container');
+  const cargo = rfqFieldVal(rfqId, 'Cargo') || rfqFieldVal(rfqId, 'Commodity') || '';
+
+  // Reset modal state
+  cpStep = 1;
+  cpSelectedIds.clear();
+  cpRouteCounter = 0;
+  document.getElementById('cp-routes-container').innerHTML = '';
+  document.getElementById('cp-notes').value = '';
+  document.getElementById('cp-validity').value = '';
+  document.getElementById('cp-send-result').style.display = 'none';
+  document.getElementById('cp-send-result').innerHTML = '';
+  document.getElementById('cp-btn-cancel').textContent = 'Cancel';
+  document.getElementById('cp-btn-cancel').onclick = cpClose;
+  const nextBtn = document.getElementById('cp-btn-next');
+  nextBtn.onclick = cpNext;
+  nextBtn.textContent = 'Next →';
+  nextBtn.style.background = '';
+  nextBtn.disabled = false;
+
+  // Pre-populate route row with POL/POD from the email chain
+  cpAddRoute(pol, pod);
+
+  // Pre-select equipment type from container field
+  const equipSel = document.getElementById('cp-equip');
+  if (container) {
+    const c = container.toUpperCase();
+    if (c.includes('20') && !c.includes('40')) equipSel.value = '20FT only';
+    else if (c.includes('40HC')) equipSel.value = '40HC only';
+    else if (c.includes('40') && !c.includes('20')) equipSel.value = '40FT only';
+    else equipSel.value = '20FT / 40FT / 40HC (all)';
+  }
+
+  // Pre-select commodity type
+  const commSel = document.getElementById('cp-commodity');
+  if (cargo) {
+    const cg = cargo.toUpperCase();
+    if (cg.includes('HAZARD') || cg.includes(' DG') || cg.startsWith('DG')) commSel.value = 'Hazardous (DG)';
+    else if (cg.includes('REEFER') || cg.includes('REFRIG')) commSel.value = 'Refrigerated (Reefer)';
+    else if (cg.includes('BREAKBULK') || cg.includes('OVERSIZED') || cg.includes('RORO')) commSel.value = 'Oversized / Breakbulk';
+    else commSel.value = 'General Cargo (FAK)';
+  }
+
+  cpRenderStep();
+  document.getElementById('cp-modal').style.display = 'flex';
+
+  // Load partners in background
   try {
-    const resp = await fetch(`/api/rfqs/${rfqId}/request-rates`, { method: 'POST', headers: {'Content-Type':'application/json'} });
-    const result = await resp.json();
-    if (!resp.ok) {
-      alert(result.error || 'Failed to email partners');
-      btn.disabled = false;
-      btn.textContent = '📧 Request rates from partners';
-      return;
+    const r = await fetch('/api/partners');
+    if (r.ok) cpPartners = (await r.json()).filter(p => p.active !== false);
+    else cpPartners = [];
+  } catch { cpPartners = []; }
+  if (cpStep === 2) cpRenderPartners();
+}
+
+function cpClose() {
+  document.getElementById('cp-modal').style.display = 'none';
+}
+
+function cpRenderStep() {
+  [1,2,3].forEach(n => {
+    const el = document.getElementById('cp-s' + n);
+    el.classList.remove('active','done');
+    if (n < cpStep) el.classList.add('done');
+    if (n === cpStep) el.classList.add('active');
+    document.getElementById('cp-body-' + n).style.display = n === cpStep ? 'flex' : 'none';
+  });
+  document.getElementById('cp-btn-back').style.display = cpStep > 1 ? '' : 'none';
+  const nextBtn = document.getElementById('cp-btn-next');
+  if (cpStep === 3) {
+    nextBtn.textContent = '✉ Send Email';
+    nextBtn.style.background = '#1a6e2e';
+  } else {
+    nextBtn.textContent = 'Next →';
+    nextBtn.style.background = '';
+  }
+}
+
+function cpNext() {
+  if (cpStep === 1) {
+    const routes = cpGetRoutes();
+    const valid = routes.filter(r => r.pol && r.pod);
+    if (!valid.length) { alert('Please enter at least one POL and POD route.'); return; }
+    const incomplete = routes.filter(r => (r.pol && !r.pod) || (!r.pol && r.pod));
+    if (incomplete.length) { alert('Each route must have both a POL and a POD.'); return; }
+    cpStep = 2;
+    cpRenderStep();
+    cpRenderPartners();
+  } else if (cpStep === 2) {
+    if (cpSelectedIds.size === 0) { alert('Please select at least one partner.'); return; }
+    cpStep = 3;
+    cpRenderStep();
+    cpBuildEmailPreview();
+  } else if (cpStep === 3) {
+    cpSendEmails();
+  }
+}
+
+function cpBack() {
+  if (cpStep > 1) { cpStep--; cpRenderStep(); if (cpStep === 2) cpRenderPartners(); }
+}
+
+function cpRenderPartners() {
+  const list = document.getElementById('cp-partners-list');
+  const noP = document.getElementById('cp-no-partners');
+  if (!cpPartners.length) {
+    list.style.display = 'none';
+    noP.style.display = '';
+    return;
+  }
+  noP.style.display = 'none';
+  list.style.display = 'flex';
+  const catColors = { FCL:'chip-blue',LCL:'chip-green',AIR:'chip-purple',RORO:'chip-amber',REEFER:'chip-blue',DG:'chip-red',BREAKBULK:'chip-gray' };
+  list.innerHTML = cpPartners.map(p => {
+    const cats = (p.categories||[]).map(c => `<span class="chip ${catColors[c]||'chip-gray'}" style="font-size:9px;padding:1px 5px">${c}</span>`).join('');
+    const sel = cpSelectedIds.has(p.id) ? 'selected' : '';
+    return `<div class="cp-partner-item ${sel}" id="cp-pi-${p.id}" onclick="cpTogglePartner(${p.id})">
+      <input type="checkbox" class="cp-partner-check" ${cpSelectedIds.has(p.id)?'checked':''} onclick="event.stopPropagation();cpTogglePartner(${p.id})">
+      <div style="flex:1;min-width:0">
+        <div class="cp-partner-name">${escHtml(p.name)}</div>
+        <div class="cp-partner-email">${escHtml(p.email)}</div>
+        ${cats ? `<div class="cp-partner-cats">${cats}</div>` : ''}
+        ${p.notes ? `<div style="font-size:10px;color:var(--text3);margin-top:4px;font-style:italic">${escHtml(p.notes)}</div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+  cpUpdateSelCount();
+}
+
+function cpTogglePartner(id) {
+  if (cpSelectedIds.has(id)) cpSelectedIds.delete(id);
+  else cpSelectedIds.add(id);
+  const item = document.getElementById('cp-pi-' + id);
+  if (item) {
+    item.classList.toggle('selected', cpSelectedIds.has(id));
+    const chk = item.querySelector('.cp-partner-check');
+    if (chk) chk.checked = cpSelectedIds.has(id);
+  }
+  cpUpdateSelCount();
+}
+
+function cpUpdateSelCount() {
+  const n = cpSelectedIds.size;
+  const el = document.getElementById('cp-sel-count');
+  if (el) el.textContent = n === 0 ? 'None selected' : `${n} partner${n!==1?'s':''} selected`;
+}
+
+function cpBuildEmailPreview() {
+  const routes = cpGetRoutes().filter(r => r.pol && r.pod);
+  const equip = document.getElementById('cp-equip').value;
+  const commodity = document.getElementById('cp-commodity').value;
+  const validity = document.getElementById('cp-validity').value;
+  const notes = document.getElementById('cp-notes').value.trim();
+  const today = new Date().toLocaleDateString('en-GB', { day:'2-digit', month:'long', year:'numeric' });
+  const selected = cpPartners.filter(p => cpSelectedIds.has(p.id));
+
+  document.getElementById('cp-recipients-summary').innerHTML =
+    `<strong>Sending to:</strong> ${selected.map(p => `${escHtml(p.name)} &lt;${escHtml(p.email)}&gt;`).join(' · ')}`;
+
+  const routeLabel = routes.length === 1
+    ? `${routes[0].pol}–${routes[0].pod}`
+    : `${routes[0].pol}–${routes[0].pod} + ${routes.length - 1} more`;
+  document.getElementById('cp-subject').value = `Rate Request — ${routeLabel} | OnePort 365`;
+
+  const routeLines = routes.map((r, i) => `  ${i + 1}. POL: ${r.pol}   →   POD: ${r.pod}`).join('\n');
+  const validityLine = validity ? `\nValidity Required: Rates valid through ${validity}\n` : '';
+  const notesLine = notes ? `\nSpecial Requirements:\n${notes}\n` : '';
+  const body = `Dear ${selected.length === 1 ? selected[0].name : 'Team'},
+
+Please find below a rate request on behalf of OnePort 365.
+
+REQUEST DETAILS
+---------------
+Date: ${today}
+Equipment Type: ${equip}
+Commodity: ${commodity}${validityLine}
+
+TRADE LANE${routes.length > 1 ? 'S' : ''} REQUESTED
+${'-'.repeat(24)}
+${routeLines}
+${notesLine}
+Please provide your best all-in ocean freight rates (inclusive of surcharges and applicable local charges) for each trade lane above.
+
+Kindly reply with rates in the following format per route:
+  • POL → POD
+  • 20FT rate  /  40FT rate  /  40HC rate
+  • Carrier / Service
+  • Transit time
+  • Valid from / Valid to
+
+We look forward to your prompt response.
+
+Best regards,
+OnePort 365 Rates Team
+sales@oneport365.com`;
+
+  document.getElementById('cp-email-body').value = body;
+}
+
+async function cpSendEmails() {
+  const selected = cpPartners.filter(p => cpSelectedIds.has(p.id));
+  const routes = cpGetRoutes().filter(r => r.pol && r.pod);
+  const equip = document.getElementById('cp-equip').value;
+  const commodity = document.getElementById('cp-commodity').value;
+  const subject = document.getElementById('cp-subject').value.trim();
+  const body = document.getElementById('cp-email-body').value.trim();
+  if (!subject || !body) { alert('Subject and email body are required.'); return; }
+
+  const btn = document.getElementById('cp-btn-next');
+  btn.textContent = 'Sending…'; btn.disabled = true;
+  const resultEl = document.getElementById('cp-send-result');
+  resultEl.style.display = 'none';
+
+  try {
+    const sendRes = await fetch('/api/gmail/send-outreach', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ recipients: selected.map(p => ({ name: p.name, email: p.email })), subject, body }),
+    });
+    const sendData = await sendRes.json();
+    const allOk = sendData.results?.every(x => x.ok);
+    const sent = sendData.results?.filter(x => x.ok).length ?? 0;
+    const failed = sendData.results?.filter(x => !x.ok) ?? [];
+
+    const fullRoutes = routes.map(r => ({ pol: r.pol, pod: r.pod, equip, commodity }));
+    await fetch('/api/partner-outreach', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        partnerIds: selected.map(p => p.id),
+        partnerNames: selected.map(p => p.name),
+        partnerEmails: selected.map(p => p.email),
+        routes: fullRoutes, subject, body,
+      }),
+    }).catch(() => {});
+
+    if (allOk) {
+      resultEl.className = 'cp-send-result ok';
+      resultEl.innerHTML = `✓ Rate request sent to ${sent} partner${sent!==1?'s':''}! Recorded in outreach history. Partners will reply to your Gmail.`;
+    } else {
+      resultEl.className = 'cp-send-result err';
+      resultEl.innerHTML = `⚠ Sent to ${sent} partner${sent!==1?'s':''}. Failed for: ${failed.map(f=>f.email).join(', ')}`;
     }
-    btn.style.background = '#16a34a';
-    btn.style.borderColor = '#16a34a';
-    btn.textContent = `✓ Emailed ${result.sent} partner${result.sent === 1 ? '' : 's'}`;
-    document.getElementById('ep-rates-list').innerHTML =
-      `<div class="rate-no-results" style="color:var(--accent-dark)">Rate request sent to ${result.sent} partner${result.sent===1?'':'s'}.<br>Waiting for responses.</div>`;
+    resultEl.style.display = 'flex';
+    btn.textContent = 'Done ✓';
+    btn.onclick = cpClose;
+    document.getElementById('cp-btn-cancel').textContent = 'Close';
   } catch (err) {
-    alert('Could not send: ' + err.message);
+    resultEl.className = 'cp-send-result err';
+    resultEl.innerHTML = `✕ Failed to send: ${err.message}`;
+    resultEl.style.display = 'flex';
+    btn.textContent = '✉ Send Email';
     btn.disabled = false;
-    btn.textContent = '📧 Request rates from partners';
   }
 }
 
@@ -6744,6 +7055,90 @@ document.addEventListener('DOMContentLoaded', function() {
         <div id="ea-feedback" style="display:none;margin-top:10px;padding:8px 10px;border-radius:8px;font-size:11px;font-weight:500"></div>
       </div>
 
+    </div>
+  </div>
+</div>
+
+<!-- CONTACT PARTNER FOR RATES MODAL (opened from RFQ panel) -->
+<div class="modal-overlay" id="cp-modal" style="display:none" onclick="if(event.target===this)cpClose()">
+  <div class="modal-box cp-modal-box">
+    <div class="modal-hd">
+      <span class="modal-title">✉ Contact Partner for Rates</span>
+      <button class="modal-close" onclick="cpClose()">✕</button>
+    </div>
+    <div class="cp-steps" id="cp-steps">
+      <div class="cp-step active" id="cp-s1"><span class="cp-step-num">1</span> Route Details</div>
+      <div class="cp-step-divider"></div>
+      <div class="cp-step" id="cp-s2"><span class="cp-step-num">2</span> Select Partners</div>
+      <div class="cp-step-divider"></div>
+      <div class="cp-step" id="cp-s3"><span class="cp-step-num">3</span> Review &amp; Send</div>
+    </div>
+    <div class="modal-body" id="cp-body-1">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+        <div style="font-size:11px;font-weight:700;color:var(--accent-dark);letter-spacing:.04em;text-transform:uppercase">Trade Lane Routes *</div>
+        <button class="btn" style="font-size:10px;padding:3px 10px" onclick="cpAddRoute()">+ Add Route</button>
+      </div>
+      <div id="cp-routes-container" style="display:flex;flex-direction:column;gap:6px"></div>
+      <div style="font-size:11px;font-weight:700;color:var(--accent-dark);letter-spacing:.04em;text-transform:uppercase;margin-top:10px;margin-bottom:6px">Cargo Details (applies to all routes)</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+        <div class="form-field" style="margin:0">
+          <label class="form-label">Equipment Type</label>
+          <select class="form-select" id="cp-equip">
+            <option value="20FT / 40FT / 40HC (all)">20FT / 40FT / 40HC (all)</option>
+            <option value="20FT only">20FT only</option>
+            <option value="40FT only">40FT only</option>
+            <option value="40HC only">40HC only</option>
+          </select>
+        </div>
+        <div class="form-field" style="margin:0">
+          <label class="form-label">Commodity Type</label>
+          <select class="form-select" id="cp-commodity">
+            <option value="General Cargo (FAK)">General Cargo (FAK)</option>
+            <option value="Hazardous (DG)">Hazardous (DG)</option>
+            <option value="Refrigerated (Reefer)">Refrigerated (Reefer)</option>
+            <option value="Oversized / Breakbulk">Oversized / Breakbulk</option>
+          </select>
+        </div>
+        <div class="form-field" style="margin:0">
+          <label class="form-label">Rate Validity Needed</label>
+          <input class="form-input" id="cp-validity" type="date">
+        </div>
+      </div>
+      <div class="form-field" style="margin-top:8px;margin-bottom:0">
+        <label class="form-label">Additional Notes / Special Requirements</label>
+        <input class="form-input" id="cp-notes" placeholder="e.g. DG Class 3, monthly volume estimate…">
+      </div>
+    </div>
+    <div class="modal-body" id="cp-body-2" style="display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <span style="font-size:11px;font-weight:600;color:var(--text2)">Select partners to contact</span>
+        <span style="font-size:10px;color:var(--text3)" id="cp-sel-count">None selected</span>
+      </div>
+      <div id="cp-partners-list" style="display:flex;flex-direction:column;gap:8px">
+        <div style="text-align:center;padding:24px;color:var(--text3);font-size:12px">Loading partners…</div>
+      </div>
+      <div id="cp-no-partners" style="display:none;padding:24px;text-align:center">
+        <div style="font-size:28px;margin-bottom:8px">👥</div>
+        <div style="font-size:13px;font-weight:600;color:var(--text2)">No partners yet</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:4px">Add partners via the Partners section to start sending rate requests</div>
+      </div>
+    </div>
+    <div class="modal-body" id="cp-body-3" style="display:none">
+      <div id="cp-recipients-summary" style="background:#f0f4f0;border-radius:8px;padding:10px 14px;font-size:11px;color:var(--text2);margin-bottom:4px"></div>
+      <div class="form-field" style="margin-top:8px">
+        <label class="form-label">Email Subject</label>
+        <input class="form-input" id="cp-subject" value="">
+      </div>
+      <div class="form-field" style="margin-bottom:0">
+        <label class="form-label">Email Body — review and edit before sending</label>
+        <textarea class="cp-email-preview" id="cp-email-body"></textarea>
+      </div>
+      <div id="cp-send-result" style="display:none;margin-top:8px"></div>
+    </div>
+    <div class="modal-ft">
+      <button class="btn" id="cp-btn-cancel" onclick="cpClose()">Cancel</button>
+      <button class="btn" id="cp-btn-back" style="display:none" onclick="cpBack()">← Back</button>
+      <button class="btn btn-primary" id="cp-btn-next" onclick="cpNext()">Next →</button>
     </div>
   </div>
 </div>
