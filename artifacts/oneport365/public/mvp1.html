@@ -513,6 +513,11 @@ tr.trow.sel td{background:#eef6e6}
               <span class="ep-timer" id="ep-timer">sends in 3:00</span>
               <button onclick="epCancel()" title="Discard draft" style="border:none;background:none;cursor:pointer;color:var(--text3);font-size:15px;padding:0 0 0 10px;line-height:1;opacity:.7">✕</button>
             </div>
+            <!-- Resend notice — shown only when re-sending after a reply was already sent -->
+            <div id="compose-resend-notice" style="display:none;flex-shrink:0;background:#fffbeb;border-bottom:1px solid #fde68a;padding:7px 16px;font-size:11px;color:#92400e;gap:7px;align-items:center">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0;color:#d97706"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+              A follow-up was already sent to this customer. Edit the draft below and send another.
+            </div>
             <!-- From -->
             <div class="compose-field-row" style="flex-shrink:0">
               <span class="compose-field-lbl">From</span>
@@ -4909,7 +4914,7 @@ function selEmail(rfqId, el) {
         ? currentGroupRfqs.every(x => x.status === 'replied')
         : r.status === 'replied';
       const replyBtn = allReplied
-        ? `<button class="btn btn-sm" disabled style="color:var(--accent-dark);background:#dcfce7;border-color:#bbf7d0;cursor:default">✓ Reply sent</button>`
+        ? `<button class="btn btn-sm" style="color:var(--accent-dark);background:#dcfce7;border-color:#bbf7d0" onclick="focusComposeTray()">✓ Replied · Send again?</button>`
         : `<button class="btn btn-sm" onclick="replyRfq(${replyRfqId})">Reply</button>`;
       actionsEl.innerHTML = `${replyBtn}<button class="btn btn-sm" style="margin-left:auto;color:var(--text3)" onclick="archiveRfq(${rfqId})">Archive</button><button class="btn btn-sm" style="color:#dc2626;border-color:#fecaca" onclick="deleteRfq(${rfqId})" title="Remove from inbox">Remove</button>`;
     }
@@ -5129,24 +5134,30 @@ function renderExtraction(r) {
       if (subjectEl) subjectEl.value = `Re: ${r.email?.subject || 'Your freight enquiry'}`;
       if (draftEl) {
         draftEl.value = draft;
-        if (r.status === 'replied') {
-          draftEl.readOnly = true;
-          draftEl.style.background = '#f8faf8';
-          draftEl.style.color = 'var(--text3)';
-        } else {
-          draftEl.readOnly = false;
-          draftEl.style.background = '';
-          draftEl.style.color = '';
-        }
+        draftEl.readOnly = false;
+        draftEl.style.background = '';
+        draftEl.style.color = '';
       }
+      const resendNotice = document.getElementById('compose-resend-notice');
       if (r.status === 'replied') {
-        if (timerEl) { timerEl.textContent = '✓ sent'; timerEl.className = 'ep-timer sent'; }
-        if (countdownEl) countdownEl.textContent = 'sent';
-        if (sendBtn) sendBtn.style.display = 'none';
+        // Re-send mode — keep editable, no countdown, show resend UI
+        if (draftEl) { draftEl.readOnly = false; draftEl.style.background = ''; draftEl.style.color = ''; }
+        if (timerEl) { timerEl.textContent = '✓ Sent'; timerEl.className = 'ep-timer sent'; }
+        if (countdownEl) countdownEl.textContent = 'send when ready';
+        if (sendBtn) {
+          sendBtn.style.display = '';
+          sendBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z"/></svg> Send Again';
+        }
+        if (resendNotice) resendNotice.style.display = 'flex';
         clearInterval(epTimerInterval);
-        if (fw) fw.style.display = 'block';
+        if (fw) fw.style.display = 'none';
+        loadComposeAccounts();
       } else {
-        if (sendBtn) sendBtn.style.display = '';
+        if (resendNotice) resendNotice.style.display = 'none';
+        if (sendBtn) {
+          sendBtn.style.display = '';
+          sendBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg> Send';
+        }
         if (fw) fw.style.display = 'none';
         startEpTimer();
         loadComposeAccounts();
@@ -5338,6 +5349,15 @@ function updateFromAvatar() {
   av.textContent = initials;
   const colors = ['#1a6e2e','#2563eb','#7c3aed','#b45309','#0e7490'];
   av.style.background = colors[email.length % colors.length];
+}
+
+function focusComposeTray() {
+  const ct = document.getElementById('compose-tray');
+  const draft = document.getElementById('ep-draft');
+  if (ct && ct.style.display !== 'none') {
+    ct.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    if (draft) { draft.focus(); draft.setSelectionRange(draft.value.length, draft.value.length); }
+  }
 }
 
 function initComposeResize() {
