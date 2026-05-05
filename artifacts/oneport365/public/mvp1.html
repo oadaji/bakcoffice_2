@@ -5380,7 +5380,7 @@ function renderExtraction(r) {
       aw.innerHTML = `<button class="btn btn-a btn-sm" style="width:100%" onclick="searchRates(${r.id})">Search rates →</button>`;
     } else {
       const remaining = QUOTE_REQS.length - filledCount;
-      aw.innerHTML = `<button class="btn btn-sm" style="width:100%;color:var(--text3);cursor:not-allowed" disabled title="${remaining} required field${remaining===1?'':'s'} still missing">${remaining} required field${remaining===1?'':'s'} missing — complete to search rates</button>`;
+      aw.innerHTML = `<button class="btn btn-sm" style="width:100%;color:var(--text3);cursor:not-allowed;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" disabled title="${remaining} required field${remaining===1?'':'s'} missing — fill in the checklist above">⚠ ${remaining} field${remaining===1?'':'s'} missing</button>`;
       const rw = document.getElementById('ep-rates-wrap');
       const rl = document.getElementById('ep-rates-list');
       if (rw) rw.style.display = 'none';
