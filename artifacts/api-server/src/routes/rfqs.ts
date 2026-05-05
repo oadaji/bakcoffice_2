@@ -914,32 +914,40 @@ Return ONLY a JSON object with this exact structure — even for a single shipme
       "label": "<short commodity/route label e.g. 'Cashew nuts · Apapa (NGAPP) → Jebel Ali (AEJEA)'>",
       "freightMode": "ocean" | "air" | "unknown",
       "fields": [
-        {"k": "Customer", "v": "<name or 'not specified'>", "ok": true/false},
-        {"k": "Company", "v": "<company or 'not specified'>", "ok": true/false},
+        {"k": "Customer", "v": "<contact person name or 'not specified'>", "ok": true/false},
+        {"k": "Company", "v": "<company/shipper name or 'not specified'>", "ok": true/false},
         {"k": "Freight Mode", "v": "Ocean Freight" | "Air Freight" | "Not specified", "ok": true/false},
         {"k": "POL", "v": "<nearest port/airport with LOCODE/IATA in brackets, e.g. 'Apapa (NGAPP)' or 'not specified'>", "ok": true/false},
         {"k": "POD", "v": "<nearest port/airport with LOCODE/IATA in brackets, e.g. 'Rotterdam (NLRTM)' or 'not specified'>", "ok": true/false},
-        {"k": "Commodity", "v": "<cargo description, or 'not specified'>", "ok": true/false},
-        {"k": "Container", "v": "<for ocean: type × qty e.g. '20FT × 2'; for air: weight e.g. '1,200 kg / 8.4 CBM'; or 'not specified'>", "ok": true/false},
+        {"k": "Commodity", "v": "<cargo description or 'not specified'>", "ok": true/false},
+        {"k": "HS Code", "v": "<HS/tariff code e.g. '0801.31' or 'not specified'>", "ok": true/false},
+        {"k": "Weight", "v": "<gross weight e.g. '5,000 kg' or 'not specified'>", "ok": true/false},
+        {"k": "Volume", "v": "<CBM e.g. '12 CBM' or 'not specified'>", "ok": true/false},
+        {"k": "Pick-up", "v": "<collection/pickup address or city, or 'not specified'>", "ok": true/false},
+        {"k": "Container", "v": "<for ocean: type × qty e.g. '20FT × 2'; for air: chargeable weight; or 'not specified'>", "ok": true/false},
         {"k": "Cargo class", "v": "<GC or DG Class X.X, or 'not specified'>", "ok": true/false},
         {"k": "Incoterm", "v": "<FOB/EXW/CIF/DDP/etc or 'not specified'>", "ok": true/false},
-        {"k": "Quantity", "v": "<container count, pallet count, or weight/volume, or 'not specified'>", "ok": true/false}
+        {"k": "Target Price", "v": "<target rate/budget if mentioned, or 'not specified'>", "ok": true/false}
       ],
-      "missing": ["<question to ask for missing field 1>", ...],
+      "missing": ["<specific question asking the customer to provide missing field>", ...],
       "draft": null,
       "status": "info_needed" or "ready"
     }
   ],
-  "combinedDraft": "<single follow-up email covering missing fields for ALL shipments, with clearly labelled sections per shipment if more than one. null if nothing is missing across all shipments.>"
+  "combinedDraft": "<single follow-up email covering ALL missing fields for ALL shipments. null if nothing is missing.>"
 }
 
 Rules:
-- ok=true if the value is actually specified in the email; ok=false if inferred or missing
-- missing[] lists only truly missing critical fields (POL, POD, commodity, freight mode, container/weight, incoterm)
-- Always resolve city names to the closest commercial port or airport — include the LOCODE (ocean) or IATA code (air) in parentheses
-- If all critical fields are present for a shipment, missing=[] and status="ready" for that shipment
-- combinedDraft should be a warm, professional follow-up from "Commercial Team · OnePort 365"
-- For multiple shipments, combinedDraft must use clearly labelled sections (e.g. "Re: Shipment 1 — Cashew nuts:")
+- ok=true if the value is explicitly stated in the email; ok=false if inferred, missing, or 'not specified'
+- missing[] must list a clear, specific question for EACH field that is 'not specified' among: Company, POL, POD, Commodity, HS Code, Weight/Tonnage, Volume/CBM, Pick-up address, Freight Mode. These are the minimum required fields to generate a quote.
+- Do NOT list Contact/Email in missing[] — those are taken from the sender's email address automatically.
+- If all required fields above are present, missing=[] and status="ready"
+- Always resolve city names to the closest commercial port/airport — include LOCODE (ocean) or IATA (air) in parentheses
+- combinedDraft must be a warm, professional email from "Commercial Team · OnePort 365" that:
+  * Opens by thanking the customer for their enquiry
+  * Lists each missing field as a numbered item with a clear, plain-English request
+  * Closes by saying the team will prepare a quote as soon as the details are received
+- For multiple shipments, combinedDraft uses clearly labelled sections per shipment (e.g. "Regarding Shipment 1 — Cashew nuts:")
 - For rate-reply emails, extract partner details and rate info instead of customer RFQ fields
 - Return ONLY the JSON object, no markdown, no explanation`;
 

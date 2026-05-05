@@ -35,6 +35,7 @@ html,body{height:100%;background:#f0f4f0;color:#1a1a1a;font-family:'Inter',sans-
 .t-status{display:flex;align-items:center;gap:6px;font-size:11px;color:rgba(255,255,255,.5)}
 .t-status-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:pulse 2s ease infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+@keyframes spin{to{transform:rotate(360deg)}}
 .user-chip{display:flex;align-items:center;gap:8px;padding:4px 12px;border-radius:20px;border:1px solid rgba(255,255,255,.15);cursor:pointer}
 .user-avatar{width:26px;height:26px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:#fff;flex-shrink:0}
 
@@ -4808,11 +4809,13 @@ function syncSince() {
 
 async function syncGmail() {
   const btn = document.getElementById('gmail-sync-btn');
-  const lbl = document.getElementById('gmail-sync-label');
+  if (!btn) return;
   btn.disabled = true;
   btn.style.opacity = '0.6';
-  lbl.textContent = 'Syncing…';
-  let succeeded = false;
+  btn.title = 'Syncing…';
+  // Spin the icon while syncing
+  const svg = btn.querySelector('svg');
+  if (svg) svg.style.animation = 'spin 1s linear infinite';
   try {
     const res = await fetch('/api/gmail/sync', {
       method: 'POST',
@@ -4822,17 +4825,16 @@ async function syncGmail() {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Sync failed');
     const { synced } = data;
-    lbl.textContent = synced > 0 ? `+${synced} new` : 'Up to date';
-    succeeded = true;
+    btn.title = synced > 0 ? `+${synced} new emails` : 'Up to date';
   } catch(e) {
-    lbl.textContent = 'Done';
+    btn.title = 'Sync failed';
   } finally {
     // Always refresh inbox — sync may have ingested emails even if the response was cut short
     await loadInbox();
     setTimeout(() => {
-      lbl.textContent = 'Sync All';
+      if (svg) svg.style.animation = '';
+      btn.title = 'Sync all inboxes';
       btn.disabled = false; btn.style.opacity = '1';
-      btn.style.background = ''; btn.style.color = ''; btn.style.borderColor = '';
     }, 3000);
   }
 }
