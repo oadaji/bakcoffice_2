@@ -5,6 +5,11 @@ import { eq, desc, or, inArray } from "drizzle-orm";
 import { anthropic } from "@workspace/integrations-anthropic-ai";
 import nodemailer from "nodemailer";
 
+function normaliseMessageId(raw: string | undefined | null): string | null {
+  if (!raw) return null;
+  return raw.trim().replace(/^<|>$/g, "");
+}
+
 function createMailTransporter() {
   return nodemailer.createTransport({
     host: "smtp.gmail.com",
@@ -176,12 +181,31 @@ router.post("/rfqs/:id/send-followup", async (req, res) => {
       secure: senderUser.endsWith("@gmail.com"),
       auth: { user: senderUser, pass: senderPass },
     });
-    await transporter.sendMail({
+    const sentSubject = `Re: ${email.subject ?? "Your freight enquiry"}`;
+    const info = await transporter.sendMail({
       from: `OnePort 365 Commercial Team <${senderUser}>`,
       to: email.fromEmail,
-      subject: `Re: ${email.subject ?? "Your freight enquiry"}`,
+      subject: sentSubject,
       text: bodyText,
+      // Ensure our reply threads into the customer's original email
+      inReplyTo: email.messageId ? `<${email.messageId}>` : undefined,
+      references: email.messageId ? `<${email.messageId}>` : undefined,
     });
+
+    // Store the sent email in emailsTable so future customer replies thread correctly
+    const sentMessageId = normaliseMessageId(info.messageId);
+    await db.insert(emailsTable).values({
+      uid: `outbound:${sentMessageId ?? `${rfq.id}:${Date.now()}`}`,
+      fromName: "OnePort 365 Commercial Team",
+      fromEmail: senderUser,
+      subject: sentSubject,
+      body: bodyText,
+      emailType: "outbound",
+      receivedAt: new Date(),
+      messageId: sentMessageId,
+      inReplyTo: email.messageId ?? null,
+      parentEmailId: email.id,
+    }).onConflictDoNothing();
 
     // For grouped RFQs, mark all siblings as replied with the same draft
     if (rfq.groupId && (rfq.groupTotal ?? 1) > 1) {

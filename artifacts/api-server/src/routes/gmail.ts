@@ -236,10 +236,25 @@ router.post("/gmail/sync", async (req, res) => {
 
               if (parentRows.length) {
                 const parentEmailId = parentRows[0].emailId;
-                const rfqRows = await db
+                let rfqRows = await db
                   .select({ rfqId: rfqsTable.id })
                   .from(rfqsTable)
                   .where(eq(rfqsTable.emailId, parentEmailId));
+
+                // If no direct RFQ match, the parent may be an outbound reply we sent.
+                // Walk up one level via parentEmailId to find the original RFQ email.
+                if (!rfqRows.length) {
+                  const parentEmailRows = await db
+                    .select({ parentEmailId: emailsTable.parentEmailId })
+                    .from(emailsTable)
+                    .where(eq(emailsTable.id, parentEmailId));
+                  if (parentEmailRows.length && parentEmailRows[0].parentEmailId) {
+                    rfqRows = await db
+                      .select({ rfqId: rfqsTable.id })
+                      .from(rfqsTable)
+                      .where(eq(rfqsTable.emailId, parentEmailRows[0].parentEmailId));
+                  }
+                }
 
                 if (rfqRows.length) {
                   const rfqId = rfqRows[0].rfqId;
