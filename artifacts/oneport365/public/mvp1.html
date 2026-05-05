@@ -5176,48 +5176,53 @@ function renderExtraction(r) {
   // Compose tray — always set up for customer emails so reply is always possible
   const isCustomerEmail = !['outbound', 'rate-reply'].includes(r.emailType);
   if (isCustomerEmail) {
-    const draftEl = document.getElementById('ep-draft');
-    const timerEl = document.getElementById('ep-timer');
-    const countdownEl = document.getElementById('compose-countdown');
-    const sendBtn = document.getElementById('compose-send-btn');
-    const toEl = document.getElementById('compose-to');
-    const subjectEl = document.getElementById('compose-subject');
-    const ccEl = document.getElementById('compose-cc');
-    const resendNotice = document.getElementById('compose-resend-notice');
-    // Always wire up recipient / subject fields
-    if (toEl) toEl.textContent = r.email?.fromEmail || r.email?.fromName || '';
-    if (subjectEl) subjectEl.value = `Re: ${r.email?.subject || 'Your freight enquiry'}`;
-    if (ccEl) ccEl.value = r.email?.cc || '';
-    if (draftEl) { draftEl.readOnly = false; draftEl.style.background = ''; draftEl.style.color = ''; }
-    loadComposeAccounts();
-
-    if (draft && missing.length && r.status !== 'replied') {
-      // Info-needed with AI draft — auto-show tray with countdown
-      composeTrayOpen = true;
-      if (ct) ct.style.display = 'flex';
-      if (draftEl) draftEl.value = draft;
-      if (resendNotice) resendNotice.style.display = 'none';
-      if (sendBtn) { sendBtn.style.display = ''; sendBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg> Send'; }
-      startEpTimer();
+    // If the user has the compose tray open and is actively composing, leave it completely alone
+    if (composeTrayOpen) {
+      // only refresh the non-body metadata fields (To/CC/Subject stay as-is; don't touch textarea)
     } else {
-      // Ready, replied, or no draft — hide tray only if the user hasn't manually opened it
-      if (!composeTrayOpen && ct) ct.style.display = 'none';
-      if (r.status === 'replied') {
-        // Pre-load the previous draft for quick re-send
-        if (draftEl) draftEl.value = draft || '';
-        if (timerEl) { timerEl.textContent = '✓ Sent'; timerEl.className = 'ep-timer sent'; }
-        if (countdownEl) countdownEl.textContent = 'send when ready';
-        if (sendBtn) { sendBtn.style.display = ''; sendBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z"/></svg> Send Again'; }
-        if (resendNotice) resendNotice.style.display = 'flex';
-      } else {
-        // Ready (or other) — blank slate for a fresh message
-        if (draftEl) draftEl.value = '';
-        if (timerEl) { timerEl.textContent = 'Ready to send'; timerEl.className = 'ep-timer sent'; }
-        if (countdownEl) countdownEl.textContent = 'send when ready';
-        if (sendBtn) { sendBtn.style.display = ''; sendBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg> Send'; }
+      const draftEl = document.getElementById('ep-draft');
+      const timerEl = document.getElementById('ep-timer');
+      const countdownEl = document.getElementById('compose-countdown');
+      const sendBtn = document.getElementById('compose-send-btn');
+      const toEl = document.getElementById('compose-to');
+      const subjectEl = document.getElementById('compose-subject');
+      const ccEl = document.getElementById('compose-cc');
+      const resendNotice = document.getElementById('compose-resend-notice');
+      // Wire up recipient / subject fields
+      if (toEl) toEl.textContent = r.email?.fromEmail || r.email?.fromName || '';
+      if (subjectEl) subjectEl.value = `Re: ${r.email?.subject || 'Your freight enquiry'}`;
+      if (ccEl) ccEl.value = r.email?.cc || '';
+      if (draftEl) { draftEl.readOnly = false; draftEl.style.background = ''; draftEl.style.color = ''; }
+      loadComposeAccounts();
+
+      if (draft && missing.length && r.status !== 'replied') {
+        // Info-needed with AI draft — auto-show tray with countdown
+        composeTrayOpen = true;
+        if (ct) ct.style.display = 'flex';
+        if (draftEl) draftEl.value = draft;
         if (resendNotice) resendNotice.style.display = 'none';
+        if (sendBtn) { sendBtn.style.display = ''; sendBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg> Send'; }
+        startEpTimer();
+      } else {
+        // Ready, replied, or no draft — tray hidden by default, opened on demand via Reply button
+        if (ct) ct.style.display = 'none';
+        if (r.status === 'replied') {
+          // Pre-load the previous draft for quick re-send
+          if (draftEl) draftEl.value = draft || '';
+          if (timerEl) { timerEl.textContent = '✓ Sent'; timerEl.className = 'ep-timer sent'; }
+          if (countdownEl) countdownEl.textContent = 'send when ready';
+          if (sendBtn) { sendBtn.style.display = ''; sendBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z"/></svg> Send Again'; }
+          if (resendNotice) resendNotice.style.display = 'flex';
+        } else {
+          // Ready (or other) — blank slate for a fresh message
+          if (draftEl) draftEl.value = '';
+          if (timerEl) { timerEl.textContent = 'Ready to send'; timerEl.className = 'ep-timer sent'; }
+          if (countdownEl) countdownEl.textContent = 'send when ready';
+          if (sendBtn) { sendBtn.style.display = ''; sendBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg> Send'; }
+          if (resendNotice) resendNotice.style.display = 'none';
+        }
+        clearInterval(epTimerInterval);
       }
-      clearInterval(epTimerInterval);
     }
   } else {
     if (ct) ct.style.display = 'none';
