@@ -311,7 +311,8 @@ tr.trow.sel td{background:#eef6e6}
 .row{display:flex;gap:7px;align-items:center}
 
 /* THREAD REPLIES */
-.thread-reply{border-top:2px solid var(--accent-light);margin-top:16px;padding-top:14px}
+.thread-reply{padding:16px 20px 14px}.thread-reply+.thread-reply{border-top:1px solid var(--border)}
+.thread-original-divider{display:flex;align-items:center;gap:10px;padding:4px 20px;margin:0;color:var(--text3);font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;border-top:2px solid var(--accent-light)}
 .thread-reply-hd{display:flex;align-items:center;gap:8px;margin-bottom:8px}
 .thread-reply-badge{font-size:10px;font-weight:600;background:var(--accent-light);color:var(--accent-dark);padding:2px 8px;border-radius:10px}
 .thread-reply-meta{font-size:11px;color:var(--text3)}
@@ -486,8 +487,8 @@ tr.trow.sel td{background:#eef6e6}
         </div>
         <!-- Shared scroll container for email body + thread replies -->
         <div id="email-scroll" style="flex:1;overflow-y:auto;min-height:0">
-          <div class="detail-body" id="d-body" style="flex:none;overflow-y:visible"></div>
           <div id="d-thread"></div>
+          <div class="detail-body" id="d-body" style="flex:none;overflow-y:visible"></div>
         </div>
         <!-- OUTLOOK-STYLE INLINE COMPOSE TRAY -->
         <div id="compose-tray" class="compose-tray" style="display:none;height:320px">
@@ -5033,15 +5034,34 @@ async function loadThread(rfqId) {
     const { replies } = await resp.json();
     const container = document.getElementById('d-thread');
     if (!container) return;
-    if (!replies || !replies.length) { container.innerHTML = ''; return; }
-    container.innerHTML = replies.map((rep, i) => `
+    if (!replies || !replies.length) {
+      container.innerHTML = '';
+      const old = document.getElementById('thread-original-divider');
+      if (old) old.remove();
+      return;
+    }
+    // Newest reply first, like a modern email thread
+    const sorted = [...replies].reverse();
+    container.innerHTML = sorted.map((rep, i) => `
       <div class="thread-reply">
         <div class="thread-reply-hd">
-          <span class="thread-reply-badge">Customer reply ${replies.length > 1 ? i + 1 : ''}</span>
+          <span class="thread-reply-badge">Customer reply${sorted.length > 1 ? ' ' + (sorted.length - i) : ''}</span>
           <span class="thread-reply-meta">${escHtml(rep.fromName || rep.fromEmail)} · ${rep.receivedAt ? fmtDateTime(rep.receivedAt) : ''}</span>
         </div>
         <div class="thread-reply-body">${escHtml(rep.body || '')}</div>
       </div>`).join('');
+    // Add "Original message" divider above the original email body
+    const dBody = document.getElementById('d-body');
+    if (dBody) {
+      let divider = document.getElementById('thread-original-divider');
+      if (!divider) {
+        divider = document.createElement('div');
+        divider.id = 'thread-original-divider';
+        divider.className = 'thread-original-divider';
+        divider.innerHTML = '<span>Original message</span>';
+        dBody.parentNode.insertBefore(divider, dBody);
+      }
+    }
     // Also refresh the RFQ data in rfqData since status may have changed
     const rfqResp = await fetch('/api/rfqs');
     if (rfqResp.ok) {
