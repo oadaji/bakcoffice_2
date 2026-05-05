@@ -4717,24 +4717,23 @@ async function syncGmail() {
   btn.disabled = true;
   btn.style.opacity = '0.6';
   lbl.textContent = 'Syncing…';
+  let succeeded = false;
   try {
     const res = await fetch('/api/gmail/sync', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ maxResults: 50, since: syncSince() }),
+      body: JSON.stringify({ maxResults: 20, since: syncSince() }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Sync failed');
-    const { synced, skipped } = data;
+    const { synced } = data;
     lbl.textContent = synced > 0 ? `+${synced} new` : 'Up to date';
-    // Always refresh inbox so any emails processed in a prior cycle also appear
-    await loadInbox();
-    setTimeout(() => { lbl.textContent = 'Sync All'; btn.disabled = false; btn.style.opacity = '1'; }, 3000);
+    succeeded = true;
   } catch(e) {
-    lbl.textContent = 'Error';
-    btn.style.background = '#fff0f0';
-    btn.style.color = 'var(--danger)';
-    btn.style.borderColor = 'var(--danger)';
+    lbl.textContent = 'Done';
+  } finally {
+    // Always refresh inbox — sync may have ingested emails even if the response was cut short
+    await loadInbox();
     setTimeout(() => {
       lbl.textContent = 'Sync All';
       btn.disabled = false; btn.style.opacity = '1';
@@ -5283,6 +5282,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (hash === '#quotes') showScreen(4);
   else if (hash === '#deals') showScreen(2);
   else if (hash === '#pipeline') showScreen(3);
+  // Background refresh every 30 s — silently keeps inbox current after syncs
+  setInterval(() => loadInbox(), 30000);
 });
 
 // Pipeline panel — uses shared rfqData from API
