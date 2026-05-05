@@ -4888,8 +4888,10 @@ function renderInboxList() {
 
 let epTimerInterval = null;
 let epTimerSecs = 180;
+let composeTrayOpen = false; // true when user has manually revealed the compose tray
 
 function selEmail(rfqId, el) {
+  composeTrayOpen = false; // reset when switching to a different email
   document.querySelectorAll('.email-item').forEach(e => e.classList.remove('sel'));
   if (el) el.classList.add('sel');
   const r = rfqData.find(x => x.id === rfqId);
@@ -5191,14 +5193,15 @@ function renderExtraction(r) {
 
     if (draft && missing.length && r.status !== 'replied') {
       // Info-needed with AI draft — auto-show tray with countdown
+      composeTrayOpen = true;
       if (ct) ct.style.display = 'flex';
       if (draftEl) draftEl.value = draft;
       if (resendNotice) resendNotice.style.display = 'none';
       if (sendBtn) { sendBtn.style.display = ''; sendBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg> Send'; }
       startEpTimer();
     } else {
-      // Ready, replied, or no draft — tray hidden by default, opened on demand via Reply button
-      if (ct) ct.style.display = 'none';
+      // Ready, replied, or no draft — hide tray only if the user hasn't manually opened it
+      if (!composeTrayOpen && ct) ct.style.display = 'none';
       if (r.status === 'replied') {
         // Pre-load the previous draft for quick re-send
         if (draftEl) draftEl.value = draft || '';
@@ -5367,6 +5370,7 @@ async function epSendNow() {
 
 function epCancel() {
   clearInterval(epTimerInterval);
+  composeTrayOpen = false;
   const ct = document.getElementById('compose-tray');
   if (ct) ct.style.display = 'none';
 }
@@ -5409,6 +5413,7 @@ function focusComposeTray() {
   const ct = document.getElementById('compose-tray');
   const draft = document.getElementById('ep-draft');
   if (!ct) return;
+  composeTrayOpen = true;
   if (ct.style.display === 'none') ct.style.display = 'flex';
   ct.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   if (draft) { draft.focus(); draft.setSelectionRange(draft.value.length, draft.value.length); }
