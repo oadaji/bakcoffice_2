@@ -5062,13 +5062,30 @@ async function loadThread(rfqId) {
         dBody.parentNode.insertBefore(divider, dBody);
       }
     }
-    // Also refresh the RFQ data in rfqData since status may have changed
+    // Auto re-extract from the full thread — updates extracted fields + advances status if complete
+    try {
+      const reExtractResp = await fetch(`/api/rfqs/${rfqId}/re-extract`, { method: 'POST' });
+      if (reExtractResp.ok) {
+        const { rfq: updated } = await reExtractResp.json();
+        // Patch the in-memory record so renderExtraction sees fresh data
+        const idx = rfqData.findIndex(x => x.id === rfqId);
+        if (idx !== -1) {
+          rfqData[idx] = { ...rfqData[idx], ...updated };
+          renderExtraction(rfqData[idx]);
+        }
+      }
+    } catch (e) { /* non-blocking */ }
+
+    // Refresh inbox list so status badge reflects any advancement
     const rfqResp = await fetch('/api/rfqs');
     if (rfqResp.ok) {
       const fresh = await rfqResp.json();
       rfqData.length = 0;
       fresh.forEach(item => rfqData.push(item));
       renderInboxList();
+      // Re-render extraction with fully fresh data for this RFQ
+      const freshRfq = rfqData.find(x => x.id === rfqId);
+      if (freshRfq) renderExtraction(freshRfq);
     }
   } catch (err) {
     console.error('loadThread error', err);

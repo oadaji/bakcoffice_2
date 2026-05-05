@@ -377,6 +377,88 @@ router.get("/rfqs/:id/thread", async (req, res) => {
   }
 });
 
+// POST /api/rfqs/:id/re-extract — re-run Claude on the full existing thread and update fields/status
+router.post("/rfqs/:id/re-extract", async (req, res) => {
+  try {
+    const rfqId = parseInt(req.params.id, 10);
+
+    const rows = await db
+      .select()
+      .from(rfqsTable)
+      .leftJoin(emailsTable, eq(rfqsTable.emailId, emailsTable.id))
+      .where(eq(rfqsTable.id, rfqId));
+
+    if (!rows.length || !rows[0].emails) {
+      res.status(404).json({ error: "RFQ not found" });
+      return;
+    }
+
+    const rfq = rows[0].rfqs;
+    const parentEmail = rows[0].emails;
+
+    const replyRows = await db
+      .select()
+      .from(emailsTable)
+      .where(eq(emailsTable.parentEmailId, parentEmail.id))
+      .orderBy(emailsTable.receivedAt);
+
+    // Build combined thread body for Claude
+    const threadBody = replyRows.length
+      ? [
+          `ORIGINAL ENQUIRY (${parentEmail.fromName || parentEmail.fromEmail}):\n${parentEmail.body}`,
+          ...replyRows.map((r, i) =>
+            `CUSTOMER REPLY ${i + 1} (${r.fromName || r.fromEmail}, ${new Date(r.receivedAt).toLocaleDateString()}):\n${r.body}`
+          ),
+        ].join("\n\n──────────────\n\n")
+      : parentEmail.body;
+
+    const multiExtraction = await extractWithClaude(
+      {
+        fromName: parentEmail.fromName,
+        fromEmail: parentEmail.fromEmail,
+        subject: parentEmail.subject,
+        body: threadBody,
+      },
+      rfq.emailType,
+    );
+    const extraction = multiExtraction.shipments[0];
+
+    // Determine new status:
+    // - all fields found → ready
+    // - still missing but replies exist → keep 'replied' (we already sent the follow-up)
+    // - no replies → use Claude's own status verdict
+    const newStatus =
+      extraction.missing.length === 0
+        ? "ready"
+        : replyRows.length
+          ? "replied"
+          : extraction.status;
+
+    const newDraft =
+      extraction.missing.length > 0
+        ? (multiExtraction.combinedDraft ?? extraction.draft ?? rfq.followUpDraft ?? null)
+        : null;
+
+    const [updated] = await db
+      .update(rfqsTable)
+      .set({
+        status: newStatus,
+        fields: extraction.fields,
+        missingFields: extraction.missing,
+        followUpDraft: newDraft,
+        updatedAt: new Date(),
+      })
+      .where(eq(rfqsTable.id, rfqId))
+      .returning();
+
+    req.log.info({ rfqId, newStatus, replyCount: replyRows.length }, "Re-extracted RFQ from thread");
+    res.json({ rfq: updated });
+  } catch (err) {
+    req.log.error({ err }, "Failed to re-extract RFQ");
+    res.status(500).json({ error: "Failed to re-extract" });
+  }
+});
+
 // POST /api/rfq/ingest — save email + run Claude extraction + create/update RFQ
 router.post("/rfq/ingest", async (req, res) => {
   try {
