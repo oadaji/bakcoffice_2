@@ -3,7 +3,7 @@ import { ImapFlow } from "imapflow";
 import { simpleParser } from "mailparser";
 import { Readable } from "stream";
 import { db, emailsTable, rfqsTable, emailAccounts } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { eq, sql, and, desc } from "drizzle-orm";
 import nodemailer from "nodemailer";
 
 // Strip angle brackets from Message-ID values for consistent storage
@@ -271,6 +271,66 @@ router.post("/gmail/sync", async (req, res) => {
                   } else {
                     const errText = await replyResp.text();
                     errors.push(`reply ${uid}: ${errText}`);
+                  }
+                  continue;
+                }
+              }
+            }
+
+            // ── Subject-based threading fallback ─────────────────────────────
+            // Some mail clients omit the In-Reply-To header entirely.
+            // If the subject starts with "Re:", try to match against existing
+            // emails from the same sender by stripping all leading "Re:" prefixes.
+            if (/^re:\s/i.test(subject)) {
+              const baseSubject = subject.replace(/^(re:\s*)+/i, "").trim();
+              const subjectMatchRows = await db
+                .select({ emailId: emailsTable.id })
+                .from(emailsTable)
+                .where(
+                  and(
+                    eq(emailsTable.fromEmail, fromEmail),
+                    sql`lower(${emailsTable.subject}) = lower(${baseSubject})`
+                  )
+                )
+                .orderBy(desc(emailsTable.id))
+                .limit(1);
+
+              if (subjectMatchRows.length) {
+                const matchedEmailId = subjectMatchRows[0].emailId;
+                let rfqRows = await db
+                  .select({ rfqId: rfqsTable.id })
+                  .from(rfqsTable)
+                  .where(eq(rfqsTable.emailId, matchedEmailId));
+
+                // Also try walking up if the matched email is an outbound
+                if (!rfqRows.length) {
+                  const parentEmailRows = await db
+                    .select({ parentEmailId: emailsTable.parentEmailId })
+                    .from(emailsTable)
+                    .where(eq(emailsTable.id, matchedEmailId));
+                  if (parentEmailRows.length && parentEmailRows[0].parentEmailId) {
+                    rfqRows = await db
+                      .select({ rfqId: rfqsTable.id })
+                      .from(rfqsTable)
+                      .where(eq(rfqsTable.emailId, parentEmailRows[0].parentEmailId));
+                  }
+                }
+
+                if (rfqRows.length) {
+                  req.log.info({ uid, fromEmail, subject, baseSubject, rfqId: rfqRows[0].rfqId }, "Subject-match threading: routing as reply");
+                  const rfqId = rfqRows[0].rfqId;
+                  const replyResp = await fetch(`http://localhost:${port}/api/rfqs/${rfqId}/ingest-reply`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ uid, fromName, fromEmail, body, receivedAt, messageId }),
+                  });
+                  if (replyResp.ok) {
+                    const result = await replyResp.json() as { skipped?: boolean };
+                    if (!result.skipped) synced++;
+                    else skipped++;
+                  } else {
+                    const errText = await replyResp.text();
+                    errors.push(`reply (subject-match) ${uid}: ${errText}`);
                   }
                   continue;
                 }
