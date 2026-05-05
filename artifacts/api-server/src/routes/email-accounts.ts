@@ -123,6 +123,7 @@ router.post("/email-accounts/:id/test", async (req, res) => {
       auth: { user: acct.email, pass: acct.password },
       logger: false,
     });
+    client.on("error", () => {});
 
     await client.connect();
     const status = await client.status("INBOX", { messages: true, unseen: true });
@@ -159,6 +160,7 @@ router.post("/email-accounts/test-credentials", async (req, res) => {
       auth: { user: email, pass: password },
       logger: false,
     });
+    client.on("error", () => {});
 
     await client.connect();
     await client.logout();

@@ -74,13 +74,17 @@ function imapHostForProvider(provider: string): string {
 }
 
 function createImapClientForAccount(acct: AccountConfig): ImapFlow {
-  return new ImapFlow({
+  const client = new ImapFlow({
     host: acct.imapHost,
     port: acct.imapPort,
     secure: true,
     auth: { user: acct.email, pass: acct.password },
     logger: false,
   });
+  // Prevent unhandled 'error' events (e.g. socket timeout after logout) from
+  // crashing the process — errors are caught in try/catch at the call sites.
+  client.on("error", () => {});
+  return client;
 }
 
 /** Build the full list of accounts to sync: DB accounts + env-var fallback */

@@ -6486,8 +6486,11 @@ async function removeEmailAccount(id) {
   } catch(e) { alert('Failed to remove account: ' + e.message); }
 }
 
-document.getElementById('ea-overlay').addEventListener('click', function(e){
-  if (e.target === this) closeEmailAccounts();
+document.addEventListener('DOMContentLoaded', function() {
+  const eaOverlay = document.getElementById('ea-overlay');
+  if (eaOverlay) eaOverlay.addEventListener('click', function(e){
+    if (e.target === this) closeEmailAccounts();
+  });
 });
 </script>
 
