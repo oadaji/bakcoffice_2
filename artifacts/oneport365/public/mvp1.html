@@ -172,8 +172,11 @@ html,body{height:100%;background:#f0f4f0;color:#1a1a1a;font-family:'Inter',sans-
 .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .form-field{display:flex;flex-direction:column;gap:3px}
 .form-label{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.04em}
-.form-input{border:1px solid var(--border2);border-radius:6px;padding:6px 9px;font-size:12px;font-family:Inter,sans-serif;color:var(--text);outline:none;background:#fff}
+.form-input{border:1px solid var(--border2);border-radius:6px;padding:6px 9px;font-size:12px;font-family:Inter,sans-serif;color:var(--text);outline:none;background:#fff;width:100%;box-sizing:border-box}
 .form-input:focus{border-color:var(--accent)}
+.form-select{border:1px solid var(--border2);border-radius:6px;padding:6px 9px;font-size:12px;font-family:Inter,sans-serif;color:var(--text);background:#fff;outline:none;width:100%;box-sizing:border-box}
+.form-select:focus{border-color:var(--accent)}
+.modal-ft{padding:14px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;flex-shrink:0}
 .cat-toggle{display:flex;flex-wrap:wrap;gap:5px;margin-top:2px}
 .cat-toggle-btn{font-size:10px;padding:3px 9px;border-radius:10px;border:1px solid var(--border2);background:#f8faf8;cursor:pointer;color:var(--text2);font-weight:500;transition:all .12s}
 .cat-toggle-btn.on{background:#dbeafe;color:#1e40af;border-color:#bfdbfe}
