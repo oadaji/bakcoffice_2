@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { randomUUID } from "crypto";
-import { db, emailsTable, rfqsTable } from "@workspace/db";
+import { db, emailsTable, rfqsTable, emailAccounts } from "@workspace/db";
 import { eq, desc, or, inArray } from "drizzle-orm";
 import { anthropic } from "@workspace/integrations-anthropic-ai";
 import nodemailer from "nodemailer";
@@ -127,7 +127,7 @@ router.patch("/rfqs/:id", async (req, res) => {
 router.post("/rfqs/:id/send-followup", async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
-    const { draft } = req.body as { draft?: string };
+    const { draft, fromEmail } = req.body as { draft?: string; fromEmail?: string };
 
     // Load the RFQ + its source email
     const rows = await db
@@ -155,9 +155,29 @@ router.post("/rfqs/:id/send-followup", async (req, res) => {
       return;
     }
 
-    const transporter = createMailTransporter();
+    // Resolve sender credentials — prefer the selected fromEmail account, fall back to env default
+    let senderUser = process.env.GMAIL_ADDRESS!;
+    let senderPass = process.env.GMAIL_APP_PASSWORD!;
+    if (fromEmail && fromEmail !== process.env.GMAIL_ADDRESS) {
+      const [acct] = await db
+        .select({ email: emailAccounts.email, password: emailAccounts.password, provider: emailAccounts.provider })
+        .from(emailAccounts)
+        .where(eq(emailAccounts.email, fromEmail))
+        .limit(1);
+      if (acct) {
+        senderUser = acct.email;
+        senderPass = acct.password;
+      }
+    }
+
+    const transporter = nodemailer.createTransport({
+      host: senderUser.endsWith("@gmail.com") ? "smtp.gmail.com" : "smtp-mail.outlook.com",
+      port: 465,
+      secure: senderUser.endsWith("@gmail.com"),
+      auth: { user: senderUser, pass: senderPass },
+    });
     await transporter.sendMail({
-      from: `OnePort 365 Commercial Team <${process.env.GMAIL_ADDRESS}>`,
+      from: `OnePort 365 Commercial Team <${senderUser}>`,
       to: email.fromEmail,
       subject: `Re: ${email.subject ?? "Your freight enquiry"}`,
       text: bodyText,

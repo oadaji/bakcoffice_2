@@ -133,6 +133,10 @@ html,body{height:100%;background:#f0f4f0;color:#1a1a1a;font-family:'Inter',sans-
 .ep-draft:focus{border-color:var(--accent);background:#fff}
 .ep-timer{font-size:10px;color:var(--warn);background:#fffbeb;padding:2px 7px;border-radius:4px;font-weight:500}
 .ep-timer.sent{color:#166534;background:#dcfce7}
+/* COMPOSE TRAY */
+.compose-tray{display:flex;flex-direction:column;flex-shrink:0;background:#fff;border-top:2px solid var(--accent);box-shadow:0 -3px 14px rgba(0,0,0,.08)}
+.compose-field-row{display:flex;align-items:center;gap:8px;padding:5px 14px;border-bottom:1px solid #f0f4f0;min-height:30px;flex-shrink:0}
+.compose-field-lbl{font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;width:46px;flex-shrink:0}
 
 /* RATES PANEL */
 .rate-card{background:#fff;border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:7px}
@@ -487,6 +491,55 @@ tr.trow.sel td{background:#eef6e6}
         </div>
         <div class="detail-body" id="d-body"></div>
         <div id="d-thread"></div>
+        <!-- OUTLOOK-STYLE INLINE COMPOSE TRAY -->
+        <div id="compose-tray" class="compose-tray" style="display:none">
+          <!-- countdown progress bar -->
+          <div style="height:3px;background:#e4e8e4;overflow:hidden;flex-shrink:0">
+            <div id="compose-progress" style="height:100%;background:var(--accent);transition:width 1s linear;width:100%"></div>
+          </div>
+          <!-- header -->
+          <div style="display:flex;align-items:center;gap:8px;padding:8px 14px 7px;border-bottom:1px solid #eef2ee;flex-shrink:0">
+            <span style="font-size:11px;font-weight:700;color:var(--accent-dark);display:flex;align-items:center;gap:5px">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z"/></svg>
+              Reply
+            </span>
+            <div style="flex:1"></div>
+            <span class="ep-timer" id="ep-timer">sends in 3:00</span>
+            <button onclick="epCancel()" title="Discard draft" style="border:none;background:none;cursor:pointer;color:var(--text3);font-size:15px;padding:0 0 0 10px;line-height:1;opacity:.7">✕</button>
+          </div>
+          <!-- From -->
+          <div class="compose-field-row">
+            <span class="compose-field-lbl">From</span>
+            <div style="flex:1;display:flex;align-items:center;gap:7px">
+              <div id="compose-from-avatar" style="width:22px;height:22px;border-radius:50%;background:var(--accent-dark);display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;color:#fff;flex-shrink:0;letter-spacing:0">OA</div>
+              <select id="compose-from" onchange="updateFromAvatar()" style="flex:1;border:none;outline:none;font-size:11px;color:var(--text2);font-family:Inter,sans-serif;background:transparent;cursor:pointer;min-width:0;padding:2px 0">
+                <option value="">Loading…</option>
+              </select>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="color:var(--text3);flex-shrink:0;pointer-events:none"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+          </div>
+          <!-- To -->
+          <div class="compose-field-row">
+            <span class="compose-field-lbl">To</span>
+            <span id="compose-to" style="font-size:11px;color:var(--text2);background:#f0f4f0;padding:2px 10px;border-radius:12px;max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+          </div>
+          <!-- Subject -->
+          <div class="compose-field-row" style="border-bottom:1px solid #e4e8e4">
+            <span class="compose-field-lbl">Subject</span>
+            <input id="compose-subject" type="text" spellcheck="false" style="flex:1;border:none;outline:none;font-size:11px;font-weight:500;color:var(--text2);font-family:Inter,sans-serif;background:transparent;padding:2px 0" />
+          </div>
+          <!-- Body -->
+          <textarea id="ep-draft" spellcheck="true" style="flex:1;border:none;outline:none;resize:none;padding:12px 14px;font-size:12px;color:var(--text2);line-height:1.8;font-family:Inter,sans-serif;background:#fff;min-height:130px;width:100%;box-sizing:border-box"></textarea>
+          <!-- Footer toolbar -->
+          <div style="display:flex;align-items:center;gap:8px;padding:9px 14px;border-top:1px solid #e8ede8;background:#f8faf8;flex-shrink:0">
+            <button class="btn btn-primary btn-sm" onclick="epSendNow()" id="compose-send-btn" style="display:flex;align-items:center;gap:5px;font-size:12px;padding:7px 18px">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg> Send
+            </button>
+            <button onclick="epCancel()" style="border:none;background:none;cursor:pointer;color:var(--text3);font-size:11px;font-family:Inter,sans-serif;padding:4px 8px;border-radius:4px" onmouseover="this.style.background='#eef2ee'" onmouseout="this.style.background='none'">Discard</button>
+            <div style="flex:1"></div>
+            <span style="font-size:10px;color:var(--text3)">Sending in <span id="compose-countdown" style="font-weight:600;color:var(--warn)">3:00</span></span>
+          </div>
+        </div>
         <div class="detail-actions" id="d-actions">
           <button class="btn btn-sm">Reply</button>
           <button class="btn btn-sm" style="margin-left:auto;color:var(--text3)">Archive</button>
@@ -511,15 +564,9 @@ tr.trow.sel td{background:#eef6e6}
           <div id="ep-missing-wrap">
             <span class="ep-section-lbl missing-lbl">Missing Info</span>
             <div id="ep-missing"></div>
-            <div class="ep-followup" id="ep-followup-wrap">
-              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-                <span style="font-size:11px;font-weight:600;color:var(--text2)">Follow-up Draft</span>
-                <span class="ep-timer" id="ep-timer">sends in 5:00</span>
-              </div>
-              <textarea class="ep-draft" id="ep-draft" spellcheck="true" placeholder="Follow-up draft will appear here…"></textarea>
-              <div class="row" style="margin-top:10px">
-                <button class="btn btn-primary btn-sm" style="flex:1" onclick="epSendNow()">Send Now</button>
-                <button class="btn btn-danger btn-sm" onclick="epCancel()">Cancel</button>
+            <div class="ep-followup" id="ep-followup-wrap" style="display:none">
+              <div style="font-size:11px;color:var(--accent-dark);background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:7px 10px;display:flex;align-items:center;gap:6px">
+                <span>✓</span><span>Follow-up sent</span>
               </div>
             </div>
           </div>
@@ -5089,6 +5136,7 @@ function renderExtraction(r) {
   // Missing / action needed
   const mw = document.getElementById('ep-missing-wrap');
   const fw = document.getElementById('ep-followup-wrap');
+  const ct = document.getElementById('compose-tray');
   if (missing.length) {
     if (mw) {
       mw.style.display = 'block';
@@ -5097,37 +5145,49 @@ function renderExtraction(r) {
     }
     const missingEl = document.getElementById('ep-missing');
     if (missingEl) missingEl.innerHTML = missing.map(m => `<div class="ep-missing-item">⚠ ${escHtml(m)}</div>`).join('');
-    if (fw) fw.style.display = draft ? 'block' : 'none';
-    if (draft && fw) {
+    if (draft) {
+      // Show compose tray in centre column
+      if (ct) ct.style.display = 'flex';
       const draftEl = document.getElementById('ep-draft');
       const timerEl = document.getElementById('ep-timer');
-      const sendRowEl = fw.querySelector('.row');
+      const countdownEl = document.getElementById('compose-countdown');
+      const sendBtn = document.getElementById('compose-send-btn');
+      const toEl = document.getElementById('compose-to');
+      const subjectEl = document.getElementById('compose-subject');
+      if (toEl) toEl.textContent = r.email?.fromEmail || r.email?.fromName || '';
+      if (subjectEl) subjectEl.value = `Re: ${r.email?.subject || 'Your freight enquiry'}`;
       if (draftEl) {
         draftEl.value = draft;
         if (r.status === 'replied') {
           draftEl.readOnly = true;
-          draftEl.style.background = '#f3f4f6';
+          draftEl.style.background = '#f8faf8';
           draftEl.style.color = 'var(--text3)';
-          draftEl.style.cursor = 'default';
         } else {
           draftEl.readOnly = false;
           draftEl.style.background = '';
           draftEl.style.color = '';
-          draftEl.style.cursor = '';
         }
       }
       if (r.status === 'replied') {
         if (timerEl) { timerEl.textContent = '✓ sent'; timerEl.className = 'ep-timer sent'; }
-        if (sendRowEl) sendRowEl.style.display = 'none';
+        if (countdownEl) countdownEl.textContent = 'sent';
+        if (sendBtn) sendBtn.style.display = 'none';
         clearInterval(epTimerInterval);
+        if (fw) fw.style.display = 'block';
       } else {
-        if (sendRowEl) sendRowEl.style.display = '';
+        if (sendBtn) sendBtn.style.display = '';
+        if (fw) fw.style.display = 'none';
         startEpTimer();
+        loadComposeAccounts();
       }
+    } else {
+      if (ct) ct.style.display = 'none';
+      if (fw) fw.style.display = 'none';
     }
   } else {
     if (mw) mw.style.display = 'none';
     if (fw) fw.style.display = 'none';
+    if (ct) ct.style.display = 'none';
   }
 
   // Actions
@@ -5193,13 +5253,14 @@ async function deleteRfq(rfqId) {
 
 async function replyRfq(rfqId) {
   const draft = document.getElementById('ep-draft')?.value;
+  const fromEmail = document.getElementById('compose-from')?.value || undefined;
   const btn = document.querySelector('[onclick^="replyRfq"]');
   if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
   try {
     const resp = await fetch(`/api/rfqs/${rfqId}/send-followup`, {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ draft })
+      body: JSON.stringify({ draft, fromEmail })
     });
     if (!resp.ok) { const e = await resp.json(); throw new Error(e.error || 'Send failed'); }
     const r = rfqData.find(x => x.id === rfqId);
@@ -5217,13 +5278,21 @@ function startEpTimer() {
   clearInterval(epTimerInterval);
   epTimerSecs = 180;
   const timerEl = document.getElementById('ep-timer');
-  if (timerEl) { timerEl.textContent = '3:00'; timerEl.className = 'ep-timer'; }
+  const countdownEl = document.getElementById('compose-countdown');
+  const progressEl = document.getElementById('compose-progress');
+  if (timerEl) { timerEl.textContent = 'sends in 3:00'; timerEl.className = 'ep-timer'; }
+  if (countdownEl) countdownEl.textContent = '3:00';
+  if (progressEl) progressEl.style.width = '100%';
   epTimerInterval = setInterval(() => {
     epTimerSecs = Math.max(0, epTimerSecs - 1);
     const m = Math.floor(epTimerSecs / 60);
     const s = String(epTimerSecs % 60).padStart(2, '0');
     const el = document.getElementById('ep-timer');
+    const cel = document.getElementById('compose-countdown');
+    const pel = document.getElementById('compose-progress');
     if (el) el.textContent = epTimerSecs > 0 ? `sends in ${m}:${s}` : '✓ sent';
+    if (cel) cel.textContent = epTimerSecs > 0 ? `${m}:${s}` : '0:00';
+    if (pel) pel.style.width = `${(epTimerSecs / 180) * 100}%`;
     if (epTimerSecs === 0) {
       clearInterval(epTimerInterval);
       const el2 = document.getElementById('ep-timer');
@@ -5236,21 +5305,30 @@ async function epSendNow() {
   clearInterval(epTimerInterval);
   const el = document.getElementById('ep-timer');
   if (el) { el.textContent = 'Sending…'; el.className = 'ep-timer'; }
+  const sendBtn = document.getElementById('compose-send-btn');
+  if (sendBtn) { sendBtn.disabled = true; sendBtn.innerHTML = 'Sending…'; }
   if (currentRfqId) {
     const draft = document.getElementById('ep-draft')?.value;
+    const fromEmail = document.getElementById('compose-from')?.value || undefined;
     try {
       const resp = await fetch(`/api/rfqs/${currentRfqId}/send-followup`, {
         method: 'POST',
         headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ draft })
+        body: JSON.stringify({ draft, fromEmail })
       });
       if (!resp.ok) { const e = await resp.json(); throw new Error(e.error || 'Send failed'); }
       const r = rfqData.find(x => x.id === currentRfqId);
       if (r) { r.status = 'replied'; if (draft) r.followUpDraft = draft; }
+      if (el) { el.textContent = '✓ sent'; el.className = 'ep-timer sent'; }
+      const draftEl = document.getElementById('ep-draft');
+      if (draftEl) { draftEl.readOnly = true; draftEl.style.background = '#f8faf8'; draftEl.style.color = 'var(--text3)'; }
+      if (sendBtn) sendBtn.style.display = 'none';
+      const fw = document.getElementById('ep-followup-wrap');
+      if (fw) fw.style.display = 'block';
       renderInboxList();
-      selEmail(currentRfqId);
     } catch (err) {
       if (el) { el.textContent = '✗ failed'; el.style.color = '#dc2626'; }
+      if (sendBtn) { sendBtn.disabled = false; sendBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg> Send'; }
       alert('Could not send email: ' + err.message);
     }
   }
@@ -5258,10 +5336,37 @@ async function epSendNow() {
 
 function epCancel() {
   clearInterval(epTimerInterval);
-  const el = document.getElementById('ep-timer');
-  if (el) { el.textContent = 'cancelled'; el.className = 'ep-timer'; el.style.background='#f3f4f6'; el.style.color='var(--text3)'; }
-  const fw = document.getElementById('ep-followup-wrap');
-  if (fw) fw.style.display = 'none';
+  const ct = document.getElementById('compose-tray');
+  if (ct) ct.style.display = 'none';
+}
+
+async function loadComposeAccounts() {
+  const sel = document.getElementById('compose-from');
+  if (!sel) return;
+  try {
+    const data = await fetch('/api/email-accounts').then(r => r.json());
+    if (!Array.isArray(data) || !data.length) return;
+    sel.innerHTML = data.map(a =>
+      `<option value="${escHtml(a.email)}">${escHtml(a.email)}</option>`
+    ).join('');
+    updateFromAvatar();
+  } catch(e) {
+    sel.innerHTML = `<option value="">Default account</option>`;
+  }
+}
+
+function updateFromAvatar() {
+  const sel = document.getElementById('compose-from');
+  const av = document.getElementById('compose-from-avatar');
+  if (!sel || !av) return;
+  const email = sel.value || '';
+  const parts = email.split('@')[0].split(/[._\-+]/);
+  const initials = parts.length >= 2
+    ? (parts[0][0] + parts[1][0]).toUpperCase()
+    : email.substring(0, 2).toUpperCase();
+  av.textContent = initials;
+  const colors = ['#1a6e2e','#2563eb','#7c3aed','#b45309','#0e7490'];
+  av.style.background = colors[email.length % colors.length];
 }
 
 // Init — load from API
