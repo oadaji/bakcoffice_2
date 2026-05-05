@@ -16,6 +16,8 @@ export const emailsTable = pgTable("emails", {
   messageId: text("message_id"),
   inReplyTo: text("in_reply_to"),
   parentEmailId: integer("parent_email_id"),
+  // Recipients
+  cc: text("cc"),
   // Multi-inbox tracking
   receivedInbox: text("received_inbox"),
 });

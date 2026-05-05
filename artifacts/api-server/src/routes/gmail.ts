@@ -214,6 +214,7 @@ router.post("/gmail/sync", async (req, res) => {
             const receivedAt = (parsed.date ?? new Date()).toISOString();
             const messageId = normaliseMessageId(parsed.messageId);
             const inReplyTo = normaliseMessageId(parsed.inReplyTo);
+            const cc = parsed.cc?.value?.map((a: { address?: string }) => a.address).filter(Boolean).join(", ") || null;
 
             // ── Global UID: use Message-ID for cross-account dedup ──────────
             // Same email delivered to multiple monitored inboxes → same uid →
@@ -293,6 +294,7 @@ router.post("/gmail/sync", async (req, res) => {
                 emailType: "customer-rfq",
                 requireFreightMatch: true,
                 messageId,
+                cc,
                 receivedInbox: acct.label,
               }),
             });

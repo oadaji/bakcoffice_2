@@ -132,7 +132,7 @@ router.patch("/rfqs/:id", async (req, res) => {
 router.post("/rfqs/:id/send-followup", async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
-    const { draft, fromEmail } = req.body as { draft?: string; fromEmail?: string };
+    const { draft, fromEmail, cc } = req.body as { draft?: string; fromEmail?: string; cc?: string };
 
     // Load the RFQ + its source email
     const rows = await db
@@ -163,16 +163,22 @@ router.post("/rfqs/:id/send-followup", async (req, res) => {
     // Resolve sender credentials — prefer the selected fromEmail account, fall back to env default
     let senderUser = process.env.GMAIL_ADDRESS!;
     let senderPass = process.env.GMAIL_APP_PASSWORD!;
-    if (fromEmail && fromEmail !== process.env.GMAIL_ADDRESS) {
+    const envAddress = (process.env.GMAIL_ADDRESS ?? "").toLowerCase();
+    if (fromEmail && fromEmail.toLowerCase() !== envAddress) {
       const [acct] = await db
         .select({ email: emailAccounts.email, password: emailAccounts.password, provider: emailAccounts.provider })
         .from(emailAccounts)
-        .where(eq(emailAccounts.email, fromEmail))
+        .where(eq(emailAccounts.email, fromEmail.toLowerCase()))
         .limit(1);
       if (acct) {
         senderUser = acct.email;
         senderPass = acct.password;
+        req.log.info({ resolvedSender: senderUser, requestedFrom: fromEmail }, "Resolved sender from DB");
+      } else {
+        req.log.warn({ requestedFrom: fromEmail }, "Requested fromEmail not found in DB — falling back to env account");
       }
+    } else {
+      req.log.info({ resolvedSender: senderUser, requestedFrom: fromEmail ?? "(none)" }, "Using env-var sender account");
     }
 
     const transporter = nodemailer.createTransport({
@@ -185,12 +191,14 @@ router.post("/rfqs/:id/send-followup", async (req, res) => {
     const info = await transporter.sendMail({
       from: `OnePort 365 Commercial Team <${senderUser}>`,
       to: email.fromEmail,
+      cc: cc || email.cc || undefined,
       subject: sentSubject,
       text: bodyText,
       // Ensure our reply threads into the customer's original email
       inReplyTo: email.messageId ? `<${email.messageId}>` : undefined,
       references: email.messageId ? `<${email.messageId}>` : undefined,
     });
+    req.log.info({ from: senderUser, to: email.fromEmail, cc: cc || email.cc || null }, "Email sent via SMTP");
 
     // Store the sent email in emailsTable so future customer replies thread correctly
     const sentMessageId = normaliseMessageId(info.messageId);
@@ -382,6 +390,7 @@ router.post("/rfq/ingest", async (req, res) => {
       emailType = "customer-rfq",
       requireFreightMatch = false,
       messageId,
+      cc,
     } = req.body as {
       uid: string;
       fromName: string;
@@ -392,6 +401,7 @@ router.post("/rfq/ingest", async (req, res) => {
       emailType?: string;
       requireFreightMatch?: boolean;
       messageId?: string;
+      cc?: string | null;
     };
 
     if (!uid || !fromEmail || !subject || !body) {
@@ -491,6 +501,7 @@ router.post("/rfq/ingest", async (req, res) => {
         emailType,
         receivedAt: receivedAt ? new Date(receivedAt) : new Date(),
         messageId: messageId ?? null,
+        cc: cc ?? null,
       })
       .returning();
 
