@@ -5123,6 +5123,42 @@ async function loadThread(rfqId) {
   }
 }
 
+// ── Shipment direction: Nigeria is the default country ───────────────────────
+// Import  = goods coming INTO  Nigeria (POD in Nigeria)
+// Export  = goods going  OUT OF Nigeria (POL in Nigeria)
+const NG_PATTERN = /\b(nigeria|lagos|apapa|tin.?can|onne|warri|calabar|port.?harcourt|kano|NGAPP|NGLOS|NGTIN|NGONE|NGWAR|NGCAL|NGPH|NG[A-Z]{3})\b/i;
+function inferShipmentDirection(pol, pod) {
+  const polNg = NG_PATTERN.test(pol);
+  const podNg = NG_PATTERN.test(pod);
+  if (podNg && !polNg) return 'import';
+  if (polNg && !podNg) return 'export';
+  if (polNg && podNg)  return 'domestic';
+  return 'cross';
+}
+
+// ── Minimum required fields for quote generation (per RFQ spec) ───────────────
+// Docs (packing list, pictures) excluded per product decision
+const QUOTE_REQS = [
+  { label: 'Company',    keys: ['Company','Shipper','Customer','Client','Importer','Exporter'] },
+  { label: 'Contact',    keys: ['Contact','Contact Name','Contact Person','Name'] },
+  { label: 'Email',      keys: ['Email','Email Address'] },
+  { label: 'Commodity',  keys: ['Commodity','Cargo','Goods','Description','Product','Item'] },
+  { label: 'HS Code',    keys: ['HS Code','HS','Tariff Code','Tariff'] },
+  { label: 'Tonnage',    keys: ['Weight','Tonnage','GWT','Gross Weight','Total Weight','Net Weight'] },
+  { label: 'Volume',     keys: ['Volume','CBM','Cubic','Cubic Metres','Cubic Meters'] },
+  { label: 'POL',        keys: ['POL'] },
+  { label: 'POD',        keys: ['POD'] },
+  { label: 'Pick-up',    keys: ['Pick-up','Pickup','Pick up','Collection','Collection Address','Origin Address','Pickup Address'] },
+];
+function findReqField(fields, keys) {
+  return fields.find(f => keys.some(k => f.k.toLowerCase() === k.toLowerCase()));
+}
+function reqHasValue(f) {
+  if (!f || !f.v) return false;
+  const v = f.v.trim().toLowerCase();
+  return v !== '' && v !== 'not specified' && v !== 'n/a' && v !== '—' && v !== '-';
+}
+
 function renderExtraction(r) {
   if (!r) return;
   const fields = Array.isArray(r.fields) ? r.fields : [];
@@ -5158,32 +5194,90 @@ function renderExtraction(r) {
     else epTitle.textContent = 'Extracted details';
   }
 
-  // Fields — detect and surface freight mode prominently
+  // ── Top strip: Freight Mode + Import/Export direction ──────────────────────
   const freightModeField = fields.find(f => f.k === 'Freight Mode');
   const otherFields = fields.filter(f => f.k !== 'Freight Mode');
-  let modeBadge = '';
+  const polField = fields.find(f => f.k === 'POL');
+  const podField = fields.find(f => f.k === 'POD');
+  const direction = inferShipmentDirection(polField?.v || '', podField?.v || '');
+
+  const DIR_CFG = {
+    import:   { label: 'Import → Nigeria', color: '#1e40af', bg: '#dbeafe', icon: '📥' },
+    export:   { label: 'Export ← Nigeria', color: '#166534', bg: '#dcfce7', icon: '📤' },
+    domestic: { label: 'Domestic (NG)',    color: '#92400e', bg: '#fef3c7', icon: '🔄' },
+    cross:    { label: 'Cross-trade',      color: '#6b7280', bg: '#f3f4f6', icon: '↔' },
+  };
+  const dc = DIR_CFG[direction];
+
+  let topStrip = `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">`;
   if (freightModeField) {
-    const isAir = freightModeField.v.toLowerCase().includes('air');
-    const isOcean = freightModeField.v.toLowerCase().includes('ocean');
-    const modeColor = isAir ? '#0369a1' : isOcean ? '#1a6e2e' : '#64748b';
-    const modeBg    = isAir ? '#e0f2fe' : isOcean ? '#dcfce7'  : '#f1f5f9';
-    const modeIcon  = isAir ? '✈' : isOcean ? '🚢' : '?';
-    modeBadge = `<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;padding:7px 10px;background:${modeBg};border-radius:8px;border:1px solid ${modeColor}22">
-      <span style="font-size:14px">${modeIcon}</span>
-      <span style="font-size:12px;font-weight:700;color:${modeColor}">${freightModeField.v}</span>
-      ${freightModeField.ok ? '<span style="font-size:10px;color:'+modeColor+';margin-left:auto">detected ✓</span>' : '<span style="font-size:10px;color:#8a9e8a;margin-left:auto">inferred</span>'}
+    const isAir = /air/i.test(freightModeField.v);
+    const isOcean = /ocean/i.test(freightModeField.v);
+    const mc = isAir ? '#0369a1' : isOcean ? '#1a6e2e' : '#64748b';
+    const mb = isAir ? '#e0f2fe' : isOcean ? '#dcfce7' : '#f1f5f9';
+    const mi = isAir ? '✈' : isOcean ? '🚢' : '📦';
+    topStrip += `<span style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:${mb};border-radius:20px;border:1px solid ${mc}33;font-size:11px;font-weight:700;color:${mc}">${mi} ${escHtml(freightModeField.v)}</span>`;
+  }
+  topStrip += `<span style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:${dc.bg};border-radius:20px;border:1px solid ${dc.color}33;font-size:11px;font-weight:700;color:${dc.color}">${dc.icon} ${dc.label}</span>`;
+  topStrip += `</div>`;
+
+  // ── Quote Readiness — minimum required fields ────────────────────────────
+  const reqResults = QUOTE_REQS.map(req => {
+    const found = findReqField(fields, req.keys);
+    return { label: req.label, found, hasVal: reqHasValue(found) };
+  });
+  const filledCount = reqResults.filter(r => r.hasVal).length;
+  const pct = Math.round((filledCount / QUOTE_REQS.length) * 100);
+  const scoreColor = pct >= 80 ? '#166534' : pct >= 50 ? '#92400e' : '#991b1b';
+  const scoreBg    = pct >= 80 ? '#dcfce7' : pct >= 50 ? '#fef3c7' : '#fee2e2';
+
+  let reqSection = `
+    <div style="margin-bottom:10px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
+        <span style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.05em">Quote Readiness</span>
+        <span style="font-size:10px;font-weight:700;color:${scoreColor};background:${scoreBg};padding:2px 8px;border-radius:10px">${filledCount}/${QUOTE_REQS.length}</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:2px">`;
+
+  for (const { label, found, hasVal } of reqResults) {
+    if (hasVal) {
+      let displayVal = escHtml(found.v);
+      if (label === 'POL' || label === 'POD') {
+        displayVal = displayVal.replace(/\(([A-Z]{2,5})\)/g, '(<span style="font-family:monospace;color:#1a6e2e;font-weight:700">$1</span>)');
+      }
+      reqSection += `<div style="display:flex;align-items:baseline;gap:6px;padding:5px 8px;background:#f8faf8;border:1px solid var(--border);border-radius:6px">
+        <span style="font-size:10px;color:var(--text3);font-weight:600;min-width:68px;flex-shrink:0">${label}</span>
+        <span style="font-size:11px;color:var(--text);flex:1;text-align:right"><span class="ep-ok">✓</span> ${displayVal}</span>
+      </div>`;
+    } else {
+      reqSection += `<div style="display:flex;align-items:center;gap:6px;padding:5px 8px;background:#fffbf0;border:1px solid #fde68a;border-radius:6px">
+        <span style="font-size:10px;color:#92400e;font-weight:600;min-width:68px;flex-shrink:0">${label}</span>
+        <span style="font-size:10px;color:#b45309;font-style:italic;margin-left:auto">⚠ missing</span>
+      </div>`;
+    }
+  }
+  reqSection += `</div></div>`;
+
+  // ── Additional extracted fields (non-required, non-mode) ──────────────────
+  const reqKeySet = new Set(QUOTE_REQS.flatMap(r => r.keys.map(k => k.toLowerCase())));
+  const additionalFields = otherFields.filter(f => !reqKeySet.has(f.k.toLowerCase()));
+  let additionalSection = '';
+  if (additionalFields.length) {
+    additionalSection = `<div>
+      <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Additional Details</div>
+      <div style="display:flex;flex-direction:column;gap:2px">
+        ${additionalFields.map(f => {
+          const val = escHtml(f.v);
+          return `<div class="ep-field" style="padding:5px 0">
+            <span class="ep-key">${escHtml(f.k)}</span>
+            <span class="ep-val ${f.ok?'':'miss'}">${f.ok?'<span class="ep-ok">✓</span>':''} ${val}</span>
+          </div>`;
+        }).join('')}
+      </div>
     </div>`;
   }
-  document.getElementById('ep-fields').innerHTML = modeBadge + otherFields.map(f => {
-    // highlight port codes in POL/POD values
-    const val = (f.k === 'POL' || f.k === 'POD')
-      ? escHtml(f.v).replace(/\(([A-Z]{2,5})\)/g, '(<span style="font-family:monospace;color:#1a6e2e;font-weight:700">$1</span>)')
-      : escHtml(f.v);
-    return `<div class="ep-field">
-      <span class="ep-key">${escHtml(f.k)}</span>
-      <span class="ep-val ${f.ok?'':'miss'}">${f.ok?'<span class="ep-ok">✓</span>':''} ${val}</span>
-    </div>`;
-  }).join('');
+
+  document.getElementById('ep-fields').innerHTML = topStrip + reqSection + additionalSection;
 
   // Missing info panel
   const mw = document.getElementById('ep-missing-wrap');
