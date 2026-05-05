@@ -474,11 +474,6 @@ tr.trow.sel td{background:#eef6e6}
             <span class="detail-meta-time" id="d-time">14 Apr 2026 · 09:15 · sales inbox</span>
           </div>
         </div>
-        <div class="processing-bar">
-          <div class="spinner"></div>
-          <div class="processing-bar-text">Reading email and pulling out shipment details…</div>
-          <span class="processing-badge">Processing</span>
-        </div>
         <!-- THREAD BRIEF CARD -->
         <div class="brief-card" id="brief-card" style="display:none">
           <div class="brief-card-hd" onclick="toggleBrief()">
@@ -4899,42 +4894,6 @@ function selEmail(rfqId, el) {
   document.getElementById('d-body').innerHTML = bodyToHtml(e.body || '');
   document.getElementById('d-thread').innerHTML = '';
   loadThread(rfqId);
-
-  // Update processing banner based on type
-  const banner = document.querySelector('.processing-bar');
-  if (banner) {
-    if (r.emailType === 'rate-reply') {
-      banner.style.background = '#eff6ff';
-      banner.style.borderColor = '#bfdbfe';
-      const bt = banner.querySelector('.processing-bar-text'); if (bt) bt.textContent = 'Rate reply from partner — extracting rates from this email…';
-      const bb = banner.querySelector('.processing-badge'); if (bb) { bb.textContent = 'Rate reply'; bb.style.background = '#2563eb'; }
-    } else if (r.emailType === 'outbound') {
-      banner.style.background = '#f9fafb';
-      banner.style.borderColor = '#e5e7eb';
-      const bt = banner.querySelector('.processing-bar-text'); if (bt) bt.textContent = 'This email was sent by your team to a freight partner.';
-      const bb = banner.querySelector('.processing-badge'); if (bb) { bb.textContent = 'Sent'; bb.style.background = '#6b7280'; }
-    } else if (r.emailType === 'internal-rfq') {
-      banner.style.background = '#fffbeb';
-      banner.style.borderColor = '#fde68a';
-      const bt = banner.querySelector('.processing-bar-text'); if (bt) bt.textContent = 'Internal request — forwarded by OnePort staff on behalf of customer.';
-      const bb = banner.querySelector('.processing-badge'); if (bb) { bb.textContent = 'Internal'; bb.style.background = '#d97706'; }
-    } else {
-      const isComplete = r.status === 'ready' || r.status === 'replied';
-      banner.style.background = isComplete ? '#f0fdf4' : '#eef6e6';
-      banner.style.borderColor = isComplete ? '#86efac' : '#c8e6a0';
-      const spinner = banner.querySelector('.spinner');
-      if (spinner) spinner.style.display = isComplete ? 'none' : '';
-      const bt = banner.querySelector('.processing-bar-text');
-      const bb = banner.querySelector('.processing-badge');
-      if (isComplete) {
-        if (bt) bt.textContent = '✓ Shipment details extracted successfully.';
-        if (bb) { bb.textContent = 'Complete'; bb.style.background = '#16a34a'; }
-      } else {
-        if (bt) bt.textContent = 'Reading email and pulling out shipment details…';
-        if (bb) { bb.textContent = 'Processing'; bb.style.background = 'var(--accent)'; }
-      }
-    }
-  }
 
   // Show/hide action buttons based on type
   const actionsEl = document.querySelector('.detail-actions');
