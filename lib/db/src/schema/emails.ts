@@ -1,4 +1,4 @@
-import { pgTable, serial, text, timestamp, integer } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, timestamp, integer, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -16,6 +16,8 @@ export const emailsTable = pgTable("emails", {
   messageId: text("message_id"),
   inReplyTo: text("in_reply_to"),
   parentEmailId: integer("parent_email_id"),
+  // Multi-inbox tracking
+  receivedInbox: text("received_inbox"),
 });
 
 export const insertEmailSchema = createInsertSchema(emailsTable).omit({
@@ -25,3 +27,20 @@ export const insertEmailSchema = createInsertSchema(emailsTable).omit({
 
 export type InsertEmail = z.infer<typeof insertEmailSchema>;
 export type Email = typeof emailsTable.$inferSelect;
+
+// ── EMAIL ACCOUNTS (multi-inbox monitoring) ────────────────────────────────────
+export const emailAccounts = pgTable("email_accounts", {
+  id: serial("id").primaryKey(),
+  label: text("label"),
+  email: text("email").notNull().unique(),
+  provider: text("provider").notNull().default("gmail"), // 'gmail' | 'outlook' | 'imap'
+  imapHost: text("imap_host"),
+  imapPort: integer("imap_port"),
+  password: text("password").notNull(),
+  active: boolean("active").notNull().default(true),
+  lastSyncedAt: timestamp("last_synced_at"),
+  lastError: text("last_error"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export type EmailAccount = typeof emailAccounts.$inferSelect;

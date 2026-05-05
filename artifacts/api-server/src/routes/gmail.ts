@@ -2,7 +2,7 @@ import { Router, type IRouter } from "express";
 import { ImapFlow } from "imapflow";
 import { simpleParser } from "mailparser";
 import { Readable } from "stream";
-import { db, emailsTable, rfqsTable } from "@workspace/db";
+import { db, emailsTable, rfqsTable, emailAccounts } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import nodemailer from "nodemailer";
 
@@ -27,7 +27,7 @@ const AUTOMATED_ADDRESS_PATTERNS = [
   /^alerts?@/i,
   /^newsletter@/i,
   /^updates?@/i,
-  /^orders?@/i,           // retail/food order systems (orders@, order@)
+  /^orders?@/i,
   /^support@/i,
   /^billing@/i,
   /^info@accounts\./i,
@@ -45,7 +45,6 @@ const AUTOMATED_SUBJECT_PATTERNS = [
   /your (order|receipt|invoice) (has been|was)/i,
   /password reset/i,
   /\[automated\]/i,
-  // Non-freight subject signals
   /cupcake|pastry|bakery|cake order|food order/i,
   /appointment (confirmed|reminder|booked)/i,
   /booking confirmation/i,
@@ -61,194 +60,280 @@ function isAutomatedEmail(fromEmail: string, subject: string, hasListUnsubscribe
 
 // ── IMAP client factory ───────────────────────────────────────────────────────
 
-function createImapClient() {
-  const user = process.env.GMAIL_ADDRESS;
-  const pass = process.env.GMAIL_APP_PASSWORD;
+interface AccountConfig {
+  email: string;
+  password: string;
+  imapHost: string;
+  imapPort: number;
+  label: string;
+}
 
-  if (!user || !pass) {
-    throw new Error("GMAIL_ADDRESS and GMAIL_APP_PASSWORD environment variables are required");
-  }
+function imapHostForProvider(provider: string): string {
+  if (provider === "outlook") return "imap.outlook.com";
+  return "imap.gmail.com";
+}
 
+function createImapClientForAccount(acct: AccountConfig): ImapFlow {
   return new ImapFlow({
-    host: "imap.gmail.com",
-    port: 993,
+    host: acct.imapHost,
+    port: acct.imapPort,
     secure: true,
-    auth: { user, pass },
+    auth: { user: acct.email, pass: acct.password },
     logger: false,
   });
+}
+
+/** Build the full list of accounts to sync: DB accounts + env-var fallback */
+async function getAccountsToSync(): Promise<AccountConfig[]> {
+  const accounts: AccountConfig[] = [];
+
+  // Env-var account (legacy / default)
+  const envUser = process.env.GMAIL_ADDRESS;
+  const envPass = process.env.GMAIL_APP_PASSWORD;
+  if (envUser && envPass) {
+    accounts.push({
+      email: envUser,
+      password: envPass,
+      imapHost: "imap.gmail.com",
+      imapPort: 993,
+      label: envUser,
+    });
+  }
+
+  // DB-stored accounts
+  const rows = await db.select().from(emailAccounts).where(eq(emailAccounts.active, true));
+  for (const row of rows) {
+    // Skip if already covered by env var
+    if (envUser && row.email.toLowerCase() === envUser.toLowerCase()) continue;
+    accounts.push({
+      email: row.email,
+      password: row.password,
+      imapHost: row.imapHost ?? imapHostForProvider(row.provider),
+      imapPort: row.imapPort ?? 993,
+      label: row.label ?? row.email,
+    });
+  }
+
+  return accounts;
 }
 
 // ── GET /api/gmail/status ─────────────────────────────────────────────────────
 
 router.get("/gmail/status", async (req, res) => {
-  const client = createImapClient();
   try {
-    await client.connect();
-    const status = await client.status("INBOX", { messages: true, unseen: true });
-    await client.logout();
-    res.json({
-      connected: true,
-      email: process.env.GMAIL_ADDRESS,
-      messages: status.messages,
-      unseen: status.unseen,
-    });
+    const accounts = await getAccountsToSync();
+    if (accounts.length === 0) {
+      res.status(503).json({ connected: false, error: "No email accounts configured" });
+      return;
+    }
+
+    const statuses = await Promise.allSettled(accounts.map(async (acct) => {
+      const client = createImapClientForAccount(acct);
+      await client.connect();
+      const status = await client.status("INBOX", { messages: true, unseen: true });
+      await client.logout();
+      return { email: acct.label, connected: true, messages: status.messages, unseen: status.unseen };
+    }));
+
+    const results = statuses.map((s, i) =>
+      s.status === "fulfilled" ? s.value : { email: accounts[i].label, connected: false, error: String((s as PromiseRejectedResult).reason) }
+    );
+
+    res.json({ accounts: results, connected: results.some(r => r.connected) });
   } catch (err) {
-    req.log.error({ err }, "Gmail IMAP status check failed");
+    req.log.error({ err }, "Gmail status check failed");
     res.status(500).json({ connected: false, error: String(err) });
   }
 });
 
 // ── POST /api/gmail/sync ──────────────────────────────────────────────────────
+// Syncs ALL active accounts (env-var + DB). Deduplicates by Message-ID so an
+// email delivered to multiple monitored addresses only becomes one RFQ.
 
 router.post("/gmail/sync", async (req, res) => {
   const { maxResults = 20, since } = req.body as {
     maxResults?: number;
-    since?: string; // ISO date string — only fetch emails after this time
+    since?: string;
   };
 
-  // Default: only fetch emails from the last 30 minutes if no since provided
   const sinceDate = since ? new Date(since) : new Date(Date.now() - 30 * 60 * 1000);
 
-  const client = createImapClient();
   try {
-    await client.connect();
-    await client.mailboxOpen("INBOX");
+    const accounts = await getAccountsToSync();
 
-    // Fetch the most recent N messages by sequence number
-    // Server-side internalDate filter handles the precise time cutoff
-    const status = await client.status("INBOX", { messages: true });
-    const total = status.messages ?? 0;
-
-    if (total === 0) {
-      await client.logout();
-      res.json({ synced: 0, skipped: 0, message: "Inbox is empty" });
+    if (accounts.length === 0) {
+      res.status(503).json({ error: "No email accounts configured. Add an account first." });
       return;
     }
 
-    const start = Math.max(1, total - maxResults + 1);
-    const range = `${start}:${total}`;
-    req.log.info({ total, start, range, sinceDate: sinceDate.toISOString() }, "IMAP fetch range");
+    let totalSynced = 0;
+    let totalSkipped = 0;
+    const allErrors: string[] = [];
 
-    let synced = 0;
-    let skipped = 0;
-    const errors: string[] = [];
-
-    for await (const msg of client.fetch(range, { envelope: true, source: true, internalDate: true })) {
+    for (const acct of accounts) {
+      const client = createImapClientForAccount(acct);
       try {
-        // Server-side time filter — skip messages received before sinceDate
-        const msgDate = msg.internalDate ?? msg.envelope.date ?? new Date(0);
-        if (new Date(msgDate) < sinceDate) {
-          skipped++;
+        await client.connect();
+        await client.mailboxOpen("INBOX");
+
+        const status = await client.status("INBOX", { messages: true });
+        const total = status.messages ?? 0;
+
+        if (total === 0) {
+          await client.logout();
           continue;
         }
 
-        const uid = `gmail:${msg.envelope.messageId ?? msg.uid}`;
+        const start = Math.max(1, total - maxResults + 1);
+        const range = `${start}:${total}`;
+        req.log.info({ account: acct.email, total, range, sinceDate: sinceDate.toISOString() }, "IMAP fetch");
 
-        // Parse the raw message
-        const sourceBuffer = msg.source;
-        const readable = Readable.from(sourceBuffer);
-        const parsed = await simpleParser(readable);
-
-        const subject = parsed.subject ?? "(no subject)";
-        const fromAddr = parsed.from?.value?.[0];
-        const fromEmail = fromAddr?.address ?? "";
-        const fromName = fromAddr?.name ?? fromEmail;
-        const receivedAt = (parsed.date ?? new Date()).toISOString();
-        const messageId = normaliseMessageId(parsed.messageId);
-        const inReplyTo = normaliseMessageId(parsed.inReplyTo);
-
-        // Prefer plain text; fall back to stripping HTML
-        let body = parsed.text ?? "";
-        if (!body && parsed.html) {
-          body = parsed.html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-        }
-
-        if (!fromEmail || !body.trim()) {
-          skipped++;
-          continue;
-        }
+        let synced = 0;
+        let skipped = 0;
+        const errors: string[] = [];
 
         const port = process.env.PORT ?? "8080";
 
-        // ── Reply detection ──────────────────────────────────────────────────
-        // If In-Reply-To matches a known email's messageId, route to thread ingest
-        if (inReplyTo) {
-          const parentRows = await db
-            .select({ emailId: emailsTable.id })
-            .from(emailsTable)
-            .where(eq(emailsTable.messageId, inReplyTo));
+        for await (const msg of client.fetch(range, { envelope: true, source: true, internalDate: true })) {
+          try {
+            const msgDate = msg.internalDate ?? msg.envelope.date ?? new Date(0);
+            if (new Date(msgDate) < sinceDate) { skipped++; continue; }
 
-          if (parentRows.length) {
-            const parentEmailId = parentRows[0].emailId;
-            const rfqRows = await db
-              .select({ rfqId: rfqsTable.id })
-              .from(rfqsTable)
-              .where(eq(rfqsTable.emailId, parentEmailId));
+            const sourceBuffer = msg.source;
+            const readable = Readable.from(sourceBuffer);
+            const parsed = await simpleParser(readable);
 
-            if (rfqRows.length) {
-              const rfqId = rfqRows[0].rfqId;
-              const replyResp = await fetch(`http://localhost:${port}/api/rfqs/${rfqId}/ingest-reply`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ uid, fromName, fromEmail, body, receivedAt, messageId }),
-              });
-              if (replyResp.ok) {
-                const result = await replyResp.json() as { skipped?: boolean };
-                if (!result.skipped) synced++;
-                else skipped++;
-              } else {
-                const errText = await replyResp.text();
-                errors.push(`reply ${uid}: ${errText}`);
-              }
-              continue;
+            const subject = parsed.subject ?? "(no subject)";
+            const fromAddr = parsed.from?.value?.[0];
+            const fromEmail = fromAddr?.address ?? "";
+            const fromName = fromAddr?.name ?? fromEmail;
+            const receivedAt = (parsed.date ?? new Date()).toISOString();
+            const messageId = normaliseMessageId(parsed.messageId);
+            const inReplyTo = normaliseMessageId(parsed.inReplyTo);
+
+            // ── Global UID: use Message-ID for cross-account dedup ──────────
+            // Same email delivered to multiple monitored inboxes → same uid →
+            // the ingest endpoint sees it already exists and skips it.
+            const uid = messageId ? `mid:${messageId}` : `${acct.email.split("@")[0]}:${msg.uid}`;
+
+            let body = parsed.text ?? "";
+            if (!body && parsed.html) {
+              body = parsed.html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
             }
+
+            if (!fromEmail || !body.trim()) { skipped++; continue; }
+
+            // ── Reply detection ──────────────────────────────────────────────
+            if (inReplyTo) {
+              const parentRows = await db
+                .select({ emailId: emailsTable.id })
+                .from(emailsTable)
+                .where(eq(emailsTable.messageId, inReplyTo));
+
+              if (parentRows.length) {
+                const parentEmailId = parentRows[0].emailId;
+                const rfqRows = await db
+                  .select({ rfqId: rfqsTable.id })
+                  .from(rfqsTable)
+                  .where(eq(rfqsTable.emailId, parentEmailId));
+
+                if (rfqRows.length) {
+                  const rfqId = rfqRows[0].rfqId;
+                  const replyResp = await fetch(`http://localhost:${port}/api/rfqs/${rfqId}/ingest-reply`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ uid, fromName, fromEmail, body, receivedAt, messageId }),
+                  });
+                  if (replyResp.ok) {
+                    const result = await replyResp.json() as { skipped?: boolean };
+                    if (!result.skipped) synced++;
+                    else skipped++;
+                  } else {
+                    const errText = await replyResp.text();
+                    errors.push(`reply ${uid}: ${errText}`);
+                  }
+                  continue;
+                }
+              }
+            }
+
+            // ── New email (not a reply) ──────────────────────────────────────
+            const hasListUnsubscribe = !!parsed.headers?.get("list-unsubscribe");
+            if (isAutomatedEmail(fromEmail, subject, hasListUnsubscribe)) { skipped++; continue; }
+
+            const ingestResp = await fetch(`http://localhost:${port}/api/rfq/ingest`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                uid,
+                fromName,
+                fromEmail,
+                subject,
+                body,
+                receivedAt,
+                emailType: "customer-rfq",
+                requireFreightMatch: true,
+                messageId,
+                receivedInbox: acct.label,
+              }),
+            });
+
+            if (ingestResp.status === 422) {
+              skipped++;
+            } else if (ingestResp.ok) {
+              const wasNew = ingestResp.headers.get("x-was-new") === "true";
+              if (wasNew) synced++;
+              else skipped++;
+            } else {
+              const errText = await ingestResp.text();
+              errors.push(`${uid}: ${errText}`);
+            }
+          } catch (msgErr) {
+            errors.push(`msg ${msg.uid}: ${String(msgErr)}`);
           }
         }
 
-        // ── New email (not a reply) ──────────────────────────────────────────
-        // Skip automated/marketing emails — List-Unsubscribe header is a reliable signal
-        const hasListUnsubscribe = !!parsed.headers?.get("list-unsubscribe");
-        if (isAutomatedEmail(fromEmail, subject, hasListUnsubscribe)) {
-          skipped++;
-          continue;
+        await client.logout();
+
+        // Mark last synced timestamp in DB (for DB accounts only)
+        const dbRow = await db.select({ id: emailAccounts.id })
+          .from(emailAccounts)
+          .where(eq(emailAccounts.email, acct.email));
+        if (dbRow.length) {
+          await db.update(emailAccounts)
+            .set({ lastSyncedAt: new Date(), lastError: errors.length ? errors[0] : null })
+            .where(eq(emailAccounts.id, dbRow[0].id));
         }
 
-        const ingestResp = await fetch(`http://localhost:${port}/api/rfq/ingest`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            uid,
-            fromName,
-            fromEmail,
-            subject,
-            body,
-            receivedAt,
-            emailType: "customer-rfq",
-            requireFreightMatch: true,
-            messageId,
-          }),
-        });
+        totalSynced += synced;
+        totalSkipped += skipped;
+        allErrors.push(...errors);
+      } catch (acctErr) {
+        req.log.error({ err: acctErr, account: acct.email }, "IMAP sync failed for account");
+        allErrors.push(`${acct.email}: ${String(acctErr)}`);
 
-        if (ingestResp.status === 422) {
-          skipped++;
-        } else if (ingestResp.ok) {
-          const wasNew = ingestResp.headers.get("x-was-new") === "true";
-          if (wasNew) synced++;
-          else skipped++;
-        } else {
-          const errText = await ingestResp.text();
-          errors.push(`${uid}: ${errText}`);
+        // Record error in DB
+        const dbRow = await db.select({ id: emailAccounts.id })
+          .from(emailAccounts)
+          .where(eq(emailAccounts.email, acct.email));
+        if (dbRow.length) {
+          await db.update(emailAccounts)
+            .set({ lastError: String(acctErr) })
+            .where(eq(emailAccounts.id, dbRow[0].id));
         }
-      } catch (msgErr) {
-        errors.push(`msg ${msg.uid}: ${String(msgErr)}`);
+
+        try { await client.logout(); } catch {}
       }
     }
 
-    await client.logout();
-    res.json({ synced, skipped, errors: errors.length ? errors : undefined });
+    res.json({
+      synced: totalSynced,
+      skipped: totalSkipped,
+      accountsChecked: accounts.length,
+      errors: allErrors.length ? allErrors : undefined,
+    });
   } catch (err) {
-    req.log.error({ err }, "Gmail IMAP sync failed");
-    try { await client.logout(); } catch {}
+    req.log.error({ err }, "Gmail sync failed");
     res.status(500).json({ error: String(err) });
   }
 });

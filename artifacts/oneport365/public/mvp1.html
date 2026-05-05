@@ -398,7 +398,10 @@ tr.trow.sel td{background:#eef6e6}
     <a class="nav-item" id="st3" href="/rates.html" style="text-decoration:none">$ Rates</a>
     <div class="nav-item" id="st4" onclick="showScreen(4)">📄 Quotes <span class="nav-badge" id="quotes-count">0</span></div>
     <div class="nav-right">
-      <div class="t-status"><div class="t-status-dot"></div>monitoring sales@oneport365.com</div>
+      <div class="t-status" id="monitoring-status" onclick="openEmailAccounts()" style="cursor:pointer;user-select:none" title="Manage monitored inboxes">
+        <div class="t-status-dot"></div>
+        <span id="monitoring-label">loading…</span>
+      </div>
       <div class="user-chip" onclick="toggleUserMenu()" style="position:relative">
         <div class="user-avatar">OA</div>
         <span style="font-size:11px;color:rgba(255,255,255,.85)">Okpanachi Adaji</span>
@@ -443,9 +446,13 @@ tr.trow.sel td{background:#eef6e6}
         <div class="inbox-hd">
           <span class="inbox-hd-title">New RFQ Requests</span>
           <div style="display:flex;align-items:center;gap:6px">
-            <button id="gmail-sync-btn" onclick="syncGmail()" title="Sync Gmail inbox" style="display:flex;align-items:center;gap:5px;padding:3px 9px;font-size:10px;font-weight:600;font-family:Inter,sans-serif;cursor:pointer;border-radius:20px;border:1px solid #d2d9e0;background:#fff;color:var(--text2);line-height:1.4;transition:background .15s">
+            <button onclick="openEmailAccounts()" title="Manage monitored inboxes" style="display:flex;align-items:center;gap:4px;padding:3px 9px;font-size:10px;font-weight:600;font-family:Inter,sans-serif;cursor:pointer;border-radius:20px;border:1px solid #d2d9e0;background:#fff;color:var(--text2);line-height:1.4;transition:background .15s" onmouseover="this.style.background='#f0f4f0'" onmouseout="this.style.background='#fff'">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 7L2 7"/></svg>
+              <span id="monitored-count-badge">…</span>
+            </button>
+            <button id="gmail-sync-btn" onclick="syncGmail()" title="Sync all inboxes" style="display:flex;align-items:center;gap:5px;padding:3px 9px;font-size:10px;font-weight:600;font-family:Inter,sans-serif;cursor:pointer;border-radius:20px;border:1px solid #d2d9e0;background:#fff;color:var(--text2);line-height:1.4;transition:background .15s">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3"/></svg>
-              <span id="gmail-sync-label">Sync Gmail</span>
+              <span id="gmail-sync-label">Sync All</span>
             </button>
             <div class="monitoring-pill"><div style="width:6px;height:6px;border-radius:50%;background:var(--accent);animation:pulse 2s ease infinite"></div>Live</div>
           </div>
@@ -4726,14 +4733,14 @@ async function syncGmail() {
     lbl.textContent = synced > 0 ? `+${synced} new` : 'Up to date';
     // Always refresh inbox so any emails processed in a prior cycle also appear
     await loadInbox();
-    setTimeout(() => { lbl.textContent = 'Sync Gmail'; btn.disabled = false; btn.style.opacity = '1'; }, 3000);
+    setTimeout(() => { lbl.textContent = 'Sync All'; btn.disabled = false; btn.style.opacity = '1'; }, 3000);
   } catch(e) {
     lbl.textContent = 'Error';
     btn.style.background = '#fff0f0';
     btn.style.color = 'var(--danger)';
     btn.style.borderColor = 'var(--danger)';
     setTimeout(() => {
-      lbl.textContent = 'Sync Gmail';
+      lbl.textContent = 'Sync All';
       btn.disabled = false; btn.style.opacity = '1';
       btn.style.background = ''; btn.style.color = ''; btn.style.borderColor = '';
     }, 3000);
@@ -5264,6 +5271,7 @@ function epCancel() {
 
 // Init — load from API
 document.addEventListener('DOMContentLoaded', async () => {
+  loadEmailAccountsStatus();
   await loadInbox();
   // After inbox data is loaded, also populate Deals count without switching screens
   renderDealsTable();
@@ -6318,7 +6326,227 @@ async function runCsvImport() {
 document.getElementById('csv-import-overlay').addEventListener('click', function(e){
   if(e.target === this) closeCsvImport();
 });
+
+// ── EMAIL ACCOUNTS MODAL ──────────────────────────────────────────────────────
+
+let eaAccounts = [];
+let eaProvider = 'gmail';
+
+async function loadEmailAccountsStatus() {
+  try {
+    const res = await fetch('/api/email-accounts');
+    if (!res.ok) return;
+    eaAccounts = await res.json();
+    updateMonitoringBadge();
+  } catch(e) {}
+}
+
+function updateMonitoringBadge() {
+  const label = document.getElementById('monitoring-label');
+  const badge = document.getElementById('monitored-count-badge');
+  const active = eaAccounts.filter(a => a.active !== false);
+  if (!label) return;
+  if (active.length === 0) {
+    label.textContent = 'no inbox connected';
+    if (badge) badge.textContent = '+ Connect';
+  } else if (active.length === 1) {
+    label.textContent = 'monitoring ' + active[0].email;
+    if (badge) badge.textContent = '1 inbox';
+  } else {
+    label.textContent = 'monitoring ' + active.length + ' inboxes';
+    if (badge) badge.textContent = active.length + ' inboxes';
+  }
+}
+
+function openEmailAccounts() {
+  document.getElementById('ea-overlay').style.display = 'flex';
+  renderEaAccountsList();
+}
+
+function closeEmailAccounts() {
+  document.getElementById('ea-overlay').style.display = 'none';
+  clearEaForm();
+}
+
+function renderEaAccountsList() {
+  const el = document.getElementById('ea-accounts-list');
+  if (!el) return;
+  if (eaAccounts.length === 0) {
+    el.innerHTML = '<div style="text-align:center;padding:20px;color:#8a9e8a;font-size:12px">No inboxes connected yet. Add one below.</div>';
+    return;
+  }
+  el.innerHTML = eaAccounts.map(a => {
+    const providerColor = a.provider === 'outlook' ? '#0078d4' : '#ea4335';
+    const providerLabel = a.provider === 'outlook' ? 'Outlook' : 'Gmail';
+    const providerIcon = a.provider === 'outlook'
+      ? `<svg width="13" height="13" viewBox="0 0 24 24" fill="${providerColor}"><rect x="1" y="4" width="22" height="16" rx="2" fill="none" stroke="${providerColor}" stroke-width="2"/><path d="m1 4 11 9 11-9" stroke="${providerColor}" stroke-width="2" fill="none"/></svg>`
+      : `<svg width="13" height="13" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>`;
+    const removeBtn = a.isEnvAccount
+      ? `<span style="font-size:10px;color:#8a9e8a;padding:2px 8px">default</span>`
+      : `<button onclick="removeEmailAccount(${a.id})" style="font-size:10px;color:#dc2626;background:none;border:1px solid #fca5a5;border-radius:8px;padding:2px 8px;cursor:pointer;font-family:Inter,sans-serif" onmouseover="this.style.background='#fee2e2'" onmouseout="this.style.background='none'">Remove</button>`;
+    const lastSync = a.lastSyncedAt ? 'synced ' + new Date(a.lastSyncedAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : 'never synced';
+    const errorBadge = a.lastError ? `<span style="font-size:9px;color:#dc2626;background:#fee2e2;padding:1px 6px;border-radius:8px;margin-left:4px" title="${a.lastError}">error</span>` : '';
+    return `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #f0f4f0">
+      <div style="width:32px;height:32px;border-radius:8px;background:#f8faf8;border:1px solid #e4e8e4;display:flex;align-items:center;justify-content:center;flex-shrink:0">${providerIcon}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12px;font-weight:600;color:#1a2e1a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${a.email}</div>
+        <div style="font-size:10px;color:#8a9e8a;margin-top:1px">${providerLabel} · ${lastSync}${errorBadge}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+        <div style="width:7px;height:7px;border-radius:50%;background:${a.lastError ? '#dc2626' : '#22c55e'}"></div>
+        ${removeBtn}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function setEaProvider(p) {
+  eaProvider = p;
+  const gmail = document.getElementById('ea-btn-gmail');
+  const outlook = document.getElementById('ea-btn-outlook');
+  if (p === 'gmail') {
+    gmail.style.background = '#1a2e1a'; gmail.style.color = '#fff'; gmail.style.borderColor = '#1a2e1a';
+    outlook.style.background = '#fff'; outlook.style.color = '#1a2e1a'; outlook.style.borderColor = '#d2d9e0';
+    document.getElementById('ea-hint').textContent = 'Use a Gmail App Password (not your account password). Enable it at myaccount.google.com → Security → 2-Step Verification → App passwords.';
+    document.getElementById('ea-password').placeholder = 'App password (16 chars, no spaces)';
+  } else {
+    outlook.style.background = '#1a2e1a'; outlook.style.color = '#fff'; outlook.style.borderColor = '#1a2e1a';
+    gmail.style.background = '#fff'; gmail.style.color = '#1a2e1a'; gmail.style.borderColor = '#d2d9e0';
+    document.getElementById('ea-hint').textContent = 'Use an Outlook App Password. Enable it at account.microsoft.com → Security → App passwords.';
+    document.getElementById('ea-password').placeholder = 'App password';
+  }
+  clearEaFeedback();
+}
+
+function clearEaForm() {
+  document.getElementById('ea-email').value = '';
+  document.getElementById('ea-password').value = '';
+  clearEaFeedback();
+}
+
+function clearEaFeedback() {
+  const fb = document.getElementById('ea-feedback');
+  if (fb) { fb.style.display = 'none'; fb.textContent = ''; }
+}
+
+function showEaFeedback(msg, ok) {
+  const fb = document.getElementById('ea-feedback');
+  if (!fb) return;
+  fb.style.display = 'block';
+  fb.style.background = ok ? '#f0fdf4' : '#fff0f0';
+  fb.style.border = `1px solid ${ok ? '#86efac' : '#fca5a5'}`;
+  fb.style.color = ok ? '#166534' : '#991b1b';
+  fb.textContent = msg;
+}
+
+async function testEaCredentials() {
+  const email = document.getElementById('ea-email').value.trim();
+  const password = document.getElementById('ea-password').value.trim();
+  if (!email || !password) { showEaFeedback('Please enter email and password first.', false); return; }
+  const btn = document.getElementById('ea-test-btn');
+  btn.textContent = 'Testing…'; btn.disabled = true;
+  try {
+    const res = await fetch('/api/email-accounts/test-credentials', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ email, password, provider: eaProvider }),
+    });
+    const data = await res.json();
+    showEaFeedback((data.ok ? '✓ ' : '✗ ') + data.message, data.ok);
+  } catch(e) { showEaFeedback('Network error: ' + e.message, false); }
+  btn.textContent = 'Test connection'; btn.disabled = false;
+}
+
+async function addEmailAccount() {
+  const email = document.getElementById('ea-email').value.trim();
+  const password = document.getElementById('ea-password').value.trim();
+  if (!email || !password) { showEaFeedback('Email and app password are required.', false); return; }
+  const btn = document.getElementById('ea-add-btn');
+  btn.textContent = 'Connecting…'; btn.disabled = true;
+  try {
+    const res = await fetch('/api/email-accounts', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ email, password, provider: eaProvider, label: email }),
+    });
+    const data = await res.json();
+    if (!res.ok) { showEaFeedback('✗ ' + (data.error || 'Failed to connect'), false); btn.textContent = 'Connect'; btn.disabled = false; return; }
+    showEaFeedback('✓ ' + email + ' connected successfully!', true);
+    clearEaForm();
+    await loadEmailAccountsStatus();
+    renderEaAccountsList();
+  } catch(e) { showEaFeedback('Network error: ' + e.message, false); }
+  btn.textContent = 'Connect'; btn.disabled = false;
+}
+
+async function removeEmailAccount(id) {
+  if (!confirm('Remove this email account from monitoring?')) return;
+  try {
+    await fetch('/api/email-accounts/' + id, { method: 'DELETE' });
+    await loadEmailAccountsStatus();
+    renderEaAccountsList();
+  } catch(e) { alert('Failed to remove account: ' + e.message); }
+}
+
+document.getElementById('ea-overlay').addEventListener('click', function(e){
+  if (e.target === this) closeEmailAccounts();
+});
 </script>
+
+<!-- EMAIL ACCOUNTS MODAL -->
+<div id="ea-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:3000;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:14px;width:520px;max-width:95vw;max-height:88vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.25)">
+
+    <!-- Header -->
+    <div style="padding:18px 20px 14px;border-bottom:1px solid #e4e8e4;display:flex;align-items:flex-start;justify-content:space-between;flex-shrink:0">
+      <div>
+        <div style="font-size:15px;font-weight:700;color:#1a2e1a">Email Monitoring</div>
+        <div style="font-size:11px;color:#8a9e8a;margin-top:3px">Connect Gmail &amp; Outlook inboxes to monitor for RFQs. Emails sent to multiple addresses are captured once.</div>
+      </div>
+      <button onclick="closeEmailAccounts()" style="background:none;border:none;font-size:18px;color:#8a9e8a;cursor:pointer;padding:0 0 0 12px;line-height:1">×</button>
+    </div>
+
+    <!-- Body -->
+    <div style="overflow-y:auto;flex:1;padding:16px 20px 20px">
+
+      <!-- Connected accounts -->
+      <div style="font-size:11px;font-weight:600;color:#1a2e1a;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Connected inboxes</div>
+      <div id="ea-accounts-list"></div>
+
+      <!-- Add account -->
+      <div style="margin-top:18px;border-top:1px solid #e4e8e4;padding-top:16px">
+        <div style="font-size:12px;font-weight:600;color:#1a2e1a;margin-bottom:10px">Connect a new inbox</div>
+
+        <!-- Provider tabs -->
+        <div style="display:flex;gap:8px;margin-bottom:12px">
+          <button id="ea-btn-gmail" onclick="setEaProvider('gmail')" style="display:flex;align-items:center;gap:6px;padding:6px 14px;font-size:11px;font-weight:600;font-family:Inter,sans-serif;cursor:pointer;border-radius:8px;border:1px solid #1a2e1a;background:#1a2e1a;color:#fff;transition:all .15s">
+            <svg width="12" height="12" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+            Gmail
+          </button>
+          <button id="ea-btn-outlook" onclick="setEaProvider('outlook')" style="display:flex;align-items:center;gap:6px;padding:6px 14px;font-size:11px;font-weight:600;font-family:Inter,sans-serif;cursor:pointer;border-radius:8px;border:1px solid #d2d9e0;background:#fff;color:#1a2e1a;transition:all .15s">
+            <svg width="12" height="12" viewBox="0 0 23 23"><path d="M0 0h11v11H0z" fill="#f25022"/><path d="M12 0h11v11H12z" fill="#7fba00"/><path d="M0 12h11v11H0z" fill="#00a4ef"/><path d="M12 12h11v11H12z" fill="#ffb900"/></svg>
+            Outlook
+          </button>
+        </div>
+
+        <!-- Hint -->
+        <div id="ea-hint" style="font-size:10px;color:#8a9e8a;background:#f8faf8;border:1px solid #e4e8e4;border-radius:8px;padding:8px 10px;margin-bottom:10px;line-height:1.5">Use a Gmail App Password (not your account password). Enable it at myaccount.google.com → Security → 2-Step Verification → App passwords.</div>
+
+        <!-- Inputs -->
+        <input id="ea-email" type="email" placeholder="your@email.com" style="width:100%;padding:8px 10px;font-size:12px;font-family:Inter,sans-serif;border:1px solid #d2d9e0;border-radius:8px;outline:none;box-sizing:border-box;margin-bottom:8px" onfocus="this.style.borderColor='#1a2e1a'" onblur="this.style.borderColor='#d2d9e0'">
+        <input id="ea-password" type="password" placeholder="App password (16 chars, no spaces)" style="width:100%;padding:8px 10px;font-size:12px;font-family:Inter,sans-serif;border:1px solid #d2d9e0;border-radius:8px;outline:none;box-sizing:border-box;margin-bottom:10px" onfocus="this.style.borderColor='#1a2e1a'" onblur="this.style.borderColor='#d2d9e0'">
+
+        <!-- Action buttons -->
+        <div style="display:flex;gap:8px">
+          <button id="ea-test-btn" onclick="testEaCredentials()" style="flex:1;padding:8px;font-size:11px;font-weight:600;font-family:Inter,sans-serif;cursor:pointer;border-radius:8px;border:1px solid #d2d9e0;background:#fff;color:#1a2e1a;transition:background .15s" onmouseover="this.style.background='#f8faf8'" onmouseout="this.style.background='#fff'">Test connection</button>
+          <button id="ea-add-btn" onclick="addEmailAccount()" style="flex:2;padding:8px;font-size:11px;font-weight:600;font-family:Inter,sans-serif;cursor:pointer;border-radius:8px;border:none;background:#1a2e1a;color:#fff;transition:opacity .15s" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">Connect inbox</button>
+        </div>
+
+        <!-- Feedback -->
+        <div id="ea-feedback" style="display:none;margin-top:10px;padding:8px 10px;border-radius:8px;font-size:11px;font-weight:500"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
 
 </body>
 </html>

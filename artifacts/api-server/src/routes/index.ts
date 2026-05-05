@@ -10,6 +10,7 @@ import seedRouter from "./seed";
 import { outreachRouter } from "./outreach";
 import { marketIntelRouter } from "./market-intel";
 import { settingsRouter } from "./settings";
+import { emailAccountsRouter } from "./email-accounts";
 
 const router: IRouter = Router();
 
@@ -17,6 +18,7 @@ router.use(healthRouter);
 router.use(claudeRouter);
 router.use(rfqsRouter);
 router.use(gmailRouter);
+router.use(emailAccountsRouter);
 router.use(partnersRouter);
 router.use(ratesRouter);
 router.use(quotesRouter);
