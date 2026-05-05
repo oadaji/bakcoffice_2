@@ -484,8 +484,11 @@ tr.trow.sel td{background:#eef6e6}
           </div>
           <div class="brief-card-body" id="brief-body"></div>
         </div>
-        <div class="detail-body" id="d-body"></div>
-        <div id="d-thread"></div>
+        <!-- Shared scroll container for email body + thread replies -->
+        <div id="email-scroll" style="flex:1;overflow-y:auto;min-height:0">
+          <div class="detail-body" id="d-body" style="flex:none;overflow-y:visible"></div>
+          <div id="d-thread"></div>
+        </div>
         <!-- OUTLOOK-STYLE INLINE COMPOSE TRAY -->
         <div id="compose-tray" class="compose-tray" style="display:none;height:320px">
           <!-- DRAG HANDLE — drag up/down to resize the tray vs email body -->
