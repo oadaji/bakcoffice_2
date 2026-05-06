@@ -4787,8 +4787,8 @@ async function loadInbox() {
   } catch(e) {
     console.error('renderInboxList error', e);
   }
-  // auto-select first item
-  if (rfqData.length) {
+  // auto-select first item only on initial load (not on background refreshes)
+  if (rfqData.length && currentRfqId === null) {
     try {
       const first = document.querySelector('.email-item');
       if (first) {
