@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "v0wwz6Kq5trdiWACI-sQv"
+uri = "file://OnePort365_MVP_Features.xlsx"
+type = "table"
+title = "OnePort 365 — MVP Features"
