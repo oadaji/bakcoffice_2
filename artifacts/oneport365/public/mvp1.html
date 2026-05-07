@@ -1576,6 +1576,16 @@ tr.trow.sel td{background:#eef6e6}
                 </div>
               </div>
 
+              <!-- Discount -->
+              <div style="background:#fff;border:1px solid #e4e8e4;border-radius:10px;padding:14px">
+                <div style="font-size:10px;font-weight:700;color:#8a9e8a;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Discount <span style="font-weight:400;font-size:9px;text-transform:none">(optional)</span></div>
+                <div style="display:flex;align-items:center;gap:8px">
+                  <input id="br-discount-pct" type="number" value="0" min="0" max="50" oninput="brUpdate()" style="width:64px;border:1px solid #d0d8d0;border-radius:6px;padding:6px 8px;font-size:14px;font-weight:600;font-family:Inter,sans-serif;color:#1a2e1a;outline:none;text-align:center">
+                  <span style="font-size:18px;color:#8a9e8a">%</span>
+                  <span style="font-size:10px;color:#8a9e8a;margin-left:4px">off sell price</span>
+                </div>
+              </div>
+
               <!-- Cost breakdown -->
               <div style="background:#fff;border:1px solid #e4e8e4;border-radius:10px;padding:14px">
                 <div style="font-size:10px;font-weight:700;color:#8a9e8a;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">Cost Breakdown <span style="font-size:9px;font-weight:400;text-transform:none">(USD equiv.)</span></div>
@@ -1888,6 +1898,17 @@ tr.trow.sel td{background:#eef6e6}
                           />
                           <span style="font-size:11px;color:#8a9e8a">%</span>
                           <span id="qp-margin-amt" style="font-family:monospace;font-weight:600;color:#4a5e4a;min-width:60px;text-align:right">—</span>
+                        </span>
+                      </div>
+                      <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:#4a5e4a">
+                        <span style="display:flex;align-items:center;gap:5px">Discount <span style="font-size:9px;color:#8a9e8a;font-weight:400">(optional)</span></span>
+                        <span style="display:flex;align-items:center;gap:6px">
+                          <input id="qp-discount-input" type="number" min="0" max="50" step="0.5" value="0"
+                            style="width:56px;border:1px solid #d0d8d0;border-radius:5px;padding:3px 6px;font-size:12px;font-weight:600;font-family:Inter,sans-serif;color:#1a2e1a;outline:none;text-align:center"
+                            oninput="qpDiscountUpdate()"
+                          />
+                          <span style="font-size:11px;color:#8a9e8a">%</span>
+                          <span id="qp-discount-amt" style="font-family:monospace;font-weight:600;color:#dc2626;min-width:60px;text-align:right">—</span>
                         </span>
                       </div>
                       <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0 4px;border-top:2px solid #e4e8e4;margin-top:4px">
@@ -3267,11 +3288,20 @@ function brUpdate(){
   }
 
   if(breakdownEl) breakdownEl.innerHTML=lines.map(([k,v])=>`<div class="fee-row"><span>${k}</span><span class="fee-val">${v}</span></div>`).join('');
+  const discountPct=_n('br-discount-pct')||0;
   const marginAmt=Math.round(totalUSD*(marginPct/100));
-  const sellPrice=totalUSD+marginAmt;
+  const preSell=totalUSD+marginAmt;
+  const discountAmt=Math.round(preSell*(discountPct/100));
+  const sellPrice=preSell-discountAmt;
   if(totalEl) totalEl.textContent=fmtUSD(totalUSD)+' (per ctr)';
   if(marginLabelEl) marginLabelEl.textContent=`Margin (${marginPct}%)`;
-  if(marginEl) marginEl.textContent=fmtUSD(marginAmt);
+  if(marginEl){
+    marginEl.textContent=fmtUSD(marginAmt);
+    let discEl=document.getElementById('br-discount-line');
+    if(!discEl){discEl=document.createElement('div');discEl.id='br-discount-line';discEl.className='fee-row';marginEl.parentElement.parentElement.appendChild(discEl);}
+    discEl.style.display=discountAmt>0?'flex':'none';
+    discEl.innerHTML=discountAmt>0?`<span>Discount (${discountPct}%)</span><span class="fee-val" style="color:#dc2626">-${fmtUSD(discountAmt)}</span>`:'';
+  }
   if(sellEl) sellEl.textContent=fmtUSD(sellPrice * qty);
   const sub=document.getElementById('br-sell-sub');
   if(sub) sub.textContent=qty>1?`${qty} × ${fmtUSD(sellPrice)} per container`:'per container (USD)';
@@ -4348,25 +4378,35 @@ function recalcQuoteTotals(q) {
   return { totalCostUSD: String(totalCost), sellPriceUSD: String(sellPrice) };
 }
 
+function _qpCalcAndUpdate() {
+  const q = QUOTES_DATA.find(x => x.id === currentQuoteDbId);
+  if (!q) return null;
+  const newMargin   = Number(document.getElementById('qp-margin-input')?.value) || 0;
+  const discountPct = Number(document.getElementById('qp-discount-input')?.value) || 0;
+  const { totalCostUSD: liveTCStr } = recalcQuoteTotals(q);
+  const totalCost  = Number(liveTCStr) || 0;
+  const preSell    = Math.round(totalCost * (1 + newMargin / 100));
+  const marginAmt  = preSell - totalCost;
+  const discountAmt = Math.round(preSell * (discountPct / 100));
+  const sellPrice  = preSell - discountAmt;
+
+  const marginLblEl    = document.getElementById('qp-margin-label');
+  const marginAmtEl    = document.getElementById('qp-margin-amt');
+  const discountAmtEl  = document.getElementById('qp-discount-amt');
+  const sellPriceEl    = document.getElementById('qp-sell-price');
+  if (marginLblEl)   marginLblEl.textContent  = `Margin (${newMargin}%)`;
+  if (marginAmtEl)   marginAmtEl.textContent  = marginAmt > 0 ? '+$' + marginAmt.toLocaleString() : '—';
+  if (discountAmtEl) discountAmtEl.textContent = discountAmt > 0 ? '-$' + discountAmt.toLocaleString() : '—';
+  if (sellPriceEl)   sellPriceEl.textContent  = sellPrice ? '$' + sellPrice.toLocaleString() : '—';
+  return { newMargin, discountPct, sellPrice };
+}
+
 async function qpMarginUpdate() {
   const q = QUOTES_DATA.find(x => x.id === currentQuoteDbId);
   if (!q || q.status !== 'draft') return;
-  const newMargin = Number(document.getElementById('qp-margin-input')?.value) || 0;
-  // Recalc with margin=0 trick: totalCostUSD never depends on margin, so just read it directly
-  const { totalCostUSD: liveTCStr } = recalcQuoteTotals(q);
-  const totalCost = Number(liveTCStr) || 0;
-  const sellPrice = Math.round(totalCost * (1 + newMargin / 100));
-  const marginAmt = sellPrice - totalCost;
-
-  // Update UI instantly
-  const marginLblEl = document.getElementById('qp-margin-label');
-  const marginAmtEl = document.getElementById('qp-margin-amt');
-  const sellPriceEl = document.getElementById('qp-sell-price');
-  if (marginLblEl) marginLblEl.textContent = `Margin (${newMargin}%)`;
-  if (marginAmtEl) marginAmtEl.textContent = marginAmt > 0 ? '+$' + marginAmt.toLocaleString() : '—';
-  if (sellPriceEl) sellPriceEl.textContent = sellPrice ? '$' + sellPrice.toLocaleString() : '—';
-
-  // Debounce the PATCH save
+  const result = _qpCalcAndUpdate();
+  if (!result) return;
+  const { newMargin, sellPrice } = result;
   clearTimeout(window._qpMarginTimer);
   window._qpMarginTimer = setTimeout(async () => {
     try {
@@ -4380,6 +4420,30 @@ async function qpMarginUpdate() {
         if (idx >= 0) QUOTES_DATA[idx] = updated;
       }
     } catch(e) { /* silent — UI already updated */ }
+  }, 600);
+}
+
+function qpDiscountUpdate() {
+  const q = QUOTES_DATA.find(x => x.id === currentQuoteDbId);
+  if (!q) return;
+  const result = _qpCalcAndUpdate();
+  if (!result) return;
+  const { newMargin, sellPrice } = result;
+  // Save updated sell price when discount changes (debounced)
+  clearTimeout(window._qpDiscountTimer);
+  window._qpDiscountTimer = setTimeout(async () => {
+    if (q.status !== 'draft') return;
+    try {
+      const r = await fetch('/api/quotes/' + currentQuoteDbId, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ marginPct: String(newMargin), sellPriceUSD: String(sellPrice) })
+      });
+      if (r.ok) {
+        const updated = await r.json();
+        const idx = QUOTES_DATA.findIndex(x => x.id === currentQuoteDbId);
+        if (idx >= 0) QUOTES_DATA[idx] = updated;
+      }
+    } catch(e) { /* silent */ }
   }, 600);
 }
 
@@ -6059,8 +6123,11 @@ function recalcQuote() {
   const blFee = rate.origin.bl || 85;
   const cost = ocean + blFee + originUSD + destUSD;
   const marginPct = parseFloat(document.getElementById('q-margin')?.value || 13) / 100;
+  const discountPct = parseFloat(document.getElementById('q-discount')?.value || 0) / 100;
   const margin = Math.round(cost * marginPct);
-  const sell = cost + margin;
+  const preSell = cost + margin;
+  const discountAmt = Math.round(preSell * discountPct);
+  const sell = preSell - discountAmt;
 
   document.getElementById('q-rates').innerHTML = [
     ['Ocean freight (' + rate.carrier + ')', '$' + rate.ocean.toLocaleString()],
@@ -6076,6 +6143,7 @@ function recalcQuote() {
   document.getElementById('q-pricing').innerHTML = `
     <div class="q-row"><span>Cost base</span><span class="q-val">$${cost.toLocaleString()}</span></div>
     <div class="q-row"><span>Margin (${Math.round(marginPct*100)}%)</span><span class="q-val">$${margin.toLocaleString()}</span></div>
+    ${discountAmt > 0 ? `<div class="q-row"><span>Discount (${Math.round(discountPct*100)}%)</span><span class="q-val" style="color:#dc2626">-$${discountAmt.toLocaleString()}</span></div>` : ''}
     <div class="q-total-row">
       <span style="font-size:14px;font-weight:700;color:var(--text)">Sell price</span>
       <span style="font-family:monospace;font-size:18px;font-weight:700;color:var(--accent-dark)">$${sell.toLocaleString()}</span>
@@ -6686,10 +6754,14 @@ async function deleteRate(id) {
       </div>
 
       <!-- Settings row -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px">
         <div>
           <label style="font-size:11px;font-weight:600;color:#4a5e4a;display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em">Margin %</label>
           <input id="gqm-margin" type="number" value="13" min="0" max="100" style="width:100%;border:1px solid #d0d8d0;border-radius:8px;padding:9px 12px;font-size:13px;font-family:Inter,sans-serif;color:#1a2e1a;outline:none;box-sizing:border-box">
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:600;color:#4a5e4a;display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em">Discount %</label>
+          <input id="gqm-discount" type="number" value="0" min="0" max="50" style="width:100%;border:1px solid #d0d8d0;border-radius:8px;padding:9px 12px;font-size:13px;font-family:Inter,sans-serif;color:#1a2e1a;outline:none;box-sizing:border-box">
         </div>
         <div>
           <label style="font-size:11px;font-weight:600;color:#4a5e4a;display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em">FX Rate (NGN/USD)</label>
