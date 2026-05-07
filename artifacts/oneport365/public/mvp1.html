@@ -5149,6 +5149,103 @@ const QUOTE_REQS = [
   { label: 'POD',        keys: ['POD'] },
   { label: 'Pick-up',    keys: ['Pick-up','Pickup','Pick up','Collection','Collection Address','Origin Address','Pickup Address'] },
 ];
+// ── Client-side HS Code lookup ───────────────────────────────────────────────
+// Keyword → [HS Code, short description]
+const HS_KEYWORDS = [
+  // Food & Agriculture
+  [['cashew','cashew nut'],           ['0801.31','Cashew nuts']],
+  [['coffee'],                         ['0901.11','Coffee (unroasted)']],
+  [['wheat','flour'],                  ['1001.99','Wheat']],
+  [['banana'],                         ['0803.90','Bananas']],
+  [['beef','bovine meat','cattle meat'],['0201.30','Beef (fresh/chilled)']],
+  [['rice'],                           ['1006.30','Rice']],
+  [['fruit juice','juice'],            ['2009.89','Fruit juice']],
+  [['tuna','canned fish','fish'],      ['1604.14','Canned tuna/fish']],
+  [['cheese','dairy'],                 ['0406.10','Fresh cheese/dairy']],
+  [['tomato'],                         ['0702.00','Fresh tomatoes']],
+  // Electronics
+  [['laptop','notebook','computer'],   ['8471.30','Laptops/notebooks']],
+  [['smartphone','mobile phone','phone'],['8517.12','Smartphones']],
+  [['television','tv','monitor'],      ['8528.72','TVs/monitors']],
+  [['cable','wire','wiring'],          ['8544.42','Cables/wiring']],
+  [['usb','ssd','flash drive','storage device'],['8523.51','USB drives/SSDs']],
+  [['microchip','chip','semiconductor'],['8542.31','Microchips/processors']],
+  [['charger','adapter','power supply'],['8504.40','Power adapters/chargers']],
+  [['connector','socket'],             ['8536.69','Electrical connectors']],
+  [['camera','camcorder'],             ['8525.80','Cameras/camcorders']],
+  // Textiles
+  [['t-shirt','tshirt','singlet'],     ['6109.10','Cotton T-shirts']],
+  [['trouser','jeans','pants','denim'],['6203.42','Trousers/jeans']],
+  [['jersey','pullover','sweater','knitwear'],['6110.20','Knitwear/pullovers']],
+  [['footwear','shoe','boot','sandal'],['6402.99','Footwear']],
+  [['fabric','textile','cloth','cotton'],['5208.21','Cotton fabric']],
+  [['garment','clothing','apparel','wear'],['6211.43','Garments/apparel']],
+  [['blanket'],                        ['6301.40','Synthetic blankets']],
+  // Machinery & Equipment
+  [['generator','motor','engine unit'],['8501.52','AC motors/generators']],
+  [['computer','desktop'],             ['8471.41','Desktop computers']],
+  [['fan','hvac','air conditioning'],  ['8414.59','Fans/HVAC equipment']],
+  [['valve','tap','pipe fitting'],     ['8481.80','Valves/pipe fittings']],
+  [['bearing','ball bearing'],         ['8482.10','Ball bearings']],
+  [['printer'],                        ['8443.32','Printers']],
+  [['drill','saw','power tool','hand tool'],['8467.29','Power hand tools']],
+  [['excavator','crane','machinery part','spare part'],['8431.49','Machinery parts']],
+  // Chemicals & Pharma
+  [['medicine','medicament','drug','pharmaceutical'],['3004.90','Medicaments/medicines']],
+  [['vaccine'],                        ['3002.15','Vaccines']],
+  [['antibiotic','penicillin'],        ['2941.10','Penicillin/antibiotics']],
+  [['disinfectant','sanitizer'],       ['3808.94','Disinfectants']],
+  [['soap','detergent'],               ['3401.11','Soap/detergent']],
+  [['chemical','reagent'],             ['3824.99','Chemical preparations']],
+  // Vehicles
+  [['car','vehicle','sedan','suv','automobile'],['8703.23','Passenger cars']],
+  [['auto part','car part','vehicle part'],['8708.29','Auto parts']],
+  [['motorcycle','motorbike'],         ['8711.60','Motorcycles']],
+  [['truck','lorry'],                  ['8704.22','Goods trucks']],
+  [['tyre','tire'],                    ['4011.10','Car tyres']],
+  [['trailer'],                        ['8716.39','Trailers']],
+  // Metals
+  [['steel sheet','steel plate','rolled steel'],['7208.39','Hot-rolled steel sheets']],
+  [['aluminium ingot','aluminum ingot'],['7601.10','Aluminium ingots']],
+  [['copper cathode','copper'],        ['7403.11','Copper cathodes']],
+  [['scrap','steel scrap','iron scrap'],['7204.49','Steel/iron scrap']],
+  [['aluminium sheet','aluminum sheet'],['7606.12','Aluminium sheets']],
+  [['steel bar','steel rod','iron rod'],['7214.99','Steel bars/rods']],
+  // Furniture & Wood
+  [['furniture','office furniture'],   ['9403.30','Wooden office furniture']],
+  [['sofa','seat','chair','upholstered'],['9401.61','Upholstered seats']],
+  [['mattress'],                       ['9404.29','Mattresses']],
+  [['door','wooden door'],             ['4418.20','Wooden doors']],
+  [['plywood','timber','wood panel'],  ['4412.33','Tropical plywood']],
+  [['lamp','light','lighting'],        ['9405.99','Lamp/lighting parts']],
+];
+
+function suggestHsCode(commodity) {
+  if (!commodity) return null;
+  const c = commodity.toLowerCase();
+  for (const [keywords, [code, desc]] of HS_KEYWORDS) {
+    if (keywords.some(kw => c.includes(kw))) return { code, desc };
+  }
+  return null;
+}
+
+// Inject AI-suggested HS code into a fields array when HS Code is missing
+// but Commodity is available. Mutates a copy, does not modify DB.
+function applyHsSuggestion(fields) {
+  const copy = fields.map(f => ({ ...f }));
+  const hsField = copy.find(f => f.k === 'HS Code');
+  if (!hsField) return copy;
+  const missing = !hsField.v || hsField.v.trim().toLowerCase() === 'not specified';
+  if (!missing) return copy; // already has a code
+  const commField = copy.find(f => /^commodity$/i.test(f.k));
+  if (!commField || !commField.v || commField.v.toLowerCase() === 'not specified') return copy;
+  const suggestion = suggestHsCode(commField.v);
+  if (!suggestion) return copy;
+  hsField.v  = `${suggestion.code} (suggested)`;
+  hsField.ok = false;
+  return copy;
+}
+
 function findReqField(fields, keys) {
   return fields.find(f => keys.some(k => f.k.toLowerCase() === k.toLowerCase()));
 }
@@ -5160,7 +5257,7 @@ function reqHasValue(f) {
 
 function renderExtraction(r) {
   if (!r) return;
-  const fields = Array.isArray(r.fields) ? r.fields : [];
+  const fields = applyHsSuggestion(Array.isArray(r.fields) ? r.fields : []);
   const missing = Array.isArray(r.missingFields) ? r.missingFields : [];
   // For grouped RFQs the combined follow-up draft lives on the first sibling
   const draftSource = currentGroupRfqs.length > 1 ? currentGroupRfqs[0] : r;
