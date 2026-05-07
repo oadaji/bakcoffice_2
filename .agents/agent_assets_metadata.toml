@@ -6,3 +6,9 @@ id = "v0wwz6Kq5trdiWACI-sQv"
 uri = "file://OnePort365_MVP_Features.xlsx"
 type = "table"
 title = "OnePort 365 — MVP Features"
+
+[[outputs]]
+id = "i27TZ6lTTdDoyQ867kEUG"
+uri = "file://OnePort365_Microsoft_Connection_Guide.md"
+type = "text"
+title = "Microsoft 365 Connection Guide — IT Admin"
