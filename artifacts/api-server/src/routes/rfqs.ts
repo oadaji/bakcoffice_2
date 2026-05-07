@@ -920,7 +920,7 @@ Return ONLY a JSON object with this exact structure — even for a single shipme
         {"k": "POL", "v": "<nearest port/airport with LOCODE/IATA in brackets, e.g. 'Apapa (NGAPP)' or 'not specified'>", "ok": true/false},
         {"k": "POD", "v": "<nearest port/airport with LOCODE/IATA in brackets, e.g. 'Rotterdam (NLRTM)' or 'not specified'>", "ok": true/false},
         {"k": "Commodity", "v": "<cargo description or 'not specified'>", "ok": true/false},
-        {"k": "HS Code", "v": "<HS/tariff code e.g. '0801.31' or 'not specified'>", "ok": true/false},
+        {"k": "HS Code", "v": "<if customer provided it: the code e.g. '8471.30'; if not provided but commodity is known: look up best match from HS CODE REFERENCE below and return the code appended with ' (suggested)' e.g. '8471.30 (suggested)'; if commodity also unknown: 'not specified'>", "ok": true/false},
         {"k": "Weight", "v": "<gross weight e.g. '5,000 kg' or 'not specified'>", "ok": true/false},
         {"k": "Volume", "v": "<CBM e.g. '12 CBM' or 'not specified'>", "ok": true/false},
         {"k": "Pick-up", "v": "<collection/pickup address or city, or 'not specified'>", "ok": true/false},
@@ -939,8 +939,23 @@ Return ONLY a JSON object with this exact structure — even for a single shipme
 
 Rules:
 - ok=true if the value is explicitly stated in the email; ok=false if inferred, missing, or 'not specified'
-- missing[] must list a clear, specific question for EACH field that is 'not specified' among: Company, POL, POD, Commodity, HS Code, Weight/Tonnage, Volume/CBM, Pick-up address, Freight Mode. These are the minimum required fields to generate a quote.
+- HS Code rules:
+  * If customer explicitly states the HS code → use it, ok=true
+  * If commodity is known but no HS code given → find the closest match from the HS CODE REFERENCE below, return "<code> (suggested)" with ok=false. Do NOT add HS Code to missing[] in this case — the suggestion is sufficient.
+  * If both commodity and HS code are unknown → "not specified", ok=false, add to missing[]
+  * If customer provides an HS code that clearly mismatches the commodity → append " (verify — may not match commodity)" and set ok=false
+- missing[] must list a clear, specific question for EACH field that is 'not specified' among: Company, POL, POD, Commodity, HS Code (only when no suggestion is possible), Weight/Tonnage, Volume/CBM, Pick-up address, Freight Mode. These are the minimum required fields to generate a quote.
 - Do NOT list Contact/Email in missing[] — those are taken from the sender's email address automatically.
+
+HS CODE REFERENCE (80 common freight commodities — use to suggest codes when commodity is known):
+Electronics: 8471.30=Laptops/notebooks, 8517.12=Smartphones, 8528.72=TVs, 8544.42=Cables/wiring, 8523.51=USB drives/SSDs, 8542.31=Microchips/processors, 8504.40=Power adapters/chargers, 8536.69=Electrical connectors, 9013.80=Optical/laser devices, 8525.80=Digital cameras/camcorders
+Textiles & Apparel: 6109.10=Cotton T-shirts, 6203.42=Men's jeans/trousers, 6204.62=Women's trousers, 6110.20=Knitwear/pullovers, 6115.22=Hosiery/socks, 6211.43=Women's sportswear, 6402.99=Rubber or plastic footwear, 6217.10=Clothing accessories (scarves/ties/gloves), 5208.21=Cotton fabric, 6301.40=Synthetic blankets
+Food & Agriculture: 0901.11=Coffee (unroasted), 1001.99=Wheat, 0803.90=Bananas, 0201.30=Beef (fresh/chilled), 1006.30=Rice, 2009.89=Fruit juice, 1604.14=Canned tuna, 0406.10=Fresh cheese/curd, 2106.90=Food preparations, 0702.00=Fresh tomatoes
+Machinery & Equipment: 8419.89=Heat treatment machinery, 8471.41=Desktop computers, 8424.89=Spraying machinery, 8414.59=Fans/HVAC equipment, 8481.80=Valves/taps/pipes, 8482.10=Ball bearings, 8501.52=AC motors, 8431.49=Construction/excavator parts, 8443.32=Inkjet printers, 8467.29=Power hand tools (drills/saws)
+Chemicals & Pharma: 3004.90=Medicaments/medicines, 3002.15=Vaccines, 2941.10=Penicillin/antibiotics, 3808.94=Disinfectants, 3307.49=Oral hygiene/dental products, 3401.11=Soap (bars/cakes), 3824.99=Chemical preparations, 2903.89=Halogenated hydrocarbons, 3906.90=Acrylic polymers, 2916.39=Aromatic monocarboxylic acids
+Vehicles & Transport: 8703.23=Passenger cars (1500–3000cc), 8708.29=Auto parts/accessories, 8711.60=Electric motorcycles, 8716.39=Trailers/semi-trailers, 8802.30=Aircraft (>2000kg), 8901.10=Ships/ferries, 8714.91=Bicycle frames/forks, 8704.22=Goods trucks (diesel >5t), 4011.10=Car tyres (new), 8409.99=Engine parts
+Metals & Materials: 7208.39=Hot-rolled steel sheets, 7601.10=Aluminium ingots, 7403.11=Copper cathodes, 7204.49=Steel/iron scrap, 7225.40=Cold-rolled alloy steel, 7606.12=Aluminium sheets/strips, 7407.10=Copper bars/rods, 7214.99=Steel bars/rods, 7502.10=Nickel ingots, 8001.10=Tin ingots
+Furniture & Wood: 9403.30=Wooden office furniture, 9401.61=Upholstered wooden seats, 9404.29=Mattresses, 4418.20=Wooden doors/frames, 4412.33=Tropical plywood, 9403.60=Other wooden furniture, 9402.10=Medical/dental/surgical furniture, 4421.99=Other wood articles, 9403.20=Metal furniture, 9405.99=Lamp/lighting parts
 - If all required fields above are present, missing=[] and status="ready"
 - Always resolve city names to the closest commercial port/airport — include LOCODE (ocean) or IATA (air) in parentheses
 - combinedDraft must be a warm, professional email from "Commercial Team · OnePort 365" that:
