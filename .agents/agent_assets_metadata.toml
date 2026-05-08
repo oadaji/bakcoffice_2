@@ -8,12 +8,6 @@ type = "table"
 title = "OnePort 365 — MVP Features"
 
 [[outputs]]
-id = "i27TZ6lTTdDoyQ867kEUG"
-uri = "file://OnePort365_Microsoft_Connection_Guide.md"
-type = "text"
-title = "Microsoft 365 Connection Guide — IT Admin"
-
-[[outputs]]
 id = "SbuN3NffPifWfZ-sVEGoD"
 uri = "file://OnePort365_Microsoft_Connection_Guide.txt"
 type = "text"
