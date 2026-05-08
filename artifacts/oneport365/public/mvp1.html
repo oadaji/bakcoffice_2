@@ -483,6 +483,10 @@ tr.trow.sel td{background:#eef6e6}
             <button id="gmail-sync-btn" onclick="syncGmail()" title="Sync all inboxes" style="display:flex;align-items:center;justify-content:center;width:26px;height:26px;padding:0;cursor:pointer;border-radius:50%;border:1px solid #d2d9e0;background:#fff;color:var(--text2);transition:background .15s;flex-shrink:0" onmouseover="this.style.background='#f0f4f0'" onmouseout="this.style.background='#fff'">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3"/></svg>
             </button>
+            <div id="wati-status-pill" title="WhatsApp (WATI) connection status" style="display:flex;align-items:center;gap:4px;padding:2px 7px;border-radius:20px;border:1px solid #d2d9e0;background:#fff;font-size:10px;font-weight:600;color:var(--text3);cursor:default">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.126 1.535 5.857L.057 23.5l5.797-1.522C7.53 23.012 9.71 23.5 12 23.5c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.5c-2.09 0-4.035-.548-5.716-1.507l-.41-.243-4.23 1.11 1.13-4.13-.267-.424A9.467 9.467 0 012.5 12C2.5 6.701 6.701 2.5 12 2.5S21.5 6.701 21.5 12 17.299 21.5 12 21.5z"/></svg>
+              <span id="wati-status-text">WA</span>
+            </div>
           </div>
         </div>
         <div class="inbox-scroll">
@@ -4832,6 +4836,31 @@ function bodyToHtml(str) {
   return escHtml(str).replace(/\n/g,'<br>');
 }
 
+async function checkWatiStatus() {
+  const pill = document.getElementById('wati-status-pill');
+  const txt = document.getElementById('wati-status-text');
+  if (!pill || !txt) return;
+  try {
+    const res = await fetch('/api/wati/status');
+    const data = await res.json();
+    if (data.connected) {
+      pill.style.borderColor = '#86efac';
+      pill.style.background = '#f0fdf4';
+      pill.style.color = '#166534';
+      txt.textContent = 'WA';
+      pill.title = 'WhatsApp (WATI) connected';
+    } else {
+      pill.style.borderColor = '#d2d9e0';
+      pill.style.background = '#fff';
+      pill.style.color = 'var(--text3)';
+      txt.textContent = 'WA';
+      pill.title = `WhatsApp (WATI) not connected${data.error ? ': ' + data.error : ''}`;
+    }
+  } catch(e) {
+    // silently ignore — WATI is optional
+  }
+}
+
 async function loadInbox() {
   let data;
   try {
@@ -4845,6 +4874,7 @@ async function loadInbox() {
     return;
   }
   rfqData = data;
+  checkWatiStatus();
   try {
     renderInboxList();
   } catch(e) {
@@ -4935,12 +4965,19 @@ function renderInboxList() {
       const st = overallStatus;
       const statusTxt = st==='ready'?'✓ ready':st==='replied'?'✓ replied':st==='archived'?'◻ archived':'⚠ info needed';
       const statusColor = (st==='ready'||st==='replied')?'var(--accent-dark)':st==='archived'?'var(--text3)':'var(--warn)';
+      const isWa = r.email?.source === 'whatsapp';
       const fromShort = (r.email?.fromName||r.email?.fromEmail||'').split('·')[0].trim().slice(0,36);
       const groupBadge = (r.groupTotal ?? 1) > 1
         ? `<span class="group-badge">${r.groupTotal} shipments</span>`
         : '';
+      const waBadge = isWa
+        ? `<span title="WhatsApp" style="display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;background:#25D366;margin-left:4px;flex-shrink:0"><svg width="8" height="8" viewBox="0 0 24 24" fill="#fff"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.126 1.535 5.857L.057 23.5l5.797-1.522C7.53 23.012 9.71 23.5 12 23.5c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.5c-2.09 0-4.035-.548-5.716-1.507l-.41-.243-4.23 1.11 1.13-4.13-.267-.424A9.467 9.467 0 012.5 12C2.5 6.701 6.701 2.5 12 2.5S21.5 6.701 21.5 12 17.299 21.5 12 21.5z"/></svg></span>`
+        : '';
+      const displayFrom = isWa
+        ? (r.email?.fromName || r.email?.whatsappPhone || fromShort)
+        : fromShort;
       html += `<div class="email-item${st!=='archived'?' unread':''}" data-rfq-id="${r.id}" onclick="selEmail(${r.id},this)">
-        <div class="ei-top"><span class="ei-from">${escHtml(fromShort)}${groupBadge}</span><span class="ei-time">${fmtDate(r.email?.receivedAt)}</span></div>
+        <div class="ei-top"><span class="ei-from">${escHtml(displayFrom)}${waBadge}${groupBadge}</span><span class="ei-time">${fmtDate(r.email?.receivedAt)}</span></div>
         <div class="ei-subj">${escHtml(r.email?.subject||'')}</div>
         <div class="ei-foot"><span class="rfq-chip">${chip}</span><span class="ei-status" style="color:${statusColor}">${statusTxt}</span></div>
       </div>`;
@@ -5501,11 +5538,33 @@ function renderExtraction(r) {
       const ccEl = document.getElementById('compose-cc');
       const resendNotice = document.getElementById('compose-resend-notice');
       // Wire up recipient / subject fields
-      if (toEl) toEl.textContent = r.email?.fromEmail || r.email?.fromName || '';
-      if (subjectEl) subjectEl.value = `Re: ${r.email?.subject || 'Your freight enquiry'}`;
-      if (ccEl) ccEl.value = r.email?.cc || '';
+      const isWaSource = r.email?.source === 'whatsapp';
+      const fromRow = document.querySelector('.compose-field-row:has(#compose-from)');
+      const ccRow = document.getElementById('compose-cc-row');
+      const replyHdr = document.querySelector('#compose-tray .compose-tray span[style*="Reply"]') ||
+                       document.querySelector('#compose-tray span');
+      if (isWaSource) {
+        if (fromRow) fromRow.style.display = 'none';
+        if (ccRow) ccRow.style.display = 'none';
+        if (toEl) {
+          toEl.textContent = r.email?.whatsappPhone || r.email?.fromEmail || '';
+          toEl.style.background = '#dcfce7';
+          toEl.style.color = '#166534';
+        }
+        if (subjectEl) subjectEl.value = `WhatsApp reply to ${r.email?.fromName || r.email?.whatsappPhone || ''}`;
+      } else {
+        if (fromRow) fromRow.style.display = '';
+        if (ccRow) ccRow.style.display = '';
+        if (toEl) {
+          toEl.textContent = r.email?.fromEmail || r.email?.fromName || '';
+          toEl.style.background = '';
+          toEl.style.color = '';
+        }
+        if (subjectEl) subjectEl.value = `Re: ${r.email?.subject || 'Your freight enquiry'}`;
+        if (ccEl) ccEl.value = r.email?.cc || '';
+        loadComposeAccounts();
+      }
       if (draftEl) { draftEl.readOnly = false; draftEl.style.background = ''; draftEl.style.color = ''; }
-      loadComposeAccounts();
 
       if (draft && missing.length && r.status !== 'replied') {
         // Info-needed with AI draft — auto-show tray with countdown
@@ -5660,17 +5719,36 @@ async function epSendNow() {
   if (sendBtn) { sendBtn.disabled = true; sendBtn.innerHTML = 'Sending…'; }
   if (currentRfqId) {
     const draft = document.getElementById('ep-draft')?.value;
-    const fromEmail = document.getElementById('compose-from')?.value || undefined;
-    const cc = document.getElementById('compose-cc')?.value?.trim() || undefined;
+    const r = rfqData.find(x => x.id === currentRfqId);
+    const isWa = r?.email?.source === 'whatsapp';
     try {
-      const resp = await fetch(`/api/rfqs/${currentRfqId}/send-followup`, {
-        method: 'POST',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ draft, fromEmail, cc })
-      });
-      if (!resp.ok) { const e = await resp.json(); throw new Error(e.error || 'Send failed'); }
-      const r = rfqData.find(x => x.id === currentRfqId);
-      if (r) { r.status = 'replied'; if (draft) r.followUpDraft = draft; }
+      if (isWa) {
+        const phone = r?.email?.whatsappPhone || r?.email?.fromEmail?.replace('@whatsapp','');
+        if (!phone) throw new Error('No WhatsApp phone number found for this RFQ');
+        const resp = await fetch('/api/wati/send', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ phone, message: draft })
+        });
+        if (!resp.ok) { const e = await resp.json(); throw new Error(e.error || 'WhatsApp send failed'); }
+        // Mark replied via PATCH
+        await fetch(`/api/rfqs/${currentRfqId}`, {
+          method: 'PATCH',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ status: 'replied', followUpDraft: draft })
+        });
+        if (r) { r.status = 'replied'; if (draft) r.followUpDraft = draft; }
+      } else {
+        const fromEmail = document.getElementById('compose-from')?.value || undefined;
+        const cc = document.getElementById('compose-cc')?.value?.trim() || undefined;
+        const resp = await fetch(`/api/rfqs/${currentRfqId}/send-followup`, {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ draft, fromEmail, cc })
+        });
+        if (!resp.ok) { const e = await resp.json(); throw new Error(e.error || 'Send failed'); }
+        if (r) { r.status = 'replied'; if (draft) r.followUpDraft = draft; }
+      }
       if (el) { el.textContent = '✓ sent'; el.className = 'ep-timer sent'; }
       const draftEl = document.getElementById('ep-draft');
       if (draftEl) { draftEl.readOnly = true; draftEl.style.background = '#f8faf8'; draftEl.style.color = 'var(--text3)'; }
@@ -5681,7 +5759,7 @@ async function epSendNow() {
     } catch (err) {
       if (el) { el.textContent = '✗ failed'; el.style.color = '#dc2626'; }
       if (sendBtn) { sendBtn.disabled = false; sendBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg> Send'; }
-      alert('Could not send email: ' + err.message);
+      alert('Could not send: ' + err.message);
     }
   }
 }

@@ -1,0 +1,94 @@
+ONEPORT 365 — FREIGHT RFQ MANAGEMENT DEMO SUITE
+Project Description
+════════════════════════════════════════════════════════════════
+
+OVERVIEW
+─────────
+OnePort 365 is an internal operations tool for a freight forwarding company.
+It automates the intake, extraction, and management of freight quote requests
+(RFQs) received by email, turning what is normally a manual inbox-reading task
+into a structured, AI-powered workflow.
+
+
+WHAT IT DOES
+─────────────
+
+1. EMAIL INBOX MONITORING
+   Connects to one or more Gmail or Outlook/IMAP mailboxes and polls them on
+   demand. Incoming emails are fetched, deduplicated, and passed through an AI
+   extraction pipeline.
+
+2. AI-POWERED RFQ EXTRACTION
+   Each email body is sent to Claude (Anthropic) which identifies whether it is
+   a genuine freight enquiry and extracts structured logistics fields:
+     - Port of Loading (POL) and Port of Discharge (POD)
+     - Commodity and HS code
+     - Container type and quantity
+     - Cargo class (general or dangerous goods)
+     - Incoterm, weight, volume, pickup address, and target price
+   It also suggests HS codes for known commodities and resolves city names to
+   official port codes (LOCODE for ocean, IATA for air).
+
+3. RFQ INBOX
+   A web interface lists all extracted RFQs. Each item shows the sender,
+   extracted fields, any missing information, and a status:
+     New → Info Needed → Ready → Replied → Archived
+
+4. AUTOMATED FOLLOW-UP DRAFTS
+   When fields are missing, Claude generates a professional follow-up email
+   draft addressed to the customer, asking specifically for the missing
+   information. The operator can edit and send it directly from the UI.
+
+5. THREAD MANAGEMENT
+   Customer replies are detected and linked back to the original RFQ. Claude
+   re-runs extraction on the full conversation thread to progressively fill
+   in missing fields.
+
+6. RATE DATABASE
+   A built-in ocean freight rate table covering major corridors (China–Nigeria,
+   Europe–Nigeria, etc.) with carrier selection, surcharges (BAF, CAF, EBS),
+   and local charges in NGN and USD.
+
+7. QUOTE BUILDER
+   Operators can build sell prices from the rate database with margin %,
+   discount %, and FX rate (NGN/USD) controls. The system shows cost
+   breakdown, margin amount, discount, and final sell price.
+
+8. AI QUOTE GENERATION
+   A modal triggers Claude to automatically select the best matching rate for
+   an RFQ's lane and build a complete costed quote with all local charges
+   included.
+
+9. PARTNER OUTREACH
+   A partner database stores freight partners (shipping lines, agents,
+   truckers). Operators can send rate-request emails to partners directly
+   from the UI.
+
+10. MARKET INTELLIGENCE
+    A panel for tracking freight market conditions and rate trends.
+
+
+TECHNOLOGY
+───────────
+  Backend:    Node.js / Express 5 API
+  Frontend:   Plain HTML served via Vite
+  Database:   PostgreSQL with Drizzle ORM
+  AI:         Claude Sonnet via Anthropic API
+  Runtime:    pnpm monorepo on Replit
+
+
+CURRENT INTEGRATIONS
+─────────────────────
+  - Gmail (live email sync and send) — active
+  - Microsoft 365 / Outlook — planned
+  - WATI WhatsApp Business API — planned
+
+
+PRIMARY USERS
+──────────────
+Commercial and operations staff at a Nigerian freight forwarding company,
+handling import/export enquiries across ocean and air freight lanes,
+predominantly on the West Africa trade corridor.
+
+════════════════════════════════════════════════════════════════
+OnePort 365 · Internal Project Description · May 2026

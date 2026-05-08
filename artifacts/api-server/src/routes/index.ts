@@ -11,6 +11,7 @@ import { outreachRouter } from "./outreach";
 import { marketIntelRouter } from "./market-intel";
 import { settingsRouter } from "./settings";
 import { emailAccountsRouter } from "./email-accounts";
+import { watiRouter } from "./wati";
 
 const router: IRouter = Router();
 
@@ -26,5 +27,6 @@ router.use(seedRouter);
 router.use(outreachRouter);
 router.use(marketIntelRouter);
 router.use(settingsRouter);
+router.use(watiRouter);
 
 export default router;

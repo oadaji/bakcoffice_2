@@ -20,6 +20,10 @@ export const emailsTable = pgTable("emails", {
   cc: text("cc"),
   // Multi-inbox tracking
   receivedInbox: text("received_inbox"),
+  // Source channel: 'email' (default) or 'whatsapp'
+  source: text("source").notNull().default("email"),
+  // WhatsApp phone number (set when source = 'whatsapp')
+  whatsappPhone: text("whatsapp_phone"),
 });
 
 export const insertEmailSchema = createInsertSchema(emailsTable).omit({

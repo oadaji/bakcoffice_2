@@ -473,6 +473,8 @@ router.post("/rfq/ingest", async (req, res) => {
       requireFreightMatch = false,
       messageId,
       cc,
+      source = "email",
+      whatsappPhone,
     } = req.body as {
       uid: string;
       fromName: string;
@@ -484,6 +486,8 @@ router.post("/rfq/ingest", async (req, res) => {
       requireFreightMatch?: boolean;
       messageId?: string;
       cc?: string | null;
+      source?: string;
+      whatsappPhone?: string;
     };
 
     if (!uid || !fromEmail || !subject || !body) {
@@ -584,6 +588,8 @@ router.post("/rfq/ingest", async (req, res) => {
         receivedAt: receivedAt ? new Date(receivedAt) : new Date(),
         messageId: messageId ?? null,
         cc: cc ?? null,
+        source: source ?? "email",
+        whatsappPhone: whatsappPhone ?? null,
       })
       .returning();
 
