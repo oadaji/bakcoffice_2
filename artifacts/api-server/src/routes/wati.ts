@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db, emailsTable, rfqsTable } from "@workspace/db";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, inArray } from "drizzle-orm";
 
 const router: IRouter = Router();
 
@@ -23,7 +23,7 @@ function watiHeaders() {
 
 router.post("/wati/webhook", async (req, res) => {
   try {
-    // Optional webhook token validation
+    // Webhook token validation — recommended in production
     const webhookToken = process.env.WATI_WEBHOOK_TOKEN;
     if (webhookToken) {
       const provided =
@@ -33,6 +33,8 @@ router.post("/wati/webhook", async (req, res) => {
         res.status(401).json({ error: "Invalid webhook token" });
         return;
       }
+    } else if (process.env.NODE_ENV === "production") {
+      req.log.warn("WATI_WEBHOOK_TOKEN is not set — webhook is unauthenticated in production");
     }
 
     // WATI sends one event per webhook call; the payload can vary slightly by version.
@@ -93,68 +95,52 @@ router.post("/wati/webhook", async (req, res) => {
 
     // ── Threading: find the most recent OPEN RFQ from this phone number ────────
     // "Open" = new | info_needed | ready | replied  (only "archived" is truly closed).
-    // A customer WhatsApp reply after we've sent a follow-up (status=replied) must
-    // continue the same RFQ thread — mirroring how email In-Reply-To threading works.
+    // A customer reply after we've sent a follow-up (status=replied) must continue
+    // the same RFQ thread — mirroring how email In-Reply-To threading works.
     // Only "archived" means the conversation is dismissed; start a new RFQ then.
     const OPEN_STATUSES = ["new", "info_needed", "ready", "replied"] as const;
 
-    const existingEmails = await db
-      .select({ id: emailsTable.id })
-      .from(emailsTable)
+    // Single join query: latest open RFQ whose source email matches this phone.
+    const openRfqRows = await db
+      .select({ rfqId: rfqsTable.id })
+      .from(rfqsTable)
+      .innerJoin(emailsTable, eq(rfqsTable.emailId, emailsTable.id))
       .where(and(
         eq(emailsTable.whatsappPhone, waId),
         eq(emailsTable.source, "whatsapp"),
+        inArray(rfqsTable.status, [...OPEN_STATUSES]),
       ))
-      .orderBy(desc(emailsTable.id))
-      .limit(10); // fetch a few in case most recent are orphaned
+      .orderBy(desc(rfqsTable.id))
+      .limit(1);
 
-    if (existingEmails.length) {
-      // Walk from newest to oldest, find the first RFQ that is still open
-      let openRfqId: number | null = null;
-      for (const em of existingEmails) {
-        const rfqRows = await db
-          .select({ rfqId: rfqsTable.id, status: rfqsTable.status })
-          .from(rfqsTable)
-          .where(eq(rfqsTable.emailId, em.id));
-
-        const openRow = rfqRows.find(r =>
-          (OPEN_STATUSES as readonly string[]).includes(r.status ?? "")
-        );
-        if (openRow) {
-          openRfqId = openRow.rfqId;
-          break;
-        }
+    if (openRfqRows.length) {
+      const rfqId = openRfqRows[0].rfqId;
+      const replyResp = await fetch(`http://localhost:${port}/api/rfqs/${rfqId}/ingest-reply`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          uid,
+          fromName: senderName,
+          fromEmail,
+          body: textBody,
+          receivedAt,
+          messageId: wamid,
+          source: "whatsapp",
+          whatsappPhone: waId,
+        }),
+      });
+      if (replyResp.ok) {
+        const result = await replyResp.json() as Record<string, unknown>;
+        res.json({ ok: true, type: "reply", rfqId, ...result });
+      } else {
+        const errText = await replyResp.text();
+        req.log.error({ rfqId, waId, err: errText }, "WATI reply ingest failed");
+        res.status(500).json({ ok: false, error: errText });
       }
-
-      if (openRfqId !== null) {
-        const rfqId = openRfqId;
-        const replyResp = await fetch(`http://localhost:${port}/api/rfqs/${rfqId}/ingest-reply`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            uid,
-            fromName: senderName,
-            fromEmail,
-            body: textBody,
-            receivedAt,
-            messageId: wamid,
-            source: "whatsapp",
-            whatsappPhone: waId,
-          }),
-        });
-        if (replyResp.ok) {
-          const result = await replyResp.json() as Record<string, unknown>;
-          res.json({ ok: true, type: "reply", rfqId, ...result });
-        } else {
-          const errText = await replyResp.text();
-          req.log.error({ rfqId, waId, err: errText }, "WATI reply ingest failed");
-          res.status(500).json({ ok: false, error: errText });
-        }
-        return;
-      }
-      // No open RFQ found — fall through to create a new one
-      req.log.info({ waId }, "WATI: existing RFQs all closed — treating as new enquiry");
+      return;
     }
+    // No open RFQ found — fall through to create a new one
+    req.log.info({ waId }, "WATI: no open RFQ for this phone — treating as new enquiry");
 
     // ── New contact: ingest as a new RFQ ───────────────────────────────────────
     const ingestResp = await fetch(`http://localhost:${port}/api/rfq/ingest`, {
