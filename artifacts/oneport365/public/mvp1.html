@@ -428,7 +428,14 @@ tr.trow.sel td{background:#eef6e6}
       <img src="/oneport365_logo.png" alt="OnePort 365" style="height:28px;width:auto;display:block">
     </div>
     <div class="nav-item" id="st2" onclick="showScreen(2)">CRM <span class="nav-badge" id="deals-count">0</span></div>
-    <div class="nav-item active" id="st1" onclick="showScreen(1)">✉ RFQ <span class="nav-badge" id="new-count">8</span></div>
+    <div class="nav-item active" id="st1e" onclick="switchChannel('email')" title="Email inbox" style="padding:0 12px;gap:5px">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 7L2 7"/></svg>
+      <span class="nav-badge" id="email-count">0</span>
+    </div>
+    <div class="nav-item" id="st1w" onclick="switchChannel('whatsapp')" title="WhatsApp inbox" style="padding:0 12px;gap:5px">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.126 1.535 5.857L.057 23.5l5.797-1.522C7.53 23.012 9.71 23.5 12 23.5c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.5c-2.09 0-4.035-.548-5.716-1.507l-.41-.243-4.23 1.11 1.13-4.13-.267-.424A9.467 9.467 0 012.5 12C2.5 6.701 6.701 2.5 12 2.5S21.5 6.701 21.5 12 17.299 21.5 12 21.5z"/></svg>
+      <span class="nav-badge" id="wa-count">0</span>
+    </div>
     <a class="nav-item" id="st3" href="/rates.html" style="text-decoration:none">$ Rates</a>
     <div class="nav-item" id="st4" onclick="showScreen(4)">📄 Quotes <span class="nav-badge" id="quotes-count">0</span></div>
     <div class="nav-right">
@@ -474,16 +481,18 @@ tr.trow.sel td{background:#eef6e6}
       <!-- COL 1: INBOX LIST -->
       <div class="col-inbox">
         <div class="inbox-hd" style="flex-direction:column;align-items:flex-start;gap:7px;padding:10px 14px">
-          <span class="inbox-hd-title" style="white-space:nowrap">New RFQ Requests</span>
+          <span class="inbox-hd-title" style="white-space:nowrap">Email Inbox</span>
           <div style="display:flex;align-items:center;gap:6px">
-            <button onclick="openEmailAccounts()" title="Manage monitored inboxes" style="display:flex;align-items:center;gap:4px;padding:3px 9px;font-size:10px;font-weight:600;font-family:Inter,sans-serif;cursor:pointer;border-radius:20px;border:1px solid #d2d9e0;background:#fff;color:var(--text2);line-height:1.4;transition:background .15s" onmouseover="this.style.background='#f0f4f0'" onmouseout="this.style.background='#fff'">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 7L2 7"/></svg>
-              <span id="monitored-count-badge">…</span>
-            </button>
-            <button id="gmail-sync-btn" onclick="syncGmail()" title="Sync all inboxes" style="display:flex;align-items:center;justify-content:center;width:26px;height:26px;padding:0;cursor:pointer;border-radius:50%;border:1px solid #d2d9e0;background:#fff;color:var(--text2);transition:background .15s;flex-shrink:0" onmouseover="this.style.background='#f0f4f0'" onmouseout="this.style.background='#fff'">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3"/></svg>
-            </button>
-            <div id="wati-status-pill" title="WhatsApp (WATI) connection status" style="display:flex;align-items:center;gap:4px;padding:2px 7px;border-radius:20px;border:1px solid #d2d9e0;background:#fff;font-size:10px;font-weight:600;color:var(--text3);cursor:default">
+            <div id="email-inbox-controls" style="display:flex;align-items:center;gap:6px">
+              <button onclick="openEmailAccounts()" title="Manage monitored inboxes" style="display:flex;align-items:center;gap:4px;padding:3px 9px;font-size:10px;font-weight:600;font-family:Inter,sans-serif;cursor:pointer;border-radius:20px;border:1px solid #d2d9e0;background:#fff;color:var(--text2);line-height:1.4;transition:background .15s" onmouseover="this.style.background='#f0f4f0'" onmouseout="this.style.background='#fff'">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 7L2 7"/></svg>
+                <span id="monitored-count-badge">…</span>
+              </button>
+              <button id="gmail-sync-btn" onclick="syncGmail()" title="Sync all inboxes" style="display:flex;align-items:center;justify-content:center;width:26px;height:26px;padding:0;cursor:pointer;border-radius:50%;border:1px solid #d2d9e0;background:#fff;color:var(--text2);transition:background .15s;flex-shrink:0" onmouseover="this.style.background='#f0f4f0'" onmouseout="this.style.background='#fff'">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3"/></svg>
+              </button>
+            </div>
+            <div id="wati-status-pill" title="WhatsApp (WATI) connection status" style="display:none;align-items:center;gap:4px;padding:2px 7px;border-radius:20px;border:1px solid #d2d9e0;background:#fff;font-size:10px;font-weight:600;color:var(--text3);cursor:default">
               <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.126 1.535 5.857L.057 23.5l5.797-1.522C7.53 23.012 9.71 23.5 12 23.5c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.5c-2.09 0-4.035-.548-5.716-1.507l-.41-.243-4.23 1.11 1.13-4.13-.267-.424A9.467 9.467 0 012.5 12C2.5 6.701 6.701 2.5 12 2.5S21.5 6.701 21.5 12 17.299 21.5 12 21.5z"/></svg>
               <span id="wati-status-text">WA</span>
             </div>
@@ -3813,18 +3822,44 @@ function showScreen(n) {
     const tab = document.getElementById(`st${i}`);
     if(tab) tab.classList.remove('active');
   });
+  // Deactivate both channel tabs; re-activate correct one if going to screen 1
+  ['st1e','st1w'].forEach(id => { const t = document.getElementById(id); if(t) t.classList.remove('active'); });
   const target = document.getElementById(`s${n}`);
-  if(target) {
-    target.style.display = 'flex';
-    target.scrollTop = 0;
-    target.classList.add('active');
-  }
+  if(target) { target.style.display = 'flex'; target.scrollTop = 0; target.classList.add('active'); }
   const tab = document.getElementById(`st${n}`);
   if(tab) tab.classList.add('active');
+  if(n===1) {
+    const ct = document.getElementById(currentChannel === 'whatsapp' ? 'st1w' : 'st1e');
+    if(ct) ct.classList.add('active');
+  }
   if(n===2) { renderDealsTable(); setTimeout(()=>selectRFQ(0, document.querySelector('#deals-tbody .trow')), 80); }
   if(n===3) setTimeout(()=>loadDBRates(), 50);
   if(n===4) setTimeout(()=>loadQuotes(), 50);
   if(n===5) setTimeout(()=>showSettingsTab('criteria'), 50);
+}
+
+function switchChannel(ch) {
+  currentChannel = ch;
+  // Update active tab states
+  ['st1e','st1w'].forEach(id => { const t = document.getElementById(id); if(t) t.classList.remove('active'); });
+  const activeTab = document.getElementById(ch === 'whatsapp' ? 'st1w' : 'st1e');
+  if(activeTab) activeTab.classList.add('active');
+  // Show screen 1 if not already active, otherwise just re-render the inbox
+  const s1 = document.getElementById('s1');
+  if(s1 && !s1.classList.contains('active')) {
+    showScreen(1);
+  } else {
+    currentRfqId = null;
+    renderInboxList();
+  }
+  // Update inbox header title and channel-specific controls
+  const hdTitle = document.querySelector('.inbox-hd-title');
+  if(hdTitle) hdTitle.textContent = ch === 'whatsapp' ? 'WhatsApp' : 'Email Inbox';
+  // Show/hide channel-specific controls
+  const emailControls = document.getElementById('email-inbox-controls');
+  const waControls = document.getElementById('wati-status-pill');
+  if(emailControls) emailControls.style.display = ch === 'whatsapp' ? 'none' : 'flex';
+  if(waControls) waControls.style.display = ch === 'whatsapp' ? 'flex' : 'none';
 }
 
 function showRatesSub(tab) {
@@ -4815,6 +4850,7 @@ function waCancel() {
 // ── API-driven inbox data ───────────────────────────────────────────────────
 let rfqData = [];             // fetched from /api/rfqs
 let currentRfqId = null;      // selected RFQ db id
+let currentChannel = 'email'; // 'email' | 'whatsapp' — active inbox channel tab
 let currentGroupRfqs = [];    // sibling RFQs for the selected group (empty for singles)
 let expandedDealGroups = new Set(); // groupIds expanded in the Deals table
 
@@ -4938,23 +4974,31 @@ function renderInboxList() {
   const partners  = rfqData.filter(r => r.emailType === 'rate-reply');
   const outbound  = rfqData.filter(r => r.emailType === 'outbound');
 
-  // Update RFQ nav badge with live count
-  const rfqBadge = document.getElementById('new-count');
-  if (rfqBadge) rfqBadge.textContent = rfqData.filter(r => r.emailType !== 'outbound').length;
+  // Update per-channel nav badge counts
+  const emailBadge = document.getElementById('email-count');
+  if (emailBadge) emailBadge.textContent = rfqData.filter(r => r.email?.source !== 'whatsapp' && r.emailType !== 'outbound').length;
+  const waBadge = document.getElementById('wa-count');
+  if (waBadge) waBadge.textContent = rfqData.filter(r => r.email?.source === 'whatsapp').length;
 
   // Deduplicate customers by emailId — keep first occurrence (lowest groupIndex)
   const seenEmailIds = new Set();
-  const uniqueCustomers = customers.filter(r => {
+  const allUniqueCustomers = customers.filter(r => {
     const eid = r.emailId ?? r.id;
     if (seenEmailIds.has(eid)) return false;
     seenEmailIds.add(eid);
     return true;
   });
 
+  // Filter by active channel
+  const uniqueCustomers = currentChannel === 'whatsapp'
+    ? allUniqueCustomers.filter(r => r.email?.source === 'whatsapp')
+    : allUniqueCustomers.filter(r => r.email?.source !== 'whatsapp');
+
   let html = '';
 
   if (uniqueCustomers.length) {
-    html += `<div class="inbox-section-lbl" style="border-top:none">Customer requests</div>`;
+    const sectionLabel = currentChannel === 'whatsapp' ? 'WhatsApp conversations' : 'Customer requests';
+    html += `<div class="inbox-section-lbl" style="border-top:none">${sectionLabel}</div>`;
     uniqueCustomers.forEach(r => {
       const chip = r.emailType === 'internal-rfq' ? 'Internal RFQ' : 'Customer RFQ';
       // For grouped emails, status = worst-case across siblings
@@ -4984,34 +5028,39 @@ function renderInboxList() {
     });
   }
 
-  if (partners.length) {
-    html += `<div class="inbox-section-lbl">Partner rate replies</div>`;
-    partners.forEach(r => {
-      const hasMissing = r.missingFields?.length > 0;
-      const statusTxt = hasMissing ? '⚠ action needed' : '✓ rates received';
-      const statusColor = hasMissing ? 'var(--warn)' : 'var(--accent-dark)';
-      const fromShort = (r.email?.fromName||r.email?.fromEmail||'').split('·')[0].trim().slice(0,36);
-      html += `<div class="email-item" data-rfq-id="${r.id}" onclick="selEmail(${r.id},this)">
-        <div class="ei-top"><span class="ei-from">${escHtml(fromShort)}</span><span class="ei-time">${fmtDate(r.email?.receivedAt)}</span></div>
-        <div class="ei-subj">${escHtml(r.email?.subject||'')}</div>
-        <div class="ei-foot"><span class="rfq-chip" style="background:#e0f2fe;color:#0369a1">Rate reply</span><span class="ei-status" style="color:${statusColor}">${statusTxt}</span></div>
-      </div>`;
-    });
+  if (currentChannel === 'email') {
+    if (partners.length) {
+      html += `<div class="inbox-section-lbl">Partner rate replies</div>`;
+      partners.forEach(r => {
+        const hasMissing = r.missingFields?.length > 0;
+        const statusTxt = hasMissing ? '⚠ action needed' : '✓ rates received';
+        const statusColor = hasMissing ? 'var(--warn)' : 'var(--accent-dark)';
+        const fromShort = (r.email?.fromName||r.email?.fromEmail||'').split('·')[0].trim().slice(0,36);
+        html += `<div class="email-item" data-rfq-id="${r.id}" onclick="selEmail(${r.id},this)">
+          <div class="ei-top"><span class="ei-from">${escHtml(fromShort)}</span><span class="ei-time">${fmtDate(r.email?.receivedAt)}</span></div>
+          <div class="ei-subj">${escHtml(r.email?.subject||'')}</div>
+          <div class="ei-foot"><span class="rfq-chip" style="background:#e0f2fe;color:#0369a1">Rate reply</span><span class="ei-status" style="color:${statusColor}">${statusTxt}</span></div>
+        </div>`;
+      });
+    }
+
+    if (outbound.length) {
+      html += `<div class="inbox-section-lbl">Sent to partners</div>`;
+      outbound.forEach(r => {
+        const fromShort = (r.email?.fromName||r.email?.fromEmail||'').slice(0,36);
+        html += `<div class="email-item" data-rfq-id="${r.id}" onclick="selEmail(${r.id},this)">
+          <div class="ei-top"><span class="ei-from">${escHtml(fromShort)}</span><span class="ei-time">${fmtDate(r.email?.receivedAt)}</span></div>
+          <div class="ei-subj">${escHtml(r.email?.subject||'')}</div>
+          <div class="ei-foot"><span class="rfq-chip" style="background:#f3f4f6;color:#6b7280">Outbound</span><span class="ei-status" style="color:var(--text3)">sent · awaiting reply</span></div>
+        </div>`;
+      });
+    }
   }
 
-  if (outbound.length) {
-    html += `<div class="inbox-section-lbl">Sent to partners</div>`;
-    outbound.forEach(r => {
-      const fromShort = (r.email?.fromName||r.email?.fromEmail||'').slice(0,36);
-      html += `<div class="email-item" data-rfq-id="${r.id}" onclick="selEmail(${r.id},this)">
-        <div class="ei-top"><span class="ei-from">${escHtml(fromShort)}</span><span class="ei-time">${fmtDate(r.email?.receivedAt)}</span></div>
-        <div class="ei-subj">${escHtml(r.email?.subject||'')}</div>
-        <div class="ei-foot"><span class="rfq-chip" style="background:#f3f4f6;color:#6b7280">Outbound</span><span class="ei-status" style="color:var(--text3)">sent · awaiting reply</span></div>
-      </div>`;
-    });
-  }
-
-  document.getElementById('inbox-list').innerHTML = html || '<div style="padding:16px;color:var(--text3);font-size:11px">No emails found</div>';
+  const emptyMsg = currentChannel === 'whatsapp'
+    ? 'No WhatsApp conversations yet'
+    : 'No emails found';
+  document.getElementById('inbox-list').innerHTML = html || `<div style="padding:16px;color:var(--text3);font-size:11px">${emptyMsg}</div>`;
 }
 
 
