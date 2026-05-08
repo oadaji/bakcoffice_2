@@ -1,0 +1,60 @@
+# WATI WhatsApp Integration — Planning Phase
+
+**Important: This is a PLANNING task. Do NOT write code yet. Produce a written plan, ask clarifying questions, and wait for approval before implementation.**
+
+## Context
+
+We are integrating WATI (WhatsApp Business API platform) into our existing platform to ingest WhatsApp business conversations and extract shipment-related details (AWB numbers, carriers, addresses, ETAs, COD amounts, status updates, etc.). We already have an email-based extraction feature; this is the WhatsApp equivalent.
+
+## Objective of this task
+
+Produce a detailed implementation plan covering architecture, data flow, schema, and open questions. No code, no scaffolding, no file creation yet.
+
+## What the plan must cover
+
+1. **Architecture diagram (described in text or ASCII)**
+   - WATI webhook → ingestion endpoint → message buffer → extraction layer → shipment record store → reconciliation with orders DB
+   - Where queues, retries, and dead-letter handling sit
+
+2. **WATI integration surface**
+   - Which WATI webhooks to subscribe to (incoming message, status, etc.) and how to filter event types
+   - How media (images, PDFs of waybills) will be fetched via WATI REST API given that webhooks only return media IDs
+   - Auth/token handling and rotation
+   - Rate limit considerations
+
+3. **Message handling strategy**
+   - Conversation windowing: buffer messages per `waId` for ~30–60s of inactivity before extraction, rather than per-message extraction. Justify the approach.
+   - Handling multi-modal input: text, images, PDFs, voice notes (out of scope for v1?)
+   - Multi-language / transliterated text (e.g., Hinglish) handling
+
+4. **Extraction layer design**
+   - LLM choice and prompt structure (do not write the prompt yet, just describe inputs/outputs)
+   - Vision/OCR path for waybill images and PDFs
+   - Output schema with per-field confidence scores
+   - How low-confidence extractions get queued for human review
+
+5. **Shipment schema**
+   - Proposed fields: AWB/tracking, carrier, sender, recipient, pickup date, expected delivery, weight, dimensions, declared value, COD, reference/order ID, status
+   - Storage: new table vs. extension of existing shipment table from the email feature — recommend one
+
+6. **Reconciliation logic**
+   - Matching strategy: exact (AWB, order ID) → fuzzy (phone + name + value)
+   - Unmatched queue handling
+
+7. **Reuse vs. rebuild**
+   - Audit the existing email extraction feature: what is reusable (extractor, schema, reconciliation) vs. what is email-specific and must be rebuilt for WhatsApp
+
+8. **Open questions to ask me before coding**
+   - Direction of messages: customer-sent, courier/supplier-sent, or both?
+   - Expected volume (messages/day) — drives queue and model tier choices
+   - Whether the system should reply back via WhatsApp on successful extraction (requires WATI template messages)
+   - Markets/languages in scope
+   - Which LLM provider we are standardizing on
+
+## Deliverable format
+
+A single markdown document with the sections above, ending with a numbered list of clarifying questions. Do not start implementation, do not create files beyond this plan document, do not install dependencies.
+
+## After the plan
+
+Once I review and answer the open questions, we will agree on a phased build order (likely: webhook ingestion → buffering → text extraction → media/OCR → reconciliation → reply-back), and only then start coding phase by phase.
