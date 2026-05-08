@@ -252,4 +252,141 @@ router.post("/wati/send", async (req, res) => {
   }
 });
 
+// ── GET /api/wati/templates ────────────────────────────────────────────────────
+// Returns the list of approved WATI message templates for this account.
+
+router.get("/wati/templates", async (req, res) => {
+  const endpoint = watiEndpoint();
+  const apiKey = process.env.WATI_API_KEY;
+
+  if (!endpoint || !apiKey) {
+    res.status(503).json({ error: "WATI_API_ENDPOINT or WATI_API_KEY not configured" });
+    return;
+  }
+
+  try {
+    const resp = await fetch(
+      `${endpoint}/api/v1/getTemplates?pageSize=100`,
+      { headers: watiHeaders() },
+    );
+
+    if (!resp.ok) {
+      const text = await resp.text();
+      req.log.error({ status: resp.status, body: text }, "WATI getTemplates failed");
+      res.status(502).json({ error: `WATI returned ${resp.status}: ${text}` });
+      return;
+    }
+
+    const data = await resp.json() as Record<string, unknown>;
+    res.json(data);
+  } catch (err) {
+    req.log.error({ err }, "WATI getTemplates error");
+    res.status(500).json({ error: String(err) });
+  }
+});
+
+// ── POST /api/wati/send-template ───────────────────────────────────────────────
+// Sends a WhatsApp template message via WATI and marks the RFQ as replied.
+// Body: { rfqId: number, phone: string, templateName: string, broadcastName: string,
+//         parameters: { name: string; value: string }[], renderedBody?: string }
+
+router.post("/wati/send-template", async (req, res) => {
+  const {
+    rfqId,
+    phone,
+    templateName,
+    broadcastName,
+    parameters = [],
+    renderedBody,
+  } = req.body as {
+    rfqId?: number;
+    phone?: string;
+    templateName?: string;
+    broadcastName?: string;
+    parameters?: { name: string; value: string }[];
+    renderedBody?: string;
+  };
+
+  if (!phone || !templateName) {
+    res.status(400).json({ error: "phone and templateName are required" });
+    return;
+  }
+
+  const endpoint = watiEndpoint();
+  const apiKey = process.env.WATI_API_KEY;
+
+  if (!endpoint || !apiKey) {
+    res.status(503).json({ error: "WATI_API_ENDPOINT or WATI_API_KEY not configured" });
+    return;
+  }
+
+  try {
+    const resp = await fetch(
+      `${endpoint}/api/v1/sendTemplateMessage/${encodeURIComponent(phone)}`,
+      {
+        method: "POST",
+        headers: watiHeaders(),
+        body: JSON.stringify({
+          template_name: templateName,
+          broadcast_name: broadcastName ?? templateName,
+          parameters,
+        }),
+      },
+    );
+
+    if (!resp.ok) {
+      const text = await resp.text();
+      req.log.error({ phone, templateName, status: resp.status, body: text }, "WATI send-template failed");
+      res.status(502).json({ error: `WATI returned ${resp.status}: ${text}` });
+      return;
+    }
+
+    const data = await resp.json() as Record<string, unknown>;
+    req.log.info({ phone, templateName, rfqId }, "WhatsApp template message sent via WATI");
+
+    // Store sent message and update RFQ
+    if (rfqId) {
+      // Look up the source email so we can link the outbound record correctly
+      const rfqRows = await db
+        .select({ rfq: rfqsTable, email: emailsTable })
+        .from(rfqsTable)
+        .leftJoin(emailsTable, eq(rfqsTable.emailId, emailsTable.id))
+        .where(eq(rfqsTable.id, rfqId))
+        .limit(1);
+
+      const sourceEmail = rfqRows[0]?.email ?? null;
+      const bodyText = renderedBody ?? `[Template: ${templateName}]`;
+
+      // Insert an outbound record so the sent message is stored for thread history
+      await db.insert(emailsTable).values({
+        uid: `wa:template:${phone}:${Date.now()}`,
+        fromName: "OnePort 365 Commercial Team",
+        fromEmail: `system@oneport365`,
+        subject: `WhatsApp template sent: ${templateName}`,
+        body: bodyText,
+        emailType: "outbound",
+        source: "whatsapp",
+        whatsappPhone: phone,
+        receivedAt: new Date(),
+        parentEmailId: sourceEmail?.id ?? null,
+        inReplyTo: sourceEmail?.messageId ?? null,
+      }).onConflictDoNothing();
+
+      // Update the RFQ status and draft
+      await db
+        .update(rfqsTable)
+        .set({
+          status: "replied",
+          followUpDraft: bodyText,
+        })
+        .where(eq(rfqsTable.id, rfqId));
+    }
+
+    res.json({ sent: true, ...data });
+  } catch (err) {
+    req.log.error({ err, phone, templateName }, "WATI send-template error");
+    res.status(500).json({ error: String(err) });
+  }
+});
+
 export { router as watiRouter };
