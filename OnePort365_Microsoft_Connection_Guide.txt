@@ -1,0 +1,87 @@
+CONNECTING MICROSOFT 365 TO ONEPORT 365
+For IT Administrator — May 2026
+════════════════════════════════════════════════════════════════
+
+WHAT YOU NEED
+─────────────
+- Azure / Microsoft 365 Administrator account
+  (Global Administrator or Application Administrator role)
+
+
+STEP 1 — SIGN INTO AZURE PORTAL
+─────────────────────────────────
+Go to: https://portal.azure.com
+Sign in with your company administrator account.
+
+
+STEP 2 — REGISTER THE APP
+───────────────────────────
+1. Click "Azure Active Directory" in the left menu
+2. Click "App registrations"
+3. Click "+ New registration"
+4. Fill in:
+     Name:                    OnePort 365
+     Supported account types: Accounts in this organizational directory only
+     Redirect URI:            Web — (your developer will provide this URL)
+5. Click "Register"
+
+
+STEP 3 — COPY THE APP IDs
+───────────────────────────
+On the app Overview page, copy:
+  - Application (client) ID
+  - Directory (tenant) ID
+
+
+STEP 4 — CREATE A CLIENT SECRET
+─────────────────────────────────
+1. In the left sidebar click "Certificates & secrets"
+2. Click "+ New client secret"
+3. Description: OnePort 365 Production
+4. Expiry: 24 months
+5. Click "Add"
+6. IMMEDIATELY copy the VALUE shown (it is only visible once)
+
+   Copy the VALUE column — NOT the Secret ID column.
+
+
+STEP 5 — GRANT API PERMISSIONS
+────────────────────────────────
+1. In the left sidebar click "API permissions"
+2. Click "+ Add a permission"
+3. Select "Microsoft Graph"
+4. Select "Delegated permissions"
+5. Search for and add these three permissions:
+
+     Mail.Read    — read emails from connected inboxes
+     Mail.Send    — send follow-up emails on behalf of users
+     User.Read    — identify the connected account
+
+6. Click "Grant admin consent for [Your Company Name]"
+7. Confirm when prompted
+
+
+WHAT TO SEND BACK TO THE DEVELOPMENT TEAM
+───────────────────────────────────────────
+Send the following three values SECURELY
+(password manager link, WhatsApp, or enter directly into Replit Secrets — not plain email):
+
+  Tenant ID:           ________________________________
+  Client ID:           ________________________________
+  Client Secret Value: ________________________________
+
+
+SECURITY NOTES
+───────────────
+- No email passwords are stored — only secure OAuth tokens
+- Rotate the client secret every 24 months (set a calendar reminder now)
+- If the secret is ever compromised, delete it in Azure and create a new one
+  — no other configuration is lost
+
+
+MICROSOFT REFERENCE
+────────────────────
+https://learn.microsoft.com/en-us/entra/identity-platform/quickstart-register-app
+
+════════════════════════════════════════════════════════════════
+OnePort 365 · IT Setup Guide · May 2026
