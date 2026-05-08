@@ -12,3 +12,9 @@ id = "SbuN3NffPifWfZ-sVEGoD"
 uri = "file://OnePort365_Microsoft_Connection_Guide.txt"
 type = "text"
 title = "Microsoft 365 Connection Guide"
+
+[[outputs]]
+id = "RzPuERxdRPskiTp3BlfzP"
+uri = "file://OnePort365_MVP1_Features.txt"
+type = "text"
+title = "OnePort 365 — MVP 1 Feature Description"

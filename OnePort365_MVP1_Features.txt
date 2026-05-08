@@ -1,0 +1,455 @@
+ONEPORT 365 — MVP 1 FEATURE DESCRIPTION
+Email RFQ Intake Tool (mvp1.html)
+════════════════════════════════════════════════════════════════
+
+Last updated: May 2026
+Tool path: /mvp1 (served from the OnePort 365 Vite app)
+Backend: Express API at /api
+
+────────────────────────────────────────────────────────────────
+ACCESS & AUTHENTICATION
+────────────────────────────────────────────────────────────────
+
+- Password-gated: users must enter a shared password on first visit.
+  The session is remembered in browser storage; no user accounts or
+  role management exist yet.
+- Single-user assumed for the demo; no multi-user permissions.
+
+────────────────────────────────────────────────────────────────
+TOP NAVIGATION
+────────────────────────────────────────────────────────────────
+
+A fixed dark-green top bar with four tabs and a user chip:
+
+  ✉ RFQ         — main inbox (default view)
+  CRM           — deals pipeline table
+  $ Rates       — rate database (separate page: /rates.html)
+  📄 Quotes     — quote builder and list
+
+  User chip (top-right):
+    - Shows operator name (Okpanachi Adaji / Admin)
+    - Dropdown: Settings, Partners & Rates, Profile, Sign out
+
+Each tab shows a live badge count (e.g. "8 new RFQs", "3 quotes").
+
+────────────────────────────────────────────────────────────────
+SCREEN 1 — RFQ INBOX  (the core workflow screen)
+────────────────────────────────────────────────────────────────
+
+Three-column layout: Inbox List | Email Detail | Extraction Panel.
+
+━━━ COLUMN 1: INBOX LIST (260 px) ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Header controls:
+  - "Inboxes" button — opens the Email Accounts modal to add/remove
+    monitored Gmail accounts.
+  - Sync button (circular arrow) — triggers an on-demand Gmail IMAP
+    fetch across all configured accounts. Fetches the last 20 UIDs
+    from each inbox and runs AI extraction on any new messages.
+  - WATI status pill — shows WhatsApp Business API connection status.
+    Grey = not configured; green = connected and live.
+
+Inbox items:
+  - Each item shows: sender name, timestamp, subject line, RFQ ref
+    chip, and a status label.
+  - WhatsApp items show a green circular WA badge next to the sender
+    name; the phone number is shown instead of an email address.
+  - Clicking an item loads the email detail and extraction panel.
+  - Active item is highlighted with a green left border.
+
+Inbox sections (auto-grouped):
+  - Customer RFQs — inbound freight enquiries
+  - Partner Replies — rate responses from shipping lines/agents
+  - Archived — dismissed items
+
+RFQ status values:
+  new          → just received, extraction pending or complete
+  info_needed  → Claude found missing required fields
+  ready        → all required fields present
+  replied      → follow-up or quote sent to customer
+  archived     → dismissed from active inbox
+
+Multi-shipment grouping:
+  - When a single email contains multiple distinct shipment requests,
+    Claude splits them into separate RFQ records. The inbox item shows
+    a "N shipments" badge. The extraction panel shows a tab per
+    shipment.
+
+━━━ COLUMN 2: EMAIL DETAIL (flexible, centre) ━━━━━━━━━━━━━━━━━
+
+Header:
+  - Subject line (large), sender name/company, email type chip,
+    timestamp, and which inbox account received the email.
+
+Thread Brief card (collapsible, shown for conversation threads):
+  - An AI-generated bullet-point summary of the full email thread:
+    what was asked, what was provided, what is still outstanding.
+  - Chips show: freight mode, route, container type.
+  - Collapsed by default; expands on click.
+
+Email body:
+  - Full plain-text email rendered with line breaks preserved.
+  - For threads: earlier messages shown as collapsed accordion cards
+    above the latest message; each card shows sender, timestamp, and
+    can be expanded to read the full message.
+
+Action bar (below email body):
+  - Reply — opens the inline compose tray.
+  - Archive — sets status to "archived" and moves item out of active
+    inbox.
+  - Generate Quote — opens the AI quote generation modal (see Quotes
+    section).
+
+Inline Compose Tray (Outlook-style, appears above the action bar):
+  - Opens when "Reply" is clicked or auto-opens when Claude detects
+    missing fields and has generated a follow-up draft.
+  - Draggable resize handle at the top — drag up/down to adjust the
+    split between email body and compose area.
+  - Countdown progress bar — shows time remaining before auto-send
+    (default 3 minutes). Operator can edit the draft before it sends.
+  - Fields:
+      From      — dropdown of configured Gmail accounts (hidden for
+                  WhatsApp items)
+      Cc        — free-text CC field (hidden for WhatsApp items)
+      To        — auto-filled from customer email / phone number.
+                  Phone shown in green for WhatsApp items.
+      Subject   — auto-filled as "Re: [original subject]" or
+                  "WhatsApp reply to [name/phone]"
+      Body      — editable textarea, pre-filled with AI draft
+  - Send button — sends immediately (email via Gmail SMTP; WhatsApp
+    via WATI send-message API). On send: status → "replied", draft
+    saved to database.
+  - Cancel / discard button — closes tray without sending.
+  - "Send Again" mode — if the RFQ was already replied, the tray
+    shows the previous draft pre-loaded and a "Send Again" button.
+
+━━━ COLUMN 3: EXTRACTION PANEL (260 px) ━━━━━━━━━━━━━━━━━━━━━━━
+
+Shown for every selected RFQ. Contains all AI output.
+
+Top strip — mode and direction badges:
+  - Freight Mode: 🚢 Ocean / ✈ Air (colour-coded pill)
+  - Direction: Import → Nigeria / Export ← Nigeria /
+    Domestic (NG) / Cross-trade (inferred from POL and POD)
+
+Quote Readiness checklist:
+  - Minimum required fields list: POL, POD, Commodity, Container
+    type, Container quantity, Contact, Email.
+  - Green tick = present and extracted.
+  - Red cross = missing (triggers info_needed status).
+
+Extracted fields list (all fields Claude found):
+  - Port of Loading (POL) with LOCODE
+  - Port of Discharge (POD) with LOCODE
+  - Freight Mode (ocean / air / road)
+  - Commodity (with HS code suggestion where known)
+  - HS Code
+  - Incoterm (EXW, FOB, CIF, etc.)
+  - Container type (20FT, 40FT, 40HC, LCL, etc.)
+  - Number of containers
+  - Cargo class (general / dangerous goods / reefer)
+  - Weight (MT / KG)
+  - Volume (CBM)
+  - Pickup / origin address
+  - Target price / budget
+  - Additional remarks
+  - Each field shows: key, extracted value, and an OK/missing flag.
+  - Fields marked missing are highlighted in orange.
+
+HS Code suggestion:
+  - If Claude suggests an HS code for a known commodity, a small
+    "Apply suggestion" chip appears. Clicking it fills in the HS
+    code field.
+
+Multi-shipment tabs:
+  - If the email was split into multiple RFQs, tabs appear at the top
+    of the extraction panel — one per shipment, labelled by commodity.
+  - Clicking a tab switches the field display to that shipment.
+
+Notes field:
+  - A free-text editable notes area below the fields.
+  - Saved automatically when the user clicks away (PATCH /api/rfqs/:id).
+
+Action buttons:
+  - Generate Quote — triggers the AI quote generation flow.
+  - Go to CRM — switches to the CRM screen with this RFQ pre-selected.
+
+────────────────────────────────────────────────────────────────
+SCREEN 2 — CRM (DEALS PIPELINE)
+────────────────────────────────────────────────────────────────
+
+Summary stats row (live, pulled from the same RFQ dataset):
+  - Total RFQs (all time)
+  - Ready for Rates (all fields present)
+  - Info Needed (awaiting customer)
+  - Follow-up Sent (replied, awaiting customer reply)
+  - Received Today (count for the current calendar day)
+
+All-RFQs table:
+  Columns: RFQ No. | Customer | Route | Commodity | Stage | Received
+  - Sortable by clicking column headers.
+  - Clicking a row selects it and loads the detail panel.
+
+Detail panel (right side, for selected row):
+  Sub-tabs: Details | Datasheet
+
+  Details tab:
+    - RFQ reference number and status badge.
+    - Shipment details (same extracted fields as the extraction panel).
+    - Missing information list (if any).
+    - Timeline — shows key events: received, reply sent, customer
+      replied, ready, etc.
+    - Action buttons: Reply, Archive, Create Quote.
+
+  Datasheet tab:
+    - A structured CY-CY shipping instruction datasheet, divided into
+      sections:
+        A. Product — HS code, commodity, goods description, packaging
+           type, quantity, weight/volume.
+        B. Container details — type, quantity, VGM.
+        C. Shipper details — name, address, contact.
+        D. Consignee details — name, address, contact.
+        E. Notify party.
+        F. Routing — POL, POD, carrier, vessel, voyage, ETD, ETA.
+        G. Commercial — invoice value, currency, incoterm.
+        H. Additional instructions.
+    - Fields auto-filled (highlighted green) from the RFQ extraction.
+    - Remaining fields are editable by the operator.
+    - "Download XLSX" button exports the datasheet as a spreadsheet.
+
+────────────────────────────────────────────────────────────────
+$ RATES (separate page: /rates.html)
+────────────────────────────────────────────────────────────────
+
+Note: This is a separate HTML page, not a screen within mvp1.html.
+Rates data feeds back into the quote builder in mvp1.
+
+Rate database table:
+  - Columns: carrier logo, trade lane, POL → POD, 20FT / 40FT / 40HC
+    (USD), surcharges (BAF, CAF, EBS), validity dates, transit time,
+    free time, demurrage/detention.
+  - Filter controls: carrier, route type, currency.
+  - Add rate / Edit rate modal:
+      Fields: POL, POD, carrier, trade lane, cargo type (dry/reefer),
+      commodity type, container charges (20FT / 40FT / 40HC / currency),
+      valid from/to, sailing date, free time (days), transit time (days),
+      demurrage / detention, notes.
+  - CSV import — bulk upload rates from a spreadsheet.
+  - CMA CGM live rate search — fetches spot rates direct from CMA CGM
+    API (requires CMA CGM API key).
+
+Partner outreach panel:
+  - List of freight partners (shipping lines, agents, truckers) with
+    contact details.
+  - Compose and send rate-request emails to partners directly.
+  - Status tracking per outreach: Waiting → Rates received → Saved to DB.
+  - Auto-chase: if no reply after 24 hours, AI sends a chase email.
+  - When a rate-reply email arrives, Claude parses it and extracts the
+    rates; operator reviews and saves to the rate database.
+
+Carrier branding:
+  - Known carriers shown with colour-coded badge logos (no external
+    image URLs): MSC, Maersk, CMA CGM, Hapag-Lloyd, Evergreen, etc.
+
+────────────────────────────────────────────────────────────────
+SCREEN 4 — QUOTES
+────────────────────────────────────────────────────────────────
+
+Quote list (left panel):
+  - All saved quotes, filterable.
+  - Each item shows: quote ref, customer name, route, status, date.
+  - Clicking a quote loads the preview panel.
+
+Quote preview panel (right):
+  - Full quote layout: OnePort 365 header, customer details, route,
+    commodity, container details.
+  - Cost breakdown:
+      Ocean freight (per container type)
+      Surcharges: BAF (Bunker Adjustment Factor), CAF (Currency
+        Adjustment Factor), EBS (Emergency Bunker Surcharge)
+      Local charges in NGN (origin / destination handling, documentation,
+        customs, etc.)
+  - Pricing controls:
+      Margin % slider/input
+      Discount % slider/input
+      FX rate (NGN/USD) input
+  - Calculated outputs:
+      Cost price (USD), Sell price (USD), Sell price (NGN),
+      Margin amount, Discount amount.
+  - Terms & conditions editor — editable list of standard shipment terms.
+  - Download button — exports quote (format: printable view).
+  - Quickbooks sync button (UI present; integration placeholder).
+
+AI Quote Generation (modal, triggered from RFQ inbox or CRM):
+  - Claude selects the best-matching rate from the rate database for
+    the RFQ's trade lane and container type.
+  - Builds a complete costed quote automatically with all surcharges
+    and local charges included.
+  - Operator reviews the result, adjusts margin/discount if needed,
+    and saves or sends.
+
+────────────────────────────────────────────────────────────────
+AI / CLAUDE FEATURES (cross-cutting)
+────────────────────────────────────────────────────────────────
+
+All AI calls route through a locked Claude Sonnet proxy at /api/claude.
+No API key is exposed to the frontend.
+
+1. RFQ Extraction
+   Triggered automatically on every ingested email.
+   - Determines whether the email is a genuine freight enquiry.
+   - Extracts 15+ structured logistics fields (see Extraction Panel
+     section above).
+   - Identifies which required fields are missing.
+   - Generates a professional follow-up email draft asking the customer
+     specifically for the missing information.
+   - Supports multi-shipment splitting: if one email contains multiple
+     distinct shipment requests, each is extracted as a separate RFQ.
+
+2. Thread Re-extraction
+   Triggered when a customer replies to a follow-up.
+   - Claude re-runs extraction on the full email thread (original +
+     all replies concatenated).
+   - Progressively fills in previously missing fields.
+   - Updates the RFQ status automatically.
+
+3. Thread Brief Summarisation
+   Triggered on multi-message threads.
+   - Produces a bullet-point summary of the conversation: what was
+     requested, what information was supplied, what is still outstanding.
+
+4. HS Code Suggestion
+   - When a commodity is identified without an HS code, Claude suggests
+     the most likely 6–8 digit HS code based on the commodity description.
+   - Shown as a chip in the extraction panel; operator can accept or ignore.
+
+5. AI Quote Generation
+   - Given an RFQ, Claude searches the rate database, selects the best
+     carrier/rate, applies surcharges, and builds a complete quote.
+
+6. Rate-Reply Parsing
+   - When a partner shipping line sends a rate email back, Claude parses
+     it and extracts individual rates (route, container size, price,
+     validity) for review and saving to the database.
+
+────────────────────────────────────────────────────────────────
+EMAIL INBOX MONITORING
+────────────────────────────────────────────────────────────────
+
+- Gmail integration (live, active):
+    Operators add Gmail accounts via the Inboxes modal.
+    Each account is polled via IMAP on demand (sync button).
+    New emails are deduplicated by message UID.
+    Ingested emails trigger Claude extraction immediately.
+    Outbound replies sent via Gmail SMTP.
+
+- Email thread detection:
+    Replies are matched to the original RFQ by In-Reply-To /
+    References message headers. Matched replies trigger thread
+    re-extraction rather than creating a new RFQ.
+
+- Inbox label:
+    Each email shows which account/inbox it arrived in.
+
+────────────────────────────────────────────────────────────────
+WHATSAPP INTEGRATION (WATI) — built, pending credentials
+────────────────────────────────────────────────────────────────
+
+Infrastructure is complete; activation requires WATI API credentials.
+
+- Inbound webhook (POST /api/wati/webhook):
+    Receives incoming WhatsApp messages from WATI.
+    Supports two WATI payload shapes (standard and nested contacts).
+    Threading: if the sender's phone number matches an existing open
+    RFQ, the message is treated as a customer reply and triggers thread
+    re-extraction. New contacts create a new RFQ.
+    Non-freight messages (greetings, short texts) are filtered out by
+    the same Claude freight-detection step used for email.
+
+- Outbound send (POST /api/wati/send):
+    Sends a free-form WhatsApp message to a customer phone number via
+    WATI (valid within the 24-hour session window).
+
+- Status check (GET /api/wati/status):
+    Pings WATI contacts API to confirm credentials are valid.
+    Result shown as the WA pill in the inbox header.
+
+- UI indicators:
+    WATI status pill (grey = offline, green = live).
+    Green WA circle badge on each WhatsApp inbox item.
+    Phone number shown instead of email in inbox item and compose tray.
+    Compose tray for WhatsApp items: From/CC fields hidden; To field
+    shows phone number in green; send routes to /api/wati/send.
+
+────────────────────────────────────────────────────────────────
+DATABASE (live PostgreSQL)
+────────────────────────────────────────────────────────────────
+
+emails table:
+  uid (unique)        — deduplication key (Gmail UID or WATI message ID)
+  fromName            — sender display name
+  fromEmail           — sender email address (or WhatsApp pseudonym)
+  subject             — email subject
+  body                — full email plain text
+  receivedAt          — timestamp
+  emailType           — customer-rfq | internal-rfq | rate-reply | outbound
+  messageId           — RFC 2822 Message-ID (for thread matching)
+  cc                  — CC recipients
+  source              — "email" or "whatsapp"
+  whatsappPhone       — sender phone number (WhatsApp only)
+
+rfqs table:
+  emailId (FK→emails)
+  ref                 — auto-generated reference (e.g. RFQ-2604-0041)
+  emailType           — mirrors email.emailType
+  status              — new | info_needed | ready | replied | archived
+  fields (JSONB)      — array of {k, v, ok} extracted field objects
+  missingFields (JSONB) — array of missing field names
+  followUpDraft       — AI-generated follow-up email draft text
+  notes               — operator-entered free-text notes
+
+────────────────────────────────────────────────────────────────
+API ENDPOINTS
+────────────────────────────────────────────────────────────────
+
+RFQ endpoints:
+  GET    /api/rfqs                   List all RFQs (with email data)
+  GET    /api/rfqs/:id               Single RFQ
+  PATCH  /api/rfqs/:id               Update status, followUpDraft, notes
+  POST   /api/rfq/ingest             Save email + run Claude extraction
+                                     + create/update RFQ
+  POST   /api/rfq/extract            Extract fields only (no persistence)
+  POST   /api/rfq/seed               Seed 10 demo RFQs (idempotent)
+  POST   /api/rfqs/:id/send-followup Send follow-up email via Gmail SMTP
+
+Gmail endpoints:
+  POST   /api/gmail/sync             Sync all configured Gmail inboxes
+  GET    /api/email-accounts         List configured email accounts
+
+WATI / WhatsApp endpoints:
+  POST   /api/wati/webhook           Receive inbound WhatsApp messages
+  GET    /api/wati/status            Check WATI connection status
+  POST   /api/wati/send              Send a WhatsApp message
+
+AI proxy:
+  POST   /api/claude                 Claude Sonnet proxy (model locked)
+
+────────────────────────────────────────────────────────────────
+WHAT IS NOT IN MVP 1 (known gaps / future work)
+────────────────────────────────────────────────────────────────
+
+- No user login / per-user accounts or roles
+- No Microsoft 365 / Outlook integration (email only via Gmail)
+- WhatsApp template messages not yet supported (only session replies)
+- No automated / scheduled email polling (sync is manual, on-demand)
+- No mobile UI (desktop browser only)
+- No client-facing portal or quote PDF delivery
+- No live FX rate feed (FX rate entered manually in quote builder)
+- No Quickbooks / accounting system integration (UI placeholder only)
+- No notifications or alerts (e.g. email to ops team on new RFQ)
+- No audit log of operator actions
+- CMA CGM live rate search requires separate API key (not provisioned)
+
+════════════════════════════════════════════════════════════════
+OnePort 365 · MVP 1 Feature Description · May 2026
+════════════════════════════════════════════════════════════════
