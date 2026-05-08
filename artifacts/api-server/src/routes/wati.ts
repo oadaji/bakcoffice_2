@@ -91,27 +91,41 @@ router.post("/wati/webhook", async (req, res) => {
 
     const port = process.env.PORT ?? "8080";
 
-    // ── Threading: check for existing RFQ from this phone number ───────────────
+    // ── Threading: find the most recent OPEN RFQ from this phone number ────────
+    // "Open" = new | info_needed | ready  (not replied, archived, or unknown).
+    // A replied/archived conversation means the customer is starting a NEW enquiry.
+    const OPEN_STATUSES = ["new", "info_needed", "ready"] as const;
+
     const existingEmails = await db
-      .select({ id: emailsTable.id, messageId: emailsTable.messageId })
+      .select({ id: emailsTable.id })
       .from(emailsTable)
       .where(and(
         eq(emailsTable.whatsappPhone, waId),
         eq(emailsTable.source, "whatsapp"),
       ))
       .orderBy(desc(emailsTable.id))
-      .limit(1);
+      .limit(10); // fetch a few in case most recent are orphaned
 
     if (existingEmails.length) {
-      // Look up the RFQ for the most recent WhatsApp email from this phone
-      const parentEmailId = existingEmails[0].id;
-      const rfqRows = await db
-        .select({ rfqId: rfqsTable.id })
-        .from(rfqsTable)
-        .where(eq(rfqsTable.emailId, parentEmailId));
+      // Walk from newest to oldest, find the first RFQ that is still open
+      let openRfqId: number | null = null;
+      for (const em of existingEmails) {
+        const rfqRows = await db
+          .select({ rfqId: rfqsTable.id, status: rfqsTable.status })
+          .from(rfqsTable)
+          .where(eq(rfqsTable.emailId, em.id));
 
-      if (rfqRows.length) {
-        const rfqId = rfqRows[0].rfqId;
+        const openRow = rfqRows.find(r =>
+          (OPEN_STATUSES as readonly string[]).includes(r.status ?? "")
+        );
+        if (openRow) {
+          openRfqId = openRow.rfqId;
+          break;
+        }
+      }
+
+      if (openRfqId !== null) {
+        const rfqId = openRfqId;
         const replyResp = await fetch(`http://localhost:${port}/api/rfqs/${rfqId}/ingest-reply`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -122,6 +136,8 @@ router.post("/wati/webhook", async (req, res) => {
             body: textBody,
             receivedAt,
             messageId: wamid,
+            source: "whatsapp",
+            whatsappPhone: waId,
           }),
         });
         if (replyResp.ok) {
@@ -134,6 +150,8 @@ router.post("/wati/webhook", async (req, res) => {
         }
         return;
       }
+      // No open RFQ found — fall through to create a new one
+      req.log.info({ waId }, "WATI: existing RFQs all closed — treating as new enquiry");
     }
 
     // ── New contact: ingest as a new RFQ ───────────────────────────────────────

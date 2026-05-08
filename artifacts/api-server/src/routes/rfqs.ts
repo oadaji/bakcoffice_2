@@ -248,13 +248,15 @@ router.post("/rfqs/:id/send-followup", async (req, res) => {
 router.post("/rfqs/:id/ingest-reply", async (req, res) => {
   try {
     const rfqId = parseInt(req.params.id, 10);
-    const { uid, fromName, fromEmail, body, receivedAt, messageId } = req.body as {
+    const { uid, fromName, fromEmail, body, receivedAt, messageId, source, whatsappPhone } = req.body as {
       uid: string;
       fromName?: string;
       fromEmail: string;
       body: string;
       receivedAt?: string;
       messageId?: string;
+      source?: string;
+      whatsappPhone?: string;
     };
 
     // Load the parent RFQ + its source email
@@ -294,6 +296,8 @@ router.post("/rfqs/:id/ingest-reply", async (req, res) => {
       messageId: messageId ?? null,
       inReplyTo: parentEmail.messageId ?? null,
       parentEmailId: parentEmail.id,
+      source: source ?? parentEmail.source ?? "email",
+      whatsappPhone: whatsappPhone ?? parentEmail.whatsappPhone ?? null,
     });
 
     // Build combined thread context for Claude
