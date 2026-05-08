@@ -92,9 +92,11 @@ router.post("/wati/webhook", async (req, res) => {
     const port = process.env.PORT ?? "8080";
 
     // ── Threading: find the most recent OPEN RFQ from this phone number ────────
-    // "Open" = new | info_needed | ready  (not replied, archived, or unknown).
-    // A replied/archived conversation means the customer is starting a NEW enquiry.
-    const OPEN_STATUSES = ["new", "info_needed", "ready"] as const;
+    // "Open" = new | info_needed | ready | replied  (only "archived" is truly closed).
+    // A customer WhatsApp reply after we've sent a follow-up (status=replied) must
+    // continue the same RFQ thread — mirroring how email In-Reply-To threading works.
+    // Only "archived" means the conversation is dismissed; start a new RFQ then.
+    const OPEN_STATUSES = ["new", "info_needed", "ready", "replied"] as const;
 
     const existingEmails = await db
       .select({ id: emailsTable.id })
