@@ -18,3 +18,9 @@ id = "RzPuERxdRPskiTp3BlfzP"
 uri = "file://OnePort365_MVP1_Features.txt"
 type = "text"
 title = "OnePort 365 — MVP 1 Feature Description"
+
+[[outputs]]
+id = "L3fH55_4ru9479d_-2rq8"
+uri = "file://artifacts/oneport365/public/outlook_setup.txt"
+type = "text"
+title = "Outlook Setup Instructions"

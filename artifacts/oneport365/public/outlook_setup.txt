@@ -1,0 +1,79 @@
+HOW TO CONNECT A MICROSOFT / OUTLOOK INBOX
+OnePort 365 — Email Monitoring Setup
+==========================================
+
+SUPPORTED EMAIL ADDRESSES
+--------------------------
+  - @outlook.com
+  - @hotmail.com
+  - @live.com
+  - @msn.com
+
+  NOTE: Work or school Microsoft 365 accounts (e.g. @yourcompany.com)
+  may NOT work if your IT admin has disabled basic IMAP authentication.
+  Those accounts require OAuth — contact your admin or use a personal
+  Microsoft account instead.
+
+
+STEP 1 — ENABLE TWO-STEP VERIFICATION
+---------------------------------------
+  1. Go to: https://account.microsoft.com
+  2. Sign in with your Microsoft account
+  3. Click Security (top navigation)
+  4. Click Advanced security options
+  5. Under "Two-step verification", click Turn on
+  6. Follow the prompts to set it up
+
+
+STEP 2 — CREATE AN APP PASSWORD
+---------------------------------
+  1. Still in Advanced security options
+  2. Scroll down to "App passwords"
+  3. Click Create a new app password
+  4. Microsoft will generate a password — it looks like: abcd efgh ijkl mnop
+  5. Copy it (you won't see it again)
+
+  NOTE: App Passwords only appear AFTER two-step verification is enabled.
+  If you don't see the App passwords section, complete Step 1 first.
+
+
+STEP 3 — CONNECT IN ONEPORT 365
+---------------------------------
+  1. Open mvp1.html and log in
+  2. Click the email icon in the top navigation
+  3. Click "Email Monitoring" or the settings/inbox icon
+  4. In the modal, click the Outlook button
+  5. Enter your full Microsoft email address
+  6. Paste the App Password from Step 2
+  7. Click "Test connection"
+     - If you see "Connected — X unread in INBOX", you're good to go
+     - If authentication fails, double-check the App Password and try again
+  8. Click "Connect inbox" to save
+
+
+TROUBLESHOOTING
+---------------
+  "Authentication failed"
+    → Make sure you used the App Password, NOT your regular account password
+    → App Passwords have no spaces — paste without spaces if copied with them
+    → Confirm two-step verification is active on your account
+
+  "Connection failed"
+    → Check that IMAP is enabled in your Outlook settings:
+      outlook.live.com → Settings → Mail → Sync email → POP and IMAP
+      Make sure "Let devices and apps use POP" or IMAP is turned on
+
+  "App passwords section not visible"
+    → Two-step verification is not yet enabled — complete Step 1 first
+
+  Work/school account not connecting
+    → Basic auth (IMAP with password) is likely blocked by your IT admin
+    → Use a personal @outlook.com or @hotmail.com account instead
+
+
+TECHNICAL DETAILS (for IT reference)
+--------------------------------------
+  Protocol : IMAP over SSL/TLS
+  Host     : imap.outlook.com
+  Port     : 993
+  Auth     : Username + App Password (basic auth)
