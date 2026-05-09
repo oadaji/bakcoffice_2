@@ -3946,13 +3946,27 @@ function switchChannel(ch) {
   ['st1e','st1w'].forEach(id => { const t = document.getElementById(id); if(t) t.classList.remove('active'); });
   const activeTab = document.getElementById(ch === 'whatsapp' ? 'st1w' : 'st1e');
   if(activeTab) activeTab.classList.add('active');
-  // Show screen 1 if not already active, otherwise just re-render the inbox
+  // Clear selection and hide middle panels immediately
+  currentRfqId = null;
+  document.querySelectorAll('.email-item').forEach(e => e.classList.remove('sel'));
+  const colEmail = document.querySelector('.col-email:not(#col-wa-chat)');
+  const colWa = document.getElementById('col-wa-chat');
+  if (colEmail) colEmail.style.display = 'none';
+  if (colWa)    colWa.style.display    = 'none';
+  // Show screen 1 if not already active, otherwise re-render
   const s1 = document.getElementById('s1');
   if(s1 && !s1.classList.contains('active')) {
     showScreen(1);
   } else {
-    currentRfqId = null;
     renderInboxList();
+    // Auto-select first item in the new channel
+    setTimeout(() => {
+      const first = document.querySelector('.email-item');
+      if (first) {
+        const id = parseInt(first.dataset.rfqId, 10);
+        if (id) selEmail(id, first);
+      }
+    }, 50);
   }
   // Toggle inbox header panels
   const hdEmail = document.getElementById('inbox-hd-email');
@@ -4971,6 +4985,27 @@ function bodyToHtml(str) {
   return escHtml(str).replace(/\n/g,'<br>');
 }
 
+async function seedWaConversations(btn) {
+  if (btn) { btn.disabled = true; btn.textContent = 'Loading…'; }
+  try {
+    const res = await fetch('/api/rfq/seed-wa', { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Seed failed');
+    await loadInbox();
+    // Auto-select first WA item
+    setTimeout(() => {
+      const first = document.querySelector('.email-item');
+      if (first) {
+        const id = parseInt(first.dataset.rfqId, 10);
+        if (id) selEmail(id, first);
+      }
+    }, 60);
+  } catch(e) {
+    if (btn) { btn.disabled = false; btn.textContent = 'Load demo conversations'; }
+    alert('Could not load demo data: ' + e.message);
+  }
+}
+
 async function checkWatiStatus() {
   try {
     const res = await fetch('/api/wati/status');
@@ -5168,10 +5203,22 @@ function renderInboxList() {
     }
   }
 
-  const emptyMsg = currentChannel === 'whatsapp'
-    ? 'No WhatsApp conversations yet'
-    : 'No emails found';
-  document.getElementById('inbox-list').innerHTML = html || `<div style="padding:16px;color:var(--text3);font-size:11px">${emptyMsg}</div>`;
+  if (!html) {
+    if (currentChannel === 'whatsapp') {
+      document.getElementById('inbox-list').innerHTML = `
+        <div style="padding:24px 16px;text-align:center">
+          <div style="font-size:28px;margin-bottom:8px">💬</div>
+          <div style="color:var(--text3);font-size:12px;margin-bottom:14px">No WhatsApp conversations yet</div>
+          <button onclick="seedWaConversations(this)" style="background:#25D366;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:600;cursor:pointer;width:100%">
+            Load demo conversations
+          </button>
+        </div>`;
+    } else {
+      document.getElementById('inbox-list').innerHTML = `<div style="padding:16px;color:var(--text3);font-size:11px">No emails found</div>`;
+    }
+  } else {
+    document.getElementById('inbox-list').innerHTML = html;
+  }
 }
 
 

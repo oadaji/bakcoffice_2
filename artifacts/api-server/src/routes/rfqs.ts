@@ -859,6 +859,17 @@ router.post("/rfq/seed", async (req, res) => {
   }
 });
 
+// POST /api/rfq/seed-wa — insert WhatsApp demo conversations (idempotent)
+router.post("/rfq/seed-wa", async (req, res) => {
+  try {
+    const seeded = await seedWaData();
+    res.json({ ok: true, seeded });
+  } catch (err) {
+    req.log.error({ err }, "Failed to seed WA demo data");
+    res.status(500).json({ error: "Failed to seed WA data" });
+  }
+});
+
 // ── helpers ─────────────────────────────────────────────────────────────────
 
 function generateRef(): string {
@@ -1009,6 +1020,154 @@ Furniture & Wood: 9403.30=Wooden office furniture, 9401.61=Upholstered wooden se
       combinedDraft: null,
     };
   }
+}
+
+async function seedWaData(): Promise<number> {
+  const WA_DEMOS = [
+    {
+      uid: "wa-demo-amaka-obi-2604",
+      fromName: "Amaka Obi",
+      whatsappPhone: "2348012345678",
+      receivedAt: new Date("2026-04-26T09:44:00Z"),
+      body: "Hello good morning\npls I need rate for china to lagos 2 containers\nmy goods are in guangzhou, ceramic tiles\ni want to use 40ft, when can you give me price?",
+      fields: [
+        { k: "Contact", v: "Amaka Obi", ok: true },
+        { k: "Phone", v: "+234 801 234 5678", ok: true },
+        { k: "POL", v: "Guangzhou, China (CNGUA)", ok: true },
+        { k: "POD", v: "Lagos, Nigeria (NGAPP)", ok: true },
+        { k: "Commodity", v: "Ceramic tiles", ok: true },
+        { k: "Container", v: "40FT × 2", ok: true },
+        { k: "Cargo class", v: "GC", ok: true },
+        { k: "Incoterm", v: "not specified", ok: false },
+      ],
+      missing: ["Incoterm — FOB, EXW or CIF?"],
+      draft: "Good morning! We received your request, pulling out the details now.\n\nTo confirm your quote for ceramic tiles (Guangzhou → Lagos, 2×40FT), could you let us know your preferred Incoterm — FOB, EXW or CIF?\n\nWe will send you rates as soon as you confirm.\n\nBest regards,\nOnePort 365",
+      status: "info_needed",
+    },
+    {
+      uid: "wa-demo-bello-musa-2604",
+      fromName: "Bello Musa",
+      whatsappPhone: "2348023456789",
+      receivedAt: new Date("2026-04-26T09:41:00Z"),
+      body: "Good morning, how much to ship from China to lagos?\nI have electronics goods, laptops and phones\nAbout 1 container 20ft",
+      fields: [
+        { k: "Contact", v: "Bello Musa", ok: true },
+        { k: "Phone", v: "+234 802 345 6789", ok: true },
+        { k: "POL", v: "China (port not specified)", ok: false },
+        { k: "POD", v: "Lagos, Nigeria (NGAPP)", ok: true },
+        { k: "Commodity", v: "Electronics — laptops and phones", ok: true },
+        { k: "Container", v: "20FT × 1", ok: true },
+        { k: "Cargo class", v: "GC", ok: true },
+        { k: "Incoterm", v: "not specified", ok: false },
+      ],
+      missing: ["Which city in China are the goods? (e.g. Shenzhen, Guangzhou, Shanghai)", "Incoterm — FOB, EXW or CIF?"],
+      draft: "Good morning Bello!\n\nThank you for your enquiry. To get you accurate rates for 1×20FT of electronics (China → Lagos), we need:\n\n1. Which city/port in China are the goods? (e.g. Shenzhen, Guangzhou, Shanghai)\n2. Incoterm — FOB, EXW or CIF?\n\nKindly confirm and we will revert with rates shortly.\n\nOnePort 365",
+      status: "info_needed",
+    },
+    {
+      uid: "wa-demo-fatima-hassan-2604",
+      fromName: "Fatima Al-Hassan",
+      whatsappPhone: "2348034567890",
+      receivedAt: new Date("2026-04-26T09:28:00Z"),
+      body: "Hello OnePort team\nI want to ship my goods from Dubai to Lagos\nCommodity: cosmetics and beauty products\n2 x 20ft FCL\nIncoterm: FOB\nReady date: 10 May 2026\nPls send rates urgently",
+      fields: [
+        { k: "Contact", v: "Fatima Al-Hassan", ok: true },
+        { k: "Phone", v: "+234 803 456 7890", ok: true },
+        { k: "POL", v: "Dubai, UAE (AEJEA)", ok: true },
+        { k: "POD", v: "Lagos, Nigeria (NGAPP)", ok: true },
+        { k: "Commodity", v: "Cosmetics and beauty products", ok: true },
+        { k: "Container", v: "20FT × 2", ok: true },
+        { k: "Cargo class", v: "GC", ok: true },
+        { k: "Incoterm", v: "FOB", ok: true },
+        { k: "Ready date", v: "10 May 2026", ok: true },
+      ],
+      missing: [],
+      draft: null,
+      status: "ready",
+    },
+    {
+      uid: "wa-demo-chukwuemeka-eze-2604",
+      fromName: "Chukwuemeka Eze",
+      whatsappPhone: "2348045678901",
+      receivedAt: new Date("2026-04-25T14:22:00Z"),
+      body: "good morning\nhow much to ship from china to apapa?\ni want FCL rate\ni have building materials, tiles and sanitary ware\nneed 2 containers 40hc",
+      fields: [
+        { k: "Contact", v: "Chukwuemeka Eze", ok: true },
+        { k: "Phone", v: "+234 804 567 8901", ok: true },
+        { k: "POL", v: "China (port not specified)", ok: false },
+        { k: "POD", v: "Apapa, Lagos (NGAPP)", ok: true },
+        { k: "Commodity", v: "Building materials — tiles and sanitary ware", ok: true },
+        { k: "Container", v: "40HC × 2", ok: true },
+        { k: "Cargo class", v: "GC", ok: true },
+        { k: "Incoterm", v: "not specified", ok: false },
+      ],
+      missing: ["Which city in China? (Guangzhou, Foshan, Shanghai?)", "Incoterm — FOB, EXW or CIF?"],
+      draft: "Good morning Chukwuemeka!\n\nFor 2×40HC of building materials (China → Apapa), we need:\n\n1. Loading city in China — Guangzhou, Foshan or another port?\n2. Incoterm — FOB, EXW or CIF?\n\nKindly confirm and we will send rates right away.\n\nOnePort 365",
+      status: "info_needed",
+    },
+    {
+      uid: "wa-demo-ngozi-traders-2604",
+      fromName: "Ngozi Traders",
+      whatsappPhone: "2348056789012",
+      receivedAt: new Date("2026-04-25T11:05:00Z"),
+      body: "Hello\nI want to import goods from UK to Lagos\nFashion items, bags and shoes\nAbout 5 CBM\nHow much will it cost?\nI need door to door service",
+      fields: [
+        { k: "Contact", v: "Ngozi Traders", ok: true },
+        { k: "Phone", v: "+234 805 678 9012", ok: true },
+        { k: "POL", v: "UK (city not specified)", ok: false },
+        { k: "POD", v: "Lagos, Nigeria (door delivery)", ok: true },
+        { k: "Commodity", v: "Fashion items — bags and shoes", ok: true },
+        { k: "Volume", v: "5 CBM", ok: true },
+        { k: "Container", v: "LCL", ok: true },
+        { k: "Cargo class", v: "GC", ok: true },
+        { k: "Incoterm", v: "DDP — door to door", ok: true },
+      ],
+      missing: ["Which city in UK are the goods? (London, Birmingham, Manchester?)"],
+      draft: "Hello!\n\nThank you for reaching out to OnePort 365.\n\nFor 5 CBM of fashion goods (UK → Lagos, door to door), we just need:\n\n· Which city in the UK are the goods located?\n\nOnce confirmed, we will send you a full DDP quote.\n\nOnePort 365",
+      status: "info_needed",
+    },
+  ];
+
+  let count = 0;
+
+  for (const demo of WA_DEMOS) {
+    const existing = await db
+      .select()
+      .from(emailsTable)
+      .where(eq(emailsTable.uid, demo.uid));
+
+    if (existing.length) continue;
+
+    const [email] = await db
+      .insert(emailsTable)
+      .values({
+        uid: demo.uid,
+        fromName: demo.fromName,
+        fromEmail: `${demo.whatsappPhone}@whatsapp`,
+        subject: `WhatsApp from ${demo.fromName}`,
+        body: demo.body,
+        emailType: "customer-rfq",
+        receivedAt: demo.receivedAt,
+        source: "whatsapp",
+        whatsappPhone: demo.whatsappPhone,
+      })
+      .returning();
+
+    const refNum = generateRef();
+    await db.insert(rfqsTable).values({
+      emailId: email.id,
+      ref: refNum,
+      emailType: "customer-rfq",
+      status: demo.status,
+      fields: demo.fields,
+      missingFields: demo.missing,
+      followUpDraft: demo.draft,
+    });
+
+    count++;
+  }
+
+  return count;
 }
 
 async function seedDemoData(): Promise<number> {
