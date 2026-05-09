@@ -625,10 +625,16 @@ tr.trow.sel td{background:#eef6e6}
           </div>
         </div>
         <div style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:8px" id="wc-messages"></div>
-        <div style="padding:10px 14px;background:#f0f2f0;border-top:1px solid #d0d8d0;display:flex;gap:8px;align-items:flex-end;flex-shrink:0">
-          <div style="flex:1;background:#fff;border-radius:20px;padding:8px 14px;font-size:12px;color:#8a9e8a;border:1px solid #e4e8e4;font-family:Inter,sans-serif">Type a WhatsApp reply…</div>
-          <button style="width:36px;height:36px;border-radius:50%;background:#25D366;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+        <div style="padding:10px 14px;background:#f0f2f0;border-top:1px solid #d0d8d0;display:flex;flex-direction:column;gap:8px;flex-shrink:0">
+          <div style="display:flex;gap:8px;align-items:center">
+            <button onclick="openWaTemplates()" style="flex:1;background:#fff;border-radius:20px;padding:9px 16px;font-size:12px;color:#8a9e8a;border:1px solid #e4e8e4;font-family:Inter,sans-serif;text-align:left;cursor:pointer;transition:border-color .15s" onmouseover="this.style.borderColor='#25D366'" onmouseout="this.style.borderColor='#e4e8e4'">Use a template to reply…</button>
+            <button onclick="openWaTemplates()" style="width:36px;height:36px;border-radius:50%;background:#25D366;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0" title="Send WhatsApp template">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+            </button>
+          </div>
+          <button onclick="openWaTemplates()" style="display:inline-flex;align-items:center;gap:6px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:20px;padding:5px 14px;cursor:pointer;font-size:11px;font-weight:600;color:#166534;font-family:Inter,sans-serif;align-self:flex-start" onmouseover="this.style.background='#dcfce7'" onmouseout="this.style.background='#f0fdf4'">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.126 1.535 5.857L.057 23.5l5.797-1.522C7.53 23.012 9.71 23.5 12 23.5c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.5c-2.09 0-4.035-.548-5.716-1.507l-.41-.243-4.23 1.11 1.13-4.13-.267-.424A9.467 9.467 0 012.5 12C2.5 6.701 6.701 2.5 12 2.5S21.5 6.701 21.5 12 17.299 21.5 12 21.5z"/></svg>
+            Use Template
           </button>
         </div>
       </div>
@@ -3897,14 +3903,21 @@ function renderWaChat(r) {
   const statusChip = document.getElementById('wc-status-chip');
   const stMap = { new:'new', info_needed:'⚠ info needed', ready:'✓ ready', replied:'✓ replied', archived:'◻ archived' };
   if (statusChip) statusChip.textContent = stMap[r.status] || r.status || '';
-  // Render body as an inbound message bubble
+  // Render body as an inbound message bubble + any existing reply as outbound
   const msgs = document.getElementById('wc-messages');
   if (!msgs) return;
   const body = (e.body || '').trim();
   const timeStr = e.receivedAt ? fmtDateTime(e.receivedAt) : '';
-  msgs.innerHTML = `<div style="display:flex;justify-content:flex-start">
+  let bubblesHtml = `<div style="display:flex;justify-content:flex-start">
     <div style="max-width:80%;background:#fff;border-radius:0 12px 12px 12px;padding:10px 12px;font-size:12px;color:#1a2e1a;line-height:1.65;box-shadow:0 1px 2px rgba(0,0,0,.1);word-break:break-word;white-space:pre-wrap">${escHtml(body)}<div style="text-align:right;font-size:10px;color:#8a9e8a;margin-top:4px">${escHtml(timeStr)} ✓</div></div>
   </div>`;
+  // If a reply was already sent, show it as a green outbound bubble
+  if (r.status === 'replied' && r.followUpDraft) {
+    bubblesHtml += `<div style="display:flex;justify-content:flex-end">
+      <div style="max-width:80%;background:#dcfce7;border-radius:12px 0 12px 12px;padding:10px 12px;font-size:12px;color:#1a2e1a;line-height:1.65;box-shadow:0 1px 2px rgba(0,0,0,.1);word-break:break-word;white-space:pre-wrap">${escHtml(r.followUpDraft)}<div style="text-align:right;font-size:10px;color:#25D366;margin-top:4px">Sent ✓✓</div></div>
+    </div>`;
+  }
+  msgs.innerHTML = bubblesHtml;
   msgs.scrollTop = msgs.scrollHeight;
 }
 
@@ -7733,15 +7746,19 @@ async function sendWaTemplate() {
       r.followUpDraft = rendered;
     }
     closeWaTemplates();
-    // Close compose tray and update inbox
-    const el = document.getElementById('ep-timer');
-    if (el) { el.textContent = '✓ Sent via WhatsApp'; el.className = 'ep-timer sent'; }
-    const draftEl = document.getElementById('ep-draft');
-    if (draftEl) { draftEl.value = rendered; draftEl.readOnly = true; draftEl.style.background = '#f8faf8'; draftEl.style.color = 'var(--text3)'; }
-    const sendNowBtn = document.getElementById('compose-send-btn');
-    if (sendNowBtn) sendNowBtn.style.display = 'none';
-    const fw = document.getElementById('ep-followup-wrap');
-    if (fw) fw.style.display = 'block';
+    // Show sent message as green outbound bubble in WA chat panel
+    const wcMsgs = document.getElementById('wc-messages');
+    if (wcMsgs) {
+      const timeStr = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+      const bubble = document.createElement('div');
+      bubble.style.cssText = 'display:flex;justify-content:flex-end';
+      bubble.innerHTML = `<div style="max-width:80%;background:#dcfce7;border-radius:12px 0 12px 12px;padding:10px 12px;font-size:12px;color:#1a2e1a;line-height:1.65;box-shadow:0 1px 2px rgba(0,0,0,.1);word-break:break-word;white-space:pre-wrap">${escHtml(rendered)}<div style="text-align:right;font-size:10px;color:#25D366;margin-top:4px">${escHtml(timeStr)} ✓✓</div></div>`;
+      wcMsgs.appendChild(bubble);
+      wcMsgs.scrollTop = wcMsgs.scrollHeight;
+    }
+    // Update status chip in WA header
+    const wcChip = document.getElementById('wc-status-chip');
+    if (wcChip) wcChip.textContent = '✓ replied';
     renderInboxList();
   } catch (err) {
     alert('Could not send template: ' + err.message);
