@@ -373,10 +373,9 @@ tr.trow.sel td{background:#eef6e6}
 
 <!-- PASSWORD GATE -->
 <div id="pw-gate">
+  <div style="display:flex;flex-direction:column;align-items:center;gap:28px">
+    <img src="/oneport365_logo.png" alt="OnePort 365" style="height:40px;width:auto;display:block">
   <div class="pw-card">
-    <div class="pw-logo">
-      <img src="/oneport365_logo_dark.png" alt="OnePort 365" style="height:44px;width:auto;display:block">
-    </div>
     <div class="pw-heading">Demo Access</div>
     <div class="pw-sub">Enter the password to continue</div>
     <form onsubmit="checkPassword();return false;">
@@ -385,6 +384,7 @@ tr.trow.sel td{background:#eef6e6}
       <button class="pw-btn" type="submit">Enter</button>
     </form>
     <div class="pw-badge">OnePort 365 · RFQ Intake Demo</div>
+  </div>
   </div>
 </div>
 <script>
@@ -1886,7 +1886,7 @@ tr.trow.sel td{background:#eef6e6}
                 <!-- QUOTE HEADER -->
                 <div style="padding:24px 28px 18px;border-bottom:1px solid #f0f0f0">
                   <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px">
-                    <img src="/oneport365_logo_dark.png" alt="OnePort 365" style="height:52px;width:auto;object-fit:contain;display:block">
+                    <img src="/oneport365_logo.png" alt="OnePort 365" style="height:52px;width:auto;object-fit:contain;display:block;filter:brightness(0)">
                     <div style="text-align:right">
                       <div id="qp-num" style="font-size:14px;font-weight:700;color:var(--accent-dark)">QUOTE-2604-0040</div>
                       <div id="qp-date" style="font-size:10px;color:#8a9e8a;margin-top:2px"></div>
