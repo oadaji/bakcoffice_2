@@ -515,6 +515,18 @@ tr.trow.sel td{background:#eef6e6}
           <!-- Hidden pill kept for JS compat -->
           <div id="wati-status-pill" style="display:none"><span id="wati-status-text">WA</span></div>
         </div>
+        <!-- Category filter bar -->
+        <div id="inbox-filter-bar" style="padding:7px 10px;border-bottom:1px solid var(--border);background:var(--surface);display:flex;align-items:center;gap:6px">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text3);flex-shrink:0"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+          <select id="inbox-category-select" onchange="setCategory(this.value)" style="flex:1;border:none;background:transparent;font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;outline:none;appearance:none;-webkit-appearance:none;padding-right:14px">
+            <option value="all">All messages</option>
+            <option value="rfq">RFQ Intake</option>
+            <option value="quoting">Quoting</option>
+            <option value="invoices">Invoices</option>
+            <option value="operations">Operations</option>
+          </select>
+          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text3);flex-shrink:0;pointer-events:none"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
         <div class="inbox-scroll">
 
           <div id="inbox-list"><div style="padding:24px;text-align:center;color:var(--text3);font-size:12px">Loading inbox…</div></div>
@@ -3940,13 +3952,35 @@ function renderWaChat(r) {
   msgs.scrollTop = msgs.scrollHeight;
 }
 
+function setCategory(cat) {
+  currentCategory = cat;
+  const sel = document.getElementById('inbox-category-select');
+  if (sel && sel.value !== cat) sel.value = cat;
+  // Reset selection and re-render
+  currentRfqId = null;
+  document.querySelectorAll('.email-item').forEach(e => e.classList.remove('sel'));
+  const colEmail = document.querySelector('.col-email:not(#col-wa-chat)');
+  const colWa = document.getElementById('col-wa-chat');
+  if (colEmail) colEmail.style.display = 'none';
+  if (colWa)    colWa.style.display    = 'none';
+  renderInboxList();
+  // Auto-select first visible item
+  setTimeout(() => {
+    const first = document.querySelector('.email-item');
+    if (first) { const id = parseInt(first.dataset.rfqId, 10); if (id) selEmail(id, first); }
+  }, 50);
+}
+
 function switchChannel(ch) {
   currentChannel = ch;
   // Update active tab states
   ['st1e','st1w'].forEach(id => { const t = document.getElementById(id); if(t) t.classList.remove('active'); });
   const activeTab = document.getElementById(ch === 'whatsapp' ? 'st1w' : 'st1e');
   if(activeTab) activeTab.classList.add('active');
-  // Clear selection and hide middle panels immediately
+  // Reset category and clear selection
+  currentCategory = 'all';
+  const catSel = document.getElementById('inbox-category-select');
+  if (catSel) catSel.value = 'all';
   currentRfqId = null;
   document.querySelectorAll('.email-item').forEach(e => e.classList.remove('sel'));
   const colEmail = document.querySelector('.col-email:not(#col-wa-chat)');
@@ -4963,7 +4997,17 @@ function waCancel() {
 // ── API-driven inbox data ───────────────────────────────────────────────────
 let rfqData = [];             // fetched from /api/rfqs
 let currentRfqId = null;      // selected RFQ db id
-let currentChannel = 'email'; // 'email' | 'whatsapp' — active inbox channel tab
+let currentChannel  = 'email';  // 'email' | 'whatsapp' — active inbox channel tab
+let currentCategory = 'all';   // 'all' | 'rfq' | 'quoting' | 'invoices' | 'operations'
+
+// emailType values that belong to each category
+const CATEGORY_TYPES = {
+  all:        null,  // no filter
+  rfq:        ['customer-rfq', 'internal-rfq'],
+  quoting:    ['rate-reply', 'outbound'],
+  invoices:   ['invoice-payable', 'invoice-receivable'],
+  operations: ['operations'],
+};
 let currentGroupRfqs = [];    // sibling RFQs for the selected group (empty for singles)
 let expandedDealGroups = new Set(); // groupIds expanded in the Deals table
 
@@ -5127,9 +5171,30 @@ function renderInboxList() {
     ? allUniqueCustomers.filter(r => r.email?.source === 'whatsapp')
     : allUniqueCustomers.filter(r => r.email?.source !== 'whatsapp');
 
+  // Category visibility flags
+  const cat = currentCategory;
+  const showRfq     = (cat === 'all' || cat === 'rfq');
+  const showQuoting = (cat === 'all' || cat === 'quoting');
+  const showFuture  = (cat === 'invoices' || cat === 'operations');
+
   let html = '';
 
-  if (uniqueCustomers.length) {
+  // Future categories: show informational empty state
+  if (showFuture) {
+    const catLabel = cat === 'invoices' ? 'Invoices' : 'Operations updates';
+    const catDesc  = cat === 'invoices'
+      ? 'Payable and receivable invoices will appear here once keyword rules are set up.'
+      : 'Shipment status updates and operations notifications will appear here once keyword rules are configured.';
+    document.getElementById('inbox-list').innerHTML = `
+      <div style="padding:28px 16px;text-align:center">
+        <div style="font-size:24px;margin-bottom:8px">${cat === 'invoices' ? '🧾' : '📦'}</div>
+        <div style="color:var(--text2);font-size:12px;font-weight:600;margin-bottom:6px">${catLabel}</div>
+        <div style="color:var(--text3);font-size:11px;line-height:1.6">${catDesc}</div>
+      </div>`;
+    return;
+  }
+
+  if (showRfq && uniqueCustomers.length) {
     const sectionLabel = currentChannel === 'whatsapp' ? 'RFQ Conversations' : 'Customer requests';
     html += `<div class="inbox-section-lbl" style="border-top:none">${sectionLabel}</div>`;
     uniqueCustomers.forEach(r => {
@@ -5174,7 +5239,7 @@ function renderInboxList() {
     });
   }
 
-  if (currentChannel === 'email') {
+  if (currentChannel === 'email' && showQuoting) {
     if (partners.length) {
       html += `<div class="inbox-section-lbl">Partner rate replies</div>`;
       partners.forEach(r => {
