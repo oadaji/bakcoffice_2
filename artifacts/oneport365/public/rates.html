@@ -13,8 +13,8 @@ button{font-family:Inter,sans-serif;cursor:pointer}
 
 /* GATE */
 #gate{position:fixed;inset:0;background:#1C3829;display:flex;align-items:center;justify-content:center;z-index:1000}
+.gate-wrap{display:flex;flex-direction:column;align-items:center;gap:28px}
 .gate-box{background:#fff;border-radius:16px;padding:36px 40px;width:360px;display:flex;flex-direction:column;align-items:center;gap:16px}
-.gate-logo{width:48px;height:48px;background:#7AB648;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:#fff}
 .gate-title{font-size:18px;font-weight:700;color:#1a2e1a}
 .gate-sub{font-size:12px;color:#8a9e8a;text-align:center}
 .gate-input{width:100%;border:1.5px solid #e4e8e4;border-radius:8px;padding:11px 14px;font-size:14px;font-family:Inter,sans-serif;outline:none;transition:border-color .15s}
@@ -63,13 +63,13 @@ button{font-family:Inter,sans-serif;cursor:pointer}
 .btn-danger:hover{background:#fee2e2}
 
 /* FILTER BAR */
-.filter-bar{background:#fff;border:1px solid var(--border);border-radius:10px;padding:14px;display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap}
-.filter-group{display:flex;flex-direction:column;gap:4px;min-width:90px;flex:1}
-.filter-label{font-size:9px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em}
-.filter-input,.filter-select{border:1px solid var(--border2);border-radius:6px;padding:6px 8px;font-size:11px;font-family:Inter,sans-serif;color:var(--text);background:#fff;outline:none}
+.filter-bar{background:#fff;border:1px solid var(--border);border-radius:10px;padding:16px;display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap}
+.filter-group{display:flex;flex-direction:column;gap:5px;min-width:110px;flex:1}
+.filter-label{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em}
+.filter-input,.filter-select{border:1px solid var(--border2);border-radius:7px;padding:8px 10px;font-size:12px;font-family:Inter,sans-serif;color:var(--text);background:#fff;outline:none}
 .filter-input{width:100%}
 .filter-select{width:100%}
-.filter-input:focus,.filter-select:focus{border-color:var(--accent)}
+.filter-input:focus,.filter-select:focus{border-color:var(--accent);border-width:1.5px}
 
 /* TABLE CARD */
 .table-card{background:#fff;border:1px solid var(--border);border-radius:10px;overflow:hidden}
@@ -293,13 +293,15 @@ tr.row-expiring-soon td{background:#fffbeb}
 
 <!-- PASSWORD GATE -->
 <div id="gate" style="display:none">
-  <div class="gate-box">
-    <div class="gate-logo">O</div>
-    <div class="gate-title">OnePort <span style="color:#7AB648">365</span></div>
-    <div class="gate-sub">Rates Database · Enter password to continue</div>
-    <input class="gate-input" type="password" id="gate-pwd" placeholder="Password" onkeydown="if(event.key==='Enter')tryLogin()">
-    <div class="gate-err" id="gate-err"></div>
-    <button class="gate-btn" onclick="tryLogin()">Enter</button>
+  <div class="gate-wrap">
+    <img src="/oneport365_logo.png" alt="OnePort 365" style="height:40px;width:auto;display:block">
+    <div class="gate-box">
+      <div class="gate-title">Demo Access</div>
+      <div class="gate-sub">Rates Database · Enter password to continue</div>
+      <input class="gate-input" type="password" id="gate-pwd" placeholder="••••••••••" onkeydown="if(event.key==='Enter')tryLogin()">
+      <div class="gate-err" id="gate-err"></div>
+      <button class="gate-btn" onclick="tryLogin()">Enter</button>
+    </div>
   </div>
 </div>
 
@@ -312,7 +314,6 @@ tr.row-expiring-soon td{background:#fffbeb}
       <img src="/oneport365_logo.png" alt="OnePort 365" style="height:28px;width:auto;display:block">
     </div>
     <a class="nav-item" href="/mvp1.html">CRM</a>
-    <a class="nav-item" href="/mvp1.html">✉ RFQ</a>
     <a class="nav-item active" href="/rates.html">$ Rates</a>
     <a class="nav-item" href="/mvp1.html">📄 Quotes</a>
     <div class="nav-right">
