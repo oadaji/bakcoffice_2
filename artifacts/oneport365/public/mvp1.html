@@ -480,23 +480,40 @@ tr.trow.sel td{background:#eef6e6}
 
       <!-- COL 1: INBOX LIST -->
       <div class="col-inbox">
-        <div class="inbox-hd" style="flex-direction:column;align-items:flex-start;gap:7px;padding:10px 14px">
-          <span class="inbox-hd-title" style="white-space:nowrap">Email Inbox</span>
-          <div style="display:flex;align-items:center;gap:6px">
-            <div id="email-inbox-controls" style="display:flex;align-items:center;gap:6px">
-              <button onclick="openEmailAccounts()" title="Manage monitored inboxes" style="display:flex;align-items:center;gap:4px;padding:3px 9px;font-size:10px;font-weight:600;font-family:Inter,sans-serif;cursor:pointer;border-radius:20px;border:1px solid #d2d9e0;background:#fff;color:var(--text2);line-height:1.4;transition:background .15s" onmouseover="this.style.background='#f0f4f0'" onmouseout="this.style.background='#fff'">
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 7L2 7"/></svg>
-                <span id="monitored-count-badge">…</span>
-              </button>
-              <button id="gmail-sync-btn" onclick="syncGmail()" title="Sync all inboxes" style="display:flex;align-items:center;justify-content:center;width:26px;height:26px;padding:0;cursor:pointer;border-radius:50%;border:1px solid #d2d9e0;background:#fff;color:var(--text2);transition:background .15s;flex-shrink:0" onmouseover="this.style.background='#f0f4f0'" onmouseout="this.style.background='#fff'">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3"/></svg>
-              </button>
-            </div>
-            <div id="wati-status-pill" title="WhatsApp (WATI) connection status" style="display:none;align-items:center;gap:4px;padding:2px 7px;border-radius:20px;border:1px solid #d2d9e0;background:#fff;font-size:10px;font-weight:600;color:var(--text3);cursor:default">
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.126 1.535 5.857L.057 23.5l5.797-1.522C7.53 23.012 9.71 23.5 12 23.5c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.5c-2.09 0-4.035-.548-5.716-1.507l-.41-.243-4.23 1.11 1.13-4.13-.267-.424A9.467 9.467 0 012.5 12C2.5 6.701 6.701 2.5 12 2.5S21.5 6.701 21.5 12 17.299 21.5 12 21.5z"/></svg>
-              <span id="wati-status-text">WA</span>
+        <div class="inbox-hd" style="padding:0;overflow:hidden">
+          <!-- Email inbox header -->
+          <div id="inbox-hd-email" style="display:flex;flex-direction:column;align-items:flex-start;gap:7px;padding:10px 14px">
+            <span class="inbox-hd-title" style="white-space:nowrap">Email Inbox</span>
+            <div style="display:flex;align-items:center;gap:6px">
+              <div id="email-inbox-controls" style="display:flex;align-items:center;gap:6px">
+                <button onclick="openEmailAccounts()" title="Manage monitored inboxes" style="display:flex;align-items:center;gap:4px;padding:3px 9px;font-size:10px;font-weight:600;font-family:Inter,sans-serif;cursor:pointer;border-radius:20px;border:1px solid #d2d9e0;background:#fff;color:var(--text2);line-height:1.4;transition:background .15s" onmouseover="this.style.background='#f0f4f0'" onmouseout="this.style.background='#fff'">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 7L2 7"/></svg>
+                  <span id="monitored-count-badge">…</span>
+                </button>
+                <button id="gmail-sync-btn" onclick="syncGmail()" title="Sync all inboxes" style="display:flex;align-items:center;justify-content:center;width:26px;height:26px;padding:0;cursor:pointer;border-radius:50%;border:1px solid #d2d9e0;background:#fff;color:var(--text2);transition:background .15s;flex-shrink:0" onmouseover="this.style.background='#f0f4f0'" onmouseout="this.style.background='#fff'">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3"/></svg>
+                </button>
+              </div>
             </div>
           </div>
+          <!-- WhatsApp Business inbox header -->
+          <div id="inbox-hd-wa" style="display:none;background:#1C3829;padding:12px 14px 11px">
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <div>
+                <div style="font-size:12px;font-weight:700;color:#fff;letter-spacing:.06em;text-transform:uppercase">WhatsApp Business</div>
+                <div style="font-size:11px;color:rgba(255,255,255,.55);display:flex;align-items:center;gap:5px;margin-top:3px">
+                  <span id="wa-live-dot" style="width:7px;height:7px;border-radius:50%;background:#555;flex-shrink:0;transition:background .3s"></span>
+                  <span id="wa-business-number" style="font-size:11px">+234 XXX XXX XXXX</span>
+                  <span id="wa-live-label" style="color:rgba(255,255,255,.4)">· connecting…</span>
+                </div>
+              </div>
+              <button onclick="openWaTemplates()" title="Send new template message" style="width:34px;height:34px;border-radius:50%;background:rgba(37,211,102,.18);border:1px solid rgba(37,211,102,.35);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0" onmouseover="this.style.background='rgba(37,211,102,.3)'" onmouseout="this.style.background='rgba(37,211,102,.18)'">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#25D366" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              </button>
+            </div>
+          </div>
+          <!-- Hidden pill kept for JS compat -->
+          <div id="wati-status-pill" style="display:none"><span id="wati-status-text">WA</span></div>
         </div>
         <div class="inbox-scroll">
 
@@ -625,16 +642,10 @@ tr.trow.sel td{background:#eef6e6}
           </div>
         </div>
         <div style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:8px" id="wc-messages"></div>
-        <div style="padding:10px 14px;background:#f0f2f0;border-top:1px solid #d0d8d0;display:flex;flex-direction:column;gap:8px;flex-shrink:0">
-          <div style="display:flex;gap:8px;align-items:center">
-            <button onclick="openWaTemplates()" style="flex:1;background:#fff;border-radius:20px;padding:9px 16px;font-size:12px;color:#8a9e8a;border:1px solid #e4e8e4;font-family:Inter,sans-serif;text-align:left;cursor:pointer;transition:border-color .15s" onmouseover="this.style.borderColor='#25D366'" onmouseout="this.style.borderColor='#e4e8e4'">Use a template to reply…</button>
-            <button onclick="openWaTemplates()" style="width:36px;height:36px;border-radius:50%;background:#25D366;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0" title="Send WhatsApp template">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
-            </button>
-          </div>
-          <button onclick="openWaTemplates()" style="display:inline-flex;align-items:center;gap:6px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:20px;padding:5px 14px;cursor:pointer;font-size:11px;font-weight:600;color:#166534;font-family:Inter,sans-serif;align-self:flex-start" onmouseover="this.style.background='#dcfce7'" onmouseout="this.style.background='#f0fdf4'">
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.126 1.535 5.857L.057 23.5l5.797-1.522C7.53 23.012 9.71 23.5 12 23.5c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.5c-2.09 0-4.035-.548-5.716-1.507l-.41-.243-4.23 1.11 1.13-4.13-.267-.424A9.467 9.467 0 012.5 12C2.5 6.701 6.701 2.5 12 2.5S21.5 6.701 21.5 12 17.299 21.5 12 21.5z"/></svg>
-            Use Template
+        <div style="padding:10px 12px;background:#f0f2f0;border-top:1px solid #d0d8d0;display:flex;gap:8px;align-items:center;flex-shrink:0">
+          <input id="wc-compose-input" type="text" placeholder="Type a reply…" onclick="openWaTemplates()" readonly style="flex:1;background:#fff;border-radius:22px;padding:10px 16px;font-size:12px;color:#8a9e8a;border:none;outline:none;font-family:Inter,sans-serif;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.06)">
+          <button onclick="openWaTemplates()" title="Send WhatsApp template" style="width:42px;height:42px;border-radius:50%;background:#25D366;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 2px 6px rgba(37,211,102,.35)" onmouseover="this.style.background='#20ba58'" onmouseout="this.style.background='#25D366'">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
           </button>
         </div>
       </div>
@@ -3897,24 +3908,32 @@ function renderWaChat(r) {
   const nameEl = document.getElementById('wc-name');
   if (nameEl) nameEl.textContent = name;
   const phoneEl = document.getElementById('wc-phone');
-  if (phoneEl) phoneEl.textContent = e.whatsappPhone ? '+' + e.whatsappPhone : 'WhatsApp';
+  if (phoneEl) phoneEl.textContent = 'online';
   const typeChip = document.getElementById('wc-type-chip');
-  if (typeChip) typeChip.textContent = r.emailType === 'internal-rfq' ? 'Internal RFQ' : 'Customer RFQ';
+  if (typeChip) typeChip.textContent = r.emailType === 'internal-rfq' ? 'Internal RFQ' : 'RFQ';
   const statusChip = document.getElementById('wc-status-chip');
   const stMap = { new:'new', info_needed:'⚠ info needed', ready:'✓ ready', replied:'✓ replied', archived:'◻ archived' };
   if (statusChip) statusChip.textContent = stMap[r.status] || r.status || '';
-  // Render body as an inbound message bubble + any existing reply as outbound
+  // Split body into separate inbound message bubbles (one per non-empty paragraph/line)
   const msgs = document.getElementById('wc-messages');
   if (!msgs) return;
   const body = (e.body || '').trim();
-  const timeStr = e.receivedAt ? fmtDateTime(e.receivedAt) : '';
-  let bubblesHtml = `<div style="display:flex;justify-content:flex-start">
-    <div style="max-width:80%;background:#fff;border-radius:0 12px 12px 12px;padding:10px 12px;font-size:12px;color:#1a2e1a;line-height:1.65;box-shadow:0 1px 2px rgba(0,0,0,.1);word-break:break-word;white-space:pre-wrap">${escHtml(body)}<div style="text-align:right;font-size:10px;color:#8a9e8a;margin-top:4px">${escHtml(timeStr)} ✓</div></div>
-  </div>`;
+  // Use receivedAt as base time, offset each bubble by +1 min
+  const baseMs = e.receivedAt ? new Date(e.receivedAt).getTime() : Date.now();
+  const paragraphs = body.split(/\n{2,}|\n/).map(p => p.trim()).filter(Boolean);
+  let bubblesHtml = '';
+  paragraphs.forEach((para, i) => {
+    const t = new Date(baseMs + i * 60000);
+    const ts = t.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    bubblesHtml += `<div style="display:flex;justify-content:flex-start">
+      <div style="max-width:78%;background:#fff;border-radius:0 12px 12px 12px;padding:9px 12px;font-size:12px;color:#1a2e1a;line-height:1.65;box-shadow:0 1px 2px rgba(0,0,0,.08);word-break:break-word">${escHtml(para)}<div style="text-align:right;font-size:10px;color:#8a9e8a;margin-top:3px">${escHtml(ts)}</div></div>
+    </div>`;
+  });
   // If a reply was already sent, show it as a green outbound bubble
   if (r.status === 'replied' && r.followUpDraft) {
+    const sentTs = new Date(baseMs + paragraphs.length * 60000).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
     bubblesHtml += `<div style="display:flex;justify-content:flex-end">
-      <div style="max-width:80%;background:#dcfce7;border-radius:12px 0 12px 12px;padding:10px 12px;font-size:12px;color:#1a2e1a;line-height:1.65;box-shadow:0 1px 2px rgba(0,0,0,.1);word-break:break-word;white-space:pre-wrap">${escHtml(r.followUpDraft)}<div style="text-align:right;font-size:10px;color:#25D366;margin-top:4px">Sent ✓✓</div></div>
+      <div style="max-width:78%;background:#dcfce7;border-radius:12px 0 12px 12px;padding:9px 12px;font-size:12px;color:#1a2e1a;line-height:1.65;box-shadow:0 1px 2px rgba(0,0,0,.08);word-break:break-word;white-space:pre-wrap">${escHtml(r.followUpDraft)}<div style="text-align:right;font-size:10px;color:#25D366;margin-top:3px">${escHtml(sentTs)} ✓✓</div></div>
     </div>`;
   }
   msgs.innerHTML = bubblesHtml;
@@ -3935,14 +3954,11 @@ function switchChannel(ch) {
     currentRfqId = null;
     renderInboxList();
   }
-  // Update inbox header title and channel-specific controls
-  const hdTitle = document.querySelector('.inbox-hd-title');
-  if(hdTitle) hdTitle.textContent = ch === 'whatsapp' ? 'WhatsApp' : 'Email Inbox';
-  // Show/hide channel-specific controls
-  const emailControls = document.getElementById('email-inbox-controls');
-  const waControls = document.getElementById('wati-status-pill');
-  if(emailControls) emailControls.style.display = ch === 'whatsapp' ? 'none' : 'flex';
-  if(waControls) waControls.style.display = ch === 'whatsapp' ? 'flex' : 'none';
+  // Toggle inbox header panels
+  const hdEmail = document.getElementById('inbox-hd-email');
+  const hdWa    = document.getElementById('inbox-hd-wa');
+  if (hdEmail) hdEmail.style.display = ch === 'whatsapp' ? 'none' : 'flex';
+  if (hdWa)    hdWa.style.display    = ch === 'whatsapp' ? 'block' : 'none';
 }
 
 function showRatesSub(tab) {
@@ -4956,27 +4972,26 @@ function bodyToHtml(str) {
 }
 
 async function checkWatiStatus() {
-  const pill = document.getElementById('wati-status-pill');
-  const txt = document.getElementById('wati-status-text');
-  if (!pill || !txt) return;
   try {
     const res = await fetch('/api/wati/status');
     const data = await res.json();
+    const dot   = document.getElementById('wa-live-dot');
+    const label = document.getElementById('wa-live-label');
+    const num   = document.getElementById('wa-business-number');
     if (data.connected) {
-      pill.style.borderColor = '#86efac';
-      pill.style.background = '#f0fdf4';
-      pill.style.color = '#166534';
-      txt.textContent = 'WA';
-      pill.title = 'WhatsApp (WATI) connected';
+      if (dot)   { dot.style.background = '#25D366'; }
+      if (label) { label.textContent = '· live'; label.style.color = '#86efac'; }
+      if (num && data.phone) num.textContent = data.phone;
     } else {
-      pill.style.borderColor = '#d2d9e0';
-      pill.style.background = '#fff';
-      pill.style.color = 'var(--text3)';
-      txt.textContent = 'WA';
-      pill.title = `WhatsApp (WATI) not connected${data.error ? ': ' + data.error : ''}`;
+      if (dot)   { dot.style.background = '#ef4444'; }
+      if (label) { label.textContent = '· not connected'; label.style.color = 'rgba(255,255,255,.35)'; }
     }
   } catch(e) {
     // silently ignore — WATI is optional
+    const dot   = document.getElementById('wa-live-dot');
+    const label = document.getElementById('wa-live-label');
+    if (dot)   dot.style.background = '#555';
+    if (label) label.textContent = '· connecting…';
   }
 }
 
@@ -5080,7 +5095,7 @@ function renderInboxList() {
   let html = '';
 
   if (uniqueCustomers.length) {
-    const sectionLabel = currentChannel === 'whatsapp' ? 'WhatsApp conversations' : 'Customer requests';
+    const sectionLabel = currentChannel === 'whatsapp' ? 'RFQ Conversations' : 'Customer requests';
     html += `<div class="inbox-section-lbl" style="border-top:none">${sectionLabel}</div>`;
     uniqueCustomers.forEach(r => {
       const chip = r.emailType === 'internal-rfq' ? 'Internal RFQ' : 'Customer RFQ';
