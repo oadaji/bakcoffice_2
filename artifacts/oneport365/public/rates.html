@@ -29,6 +29,8 @@ button{font-family:Inter,sans-serif;cursor:pointer}
 .nav-item{padding:0 14px;height:52px;display:flex;align-items:center;font-size:12px;font-weight:400;color:rgba(255,255,255,.6);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;text-decoration:none;white-space:nowrap}
 .nav-item:hover{color:rgba(255,255,255,.9);background:rgba(255,255,255,.05)}
 .nav-item.active{color:#fff;border-bottom-color:#7AB648;font-weight:500}
+.nav-badge{font-size:10px;padding:1px 6px;border-radius:10px;background:rgba(255,255,255,.15);color:#fff;font-weight:600;margin-left:4px}
+.nav-item.active .nav-badge{background:#7AB648;color:#fff}
 .nav-right{margin-left:auto;display:flex;align-items:center;gap:12px}
 .t-status{display:flex;align-items:center;gap:6px;font-size:11px;color:rgba(255,255,255,.5)}
 .t-status-dot{width:6px;height:6px;border-radius:50%;background:#7AB648}
@@ -314,6 +316,12 @@ tr.row-expiring-soon td{background:#fffbeb}
       <img src="/oneport365_logo.png" alt="OnePort 365" style="height:28px;width:auto;display:block">
     </div>
     <a class="nav-item" href="/mvp1.html">CRM</a>
+    <a class="nav-item" href="/mvp1.html" title="Email inbox" style="padding:0 12px;gap:5px">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 7L2 7"/></svg>
+    </a>
+    <a class="nav-item" href="/mvp1.html" title="WhatsApp inbox" style="padding:0 12px;gap:5px">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.126 1.535 5.857L.057 23.5l5.797-1.522C7.53 23.012 9.71 23.5 12 23.5c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.5c-2.09 0-4.035-.548-5.716-1.507l-.41-.243-4.23 1.11 1.13-4.13-.267-.424A9.467 9.467 0 012.5 12C2.5 6.701 6.701 2.5 12 2.5S21.5 6.701 21.5 12 17.299 21.5 12 21.5z"/></svg>
+    </a>
     <a class="nav-item active" href="/rates.html">$ Rates</a>
     <a class="nav-item" href="/mvp1.html">📄 Quotes</a>
     <div class="nav-right">
