@@ -597,6 +597,25 @@ router.post("/rfq/ingest", async (req, res) => {
       })
       .returning();
 
+    // ── Pre-Claude rule-based classification ────────────────────────────────
+    // Catches outbound rate requests and clear rate-reply patterns without
+    // calling Claude, preventing mis-classification and wasted LLM calls.
+    const preClassified = preClassifyEmail({ fromName, fromEmail, subject, body });
+    if (preClassified && preClassified !== "customer-rfq" && preClassified !== "internal-rfq") {
+      await db.update(emailsTable).set({ emailType: preClassified }).where(eq(emailsTable.id, email.id));
+      if (preClassified === "rate-reply") {
+        const port = process.env.PORT ?? 8080;
+        fetch(`http://localhost:${port}/api/rates/parse-email`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ emailId: email.id, body, subject, fromName, fromEmail }),
+        }).catch(() => {});
+      }
+      res.setHeader("x-was-new", "true");
+      res.json({ email: { ...email, emailType: preClassified }, rfqs: [], detectedEmailType: preClassified });
+      return;
+    }
+
     // Run Claude extraction — returns array of shipments (length ≥ 1)
     const multiExtraction = await extractWithClaude(
       { fromName, fromEmail, subject, body },
@@ -919,6 +938,66 @@ type MultiExtraction = {
   detectedEmailType?: string;
 };
 
+// preClassifyEmail — rule-based pre-classification that runs BEFORE Claude.
+// Returns the resolved email type if it can be determined with high confidence,
+// or null if Claude should decide.
+function preClassifyEmail(params: {
+  fromName: string;
+  fromEmail: string;
+  subject: string;
+  body: string;
+}): string | null {
+  const subj = params.subject ?? "";
+  const body = params.body ?? "";
+  const fromName = params.fromName ?? "";
+
+  // ── OUTBOUND: OnePort's own rate-request template ────────────────────────
+  // Subject always starts with "Rate Request — " (em-dash, en-dash, or hyphen)
+  if (/^rate request\s*[—–-]/i.test(subj)) return "outbound";
+
+  // ── OUTBOUND: body contains the rate-request template boilerplate ─────────
+  if (
+    /please find below a rate request on behalf of oneport/i.test(body) ||
+    /rate request on behalf of oneport 365/i.test(body)
+  )
+    return "outbound";
+
+  // ── OUTBOUND: sent by an identifiable OnePort 365 system account ──────────
+  if (
+    /oneport\s*365\s*(rates?|commercial|team|ops)/i.test(fromName) &&
+    !/^re:/i.test(subj)
+  )
+    return "outbound";
+
+  // ── RATE-REPLY: reply to a rate request that contains actual rate data ─────
+  // Subject "Re: Rate Request — ..." + rate-table signals
+  if (/^re:\s*rate request\s*[—–-]/i.test(subj)) {
+    const rateSignals = [
+      /usd\s*[\d,]+/i,
+      /\$\s*[\d,]+/,
+      /40(?:ft|hc).*usd|usd.*40(?:ft|hc)/i,
+      /option\s*\d+/i,
+      /validity[:\s].*\d{4}/i,
+      /all[- ]in\s+rate/i,
+      /carrier\s*:/i,
+      /transit\s*time/i,
+      /please find.*rates|rates.*below/i,
+    ];
+    if (rateSignals.some((r) => r.test(body))) return "rate-reply";
+  }
+
+  // ── RATE-REPLY: body clearly presents a rate sheet regardless of subject ───
+  const strongRateSignals = [
+    /please find (?:below|attached|herewith).*(?:rates?|tariff|quotation)/i,
+    /kindly find (?:attached|below).*(?:rates?|tariff)/i,
+    /all[- ]in.*usd.*per.*(?:teu|container|box)/i,
+    /(?:20ft|40ft|40hc).*:\s*(?:usd|n\/a)\s*[\d,]+/i,
+  ];
+  if (strongRateSignals.some((r) => r.test(body))) return "rate-reply";
+
+  return null; // let Claude decide
+}
+
 // extractWithClaude — detects multiple shipments in one email and returns an array.
 // Single-shipment emails return a one-element array. combinedDraft covers all missing
 // fields across all shipments in a single reply (so only one email is sent).
@@ -946,10 +1025,11 @@ EMAIL TYPE CLASSIFICATION — first classify this email as one of:
 - "customer-rfq": A shipper, importer, exporter, buyer, or consignee asking OnePort 365 for a freight rate or shipping quote. The sender NEEDS a service.
 - "rate-reply": A carrier, shipping line, forwarder, agent, NVOCC, or partner sending rate sheets, tariffs, freight offers, or pricing in response to a rate enquiry. Contains tables of rates, USD per TEU/kg, validity dates, surcharges. The sender is PROVIDING rates.
 - "internal-rfq": Sent by an internal OnePort 365 team member requesting rates or initiating a shipment internally.
-- "outbound": Sent by OnePort 365 to a customer (follow-up, quote, confirmation).
+- "outbound": An email sent BY OnePort 365 TO a partner, customer, or carrier — not received from them. The sender is OnePort 365 itself.
 Use the "email type hint" above only if you cannot determine the type from the content. Set "detectedEmailType" in the response.
 
-SIGNALS for "rate-reply": subject/body contains "please find our rates", "rate offer", "tariff", "freight charges per TEU", "validity", "all-in rate", rate tables with USD/EUR amounts per container or kg, carrier name in subject, "quotation from [carrier]", "ocean freight rate", "spot rate offer".
+SIGNALS for "outbound": subject starts with "Rate Request —" or "Re: Shipment" sent from OnePort 365; body contains "Please find below a rate request on behalf of OnePort 365", "OnePort 365 Rates Team", "Best regards, OnePort 365", "Best regards, Commercial Team · OnePort 365"; from-name contains "OnePort 365". These are emails OnePort itself composed and sent — NOT customer enquiries.
+SIGNALS for "rate-reply": subject/body contains "please find our rates", "please find below our all-in ocean freight rates", "rate offer", "tariff", "freight charges per TEU", "validity", "all-in rate", rate tables with USD/EUR amounts per container or kg, carrier name + route + USD amount, "quotation from [carrier]", "ocean freight rate", "spot rate offer", "Option 1 / Option 2" with prices.
 SIGNALS for "customer-rfq": sender is asking "how much", "pls give me rate", "need price", "what is the cost", "kindly quote", describes goods they want to ship, asks for timeline or ETD.
 
 IMPORTANT: Detect whether the email contains MORE THAN ONE distinct shipment request.
