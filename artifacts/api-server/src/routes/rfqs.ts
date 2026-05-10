@@ -603,6 +603,17 @@ router.post("/rfq/ingest", async (req, res) => {
       emailType,
     );
 
+    // Use Claude's detected email type unless caller explicitly provided one (not the default)
+    const resolvedEmailType = multiExtraction.detectedEmailType ?? emailType;
+
+    // If Claude classified this as a rate-reply or outbound, update the email row and skip RFQ creation
+    if (resolvedEmailType !== "customer-rfq" && resolvedEmailType !== "internal-rfq" && emailType === "customer-rfq") {
+      await db.update(emailsTable).set({ emailType: resolvedEmailType }).where(eq(emailsTable.id, email.id));
+      res.setHeader("x-was-new", "true");
+      res.json({ email, rfqs: [], detectedEmailType: resolvedEmailType });
+      return;
+    }
+
     const { shipments, combinedDraft } = multiExtraction;
 
     // If requireFreightMatch is set, reject emails that are not genuine freight/logistics enquiries.
@@ -623,6 +634,11 @@ router.post("/rfq/ingest", async (req, res) => {
       }
     }
 
+    // Update the email row if Claude detected a different type than the hint
+    if (resolvedEmailType !== emailType) {
+      await db.update(emailsTable).set({ emailType: resolvedEmailType }).where(eq(emailsTable.id, email.id));
+    }
+
     // Assign a shared groupId when there are multiple shipments
     const isGroup = shipments.length > 1;
     const groupId = isGroup ? randomUUID() : null;
@@ -641,7 +657,7 @@ router.post("/rfq/ingest", async (req, res) => {
         .values({
           emailId: email.id,
           ref: refNum,
-          emailType,
+          emailType: resolvedEmailType,
           status: s.status,
           fields: s.fields,
           missingFields: s.missing,
@@ -891,6 +907,7 @@ type SingleExtraction = {
 type MultiExtraction = {
   shipments: SingleExtraction[];
   combinedDraft: string | null;
+  detectedEmailType?: string;
 };
 
 // extractWithClaude — detects multiple shipments in one email and returns an array.
@@ -910,11 +927,21 @@ async function extractWithClaude(
   const prompt = `You are a freight operations assistant at OnePort 365, a Nigerian logistics company.
 Analyze this email and extract shipment/RFQ details.
 
-Email type: ${emailType}
+Email type hint: ${emailType}
 From: ${email.fromName || ""} <${email.fromEmail || ""}>
 Subject: ${email.subject || ""}
 Body:
 ${cleanBody}
+
+EMAIL TYPE CLASSIFICATION — first classify this email as one of:
+- "customer-rfq": A shipper, importer, exporter, buyer, or consignee asking OnePort 365 for a freight rate or shipping quote. The sender NEEDS a service.
+- "rate-reply": A carrier, shipping line, forwarder, agent, NVOCC, or partner sending rate sheets, tariffs, freight offers, or pricing in response to a rate enquiry. Contains tables of rates, USD per TEU/kg, validity dates, surcharges. The sender is PROVIDING rates.
+- "internal-rfq": Sent by an internal OnePort 365 team member requesting rates or initiating a shipment internally.
+- "outbound": Sent by OnePort 365 to a customer (follow-up, quote, confirmation).
+Use the "email type hint" above only if you cannot determine the type from the content. Set "detectedEmailType" in the response.
+
+SIGNALS for "rate-reply": subject/body contains "please find our rates", "rate offer", "tariff", "freight charges per TEU", "validity", "all-in rate", rate tables with USD/EUR amounts per container or kg, carrier name in subject, "quotation from [carrier]", "ocean freight rate", "spot rate offer".
+SIGNALS for "customer-rfq": sender is asking "how much", "pls give me rate", "need price", "what is the cost", "kindly quote", describes goods they want to ship, asks for timeline or ETD.
 
 IMPORTANT: Detect whether the email contains MORE THAN ONE distinct shipment request.
 Signals for multiple shipments: different commodities described separately, different origins/destinations, phrases like "also", "another one", "second item", "one more thing", customer asking about separate pricing, different quantities with different descriptions.
@@ -955,7 +982,8 @@ Return ONLY a JSON object with this exact structure — even for a single shipme
       "status": "info_needed" or "ready"
     }
   ],
-  "combinedDraft": "<single follow-up email covering ALL missing fields for ALL shipments. null if nothing is missing.>"
+  "combinedDraft": "<single follow-up email covering ALL missing fields for ALL shipments. null if nothing is missing.>",
+  "detectedEmailType": "customer-rfq" | "rate-reply" | "internal-rfq" | "outbound"
 }
 
 Rules:
