@@ -335,17 +335,68 @@ router.delete("/rates/other-charges/:id", async (req, res) => {
 router.get("/rates", async (req, res) => {
   try {
     const { pol, pod, container } = req.query as { pol?: string; pod?: string; container?: string };
-    const allRates = await db
+
+    // Query legacy rates table
+    const allLegacy = await db
       .select({ rate: ratesTable, partner: partnersTable })
       .from(ratesTable)
       .leftJoin(partnersTable, eq(ratesTable.partnerId, partnersTable.id));
-    const matched = allRates.filter(({ rate }) => {
+    const matchedLegacy = allLegacy.filter(({ rate }) => {
       const polMatch = !pol || locationsMatch(rate.pol, pol) || (rate.originPortCode ? locationsMatch(rate.originPortCode, pol) : false);
       const podMatch = !pod || locationsMatch(rate.pod, pod) || (rate.destinationPortCode ? locationsMatch(rate.destinationPortCode, pod) : false);
       const containerMatch = !container || !rate.containerType || rate.containerType.toLowerCase().includes(container.toLowerCase());
       return polMatch && podMatch && containerMatch;
     });
-    res.json(matched);
+
+    // Query oceanFreightRates table and normalise to same shape
+    const allOcean = await db
+      .select({ rate: oceanFreightRates, partner: partnersTable })
+      .from(oceanFreightRates)
+      .leftJoin(partnersTable, eq(oceanFreightRates.partnerId, partnersTable.id))
+      .where(eq(oceanFreightRates.archived, false));
+
+    const matchedOcean: { rate: Record<string, unknown>; partner: typeof partnersTable.$inferSelect | null }[] = [];
+    for (const { rate: r, partner } of allOcean) {
+      const polMatch = !pol || locationsMatch(r.polCode ?? '', pol);
+      const podMatch = !pod || locationsMatch(r.podCode ?? '', pod);
+      if (!polMatch || !podMatch) continue;
+
+      // Determine which sizes to emit based on container filter
+      const sizes: { label: string; amount: string | null }[] = [
+        { label: '20FT', amount: r.amount20ft },
+        { label: '40FT', amount: r.amount40ft },
+        { label: '40HC', amount: r.amount40hc },
+      ].filter(s => {
+        if (!s.amount) return false;
+        if (!container) return true;
+        return s.label.toLowerCase().includes(container.toLowerCase().replace(/[^a-z0-9]/g, ''));
+      });
+
+      for (const size of sizes) {
+        matchedOcean.push({
+          rate: {
+            id: `ofr-${r.id}-${size.label}`,
+            pol: r.polCode ?? '',
+            pod: r.podCode ?? '',
+            originPortCode: r.polCode ?? '',
+            destinationPortCode: r.podCode ?? '',
+            carrier: r.carrier ?? '',
+            containerType: size.label,
+            freightRate: size.amount,
+            currency: r.currency ?? 'USD',
+            validTo: r.expiryDate ?? null,
+            transitTime: r.transitTime ?? null,
+            notes: r.inclusionType ?? null,
+            rateType: r.rateType ?? null,
+            partnerId: r.partnerId ?? null,
+            _source: 'ocean',
+          },
+          partner: partner ?? null,
+        });
+      }
+    }
+
+    res.json([...matchedLegacy, ...matchedOcean]);
   } catch (err) {
     req.log.error({ err }, "Failed to search rates");
     res.status(500).json({ error: "Failed to search rates" });
