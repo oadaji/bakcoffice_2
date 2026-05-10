@@ -961,7 +961,7 @@ FREIGHT MODE DETECTION — classify each shipment as:
 - "unknown": insufficient signals
 
 PORT / AIRPORT RESOLUTION — when a city or location is named, identify the primary commercial port/airport and include its LOCODE/IATA code in parentheses:
-- Ocean examples: Hamburg → Hamburg (DEHAM), Lagos/Apapa → Apapa (NGAPP), Rotterdam → Rotterdam (NLRTM), Shanghai → Shanghai (CNSHA), Qingdao → Qingdao (CNTAO), Dubai/Jebel Ali → Jebel Ali (AEJEA), Antwerp → Antwerp (BEANR), Istanbul → Ambarlı (TRIST), Tema/Accra → Tema (GHTEM), Mombasa → Mombasa (KEMBA), Abidjan → Abidjan (CIABJ), Durban → Durban (ZADUR), Cape Town → Cape Town (ZACPT), Port Said → Port Said (EGPSD), Busan → Busan (KRPUS), Singapore → Singapore (SGSIN), Ningbo → Ningbo (CNNGB), Shenzhen/Yantian → Yantian (CNYTN)
+- Ocean examples: Hamburg → Hamburg (DEHAM), Lagos/Apapa → Apapa (NGAPP), Tin Can Island → Tin Can (NGTCN), Onne/Port Harcourt port → Onne (NGONE), Warri → Warri (NGWAR), Rotterdam → Rotterdam (NLRTM), Shanghai → Shanghai (CNSHA), Qingdao → Qingdao (CNTAO), Dubai/Jebel Ali → Jebel Ali (AEJEA), Antwerp → Antwerp (BEANR), Istanbul → Ambarlı (TRIST), Tema/Accra → Tema (GHTEM), Mombasa → Mombasa (KEMBA), Abidjan → Abidjan (CIABJ), Durban → Durban (ZADUR), Cape Town → Cape Town (ZACPT), Port Said → Port Said (EGPSD), Busan → Busan (KRPUS), Singapore → Singapore (SGSIN), Ningbo → Ningbo (CNNGB), Shenzhen/Yantian → Yantian (CNYTN)
 - Air examples: Lagos → Lagos (LOS), Dubai → Dubai (DXB), London → Heathrow (LHR), Frankfurt → Frankfurt (FRA), Hong Kong → Hong Kong (HKG), Shanghai → Pudong (PVG), Nairobi → Nairobi (NBO)
 
 Return ONLY a JSON object with this exact structure — even for a single shipment:
