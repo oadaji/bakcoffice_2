@@ -5000,6 +5000,11 @@ let currentRfqId = null;      // selected RFQ db id
 let currentChannel  = 'email';  // 'email' | 'whatsapp' — active inbox channel tab
 let currentCategory = 'all';   // 'all' | 'rfq' | 'quoting' | 'invoices' | 'operations'
 
+// Abort controllers — cancel in-flight requests when a newer call supersedes them
+let _loadInboxController = null;
+let _loadInboxGen = 0;
+let _loadThreadController = null;
+
 // emailType values that belong to each category
 const CATEGORY_TYPES = {
   all:        null,  // no filter
@@ -5075,17 +5080,29 @@ async function checkWatiStatus() {
 }
 
 async function loadInbox() {
+  // Cancel any previous in-flight call so only the latest resolves
+  if (_loadInboxController) _loadInboxController.abort();
+  _loadInboxController = new AbortController();
+  const gen = ++_loadInboxGen;
+
   let data;
   try {
-    const res = await fetch('/api/rfqs');
+    const res = await fetch('/api/rfqs', { signal: _loadInboxController.signal });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     data = await res.json();
   } catch(e) {
+    if (e.name === 'AbortError') return; // superseded by newer call — keep existing data shown
     console.error('loadInbox fetch error', e);
-    document.getElementById('inbox-list').innerHTML =
-      '<div style="padding:16px;color:var(--danger);font-size:11px">Failed to load inbox</div>';
+    // Only show error banner when there is nothing already displayed
+    if (!rfqData.length) {
+      document.getElementById('inbox-list').innerHTML =
+        '<div style="padding:16px;color:var(--danger);font-size:11px">Failed to load inbox</div>';
+    }
     return;
   }
+  // Guard: a newer call may have already completed while this one was in flight
+  if (gen !== _loadInboxGen) return;
+
   rfqData = data;
   checkWatiStatus();
   try {
@@ -5442,8 +5459,12 @@ function renderBrief(r, groupRfqs) {
 }
 
 async function loadThread(rfqId) {
+  // Cancel any previous thread load (re-extract + rfqs refresh) still in flight
+  if (_loadThreadController) _loadThreadController.abort();
+  _loadThreadController = new AbortController();
+  const signal = _loadThreadController.signal;
   try {
-    const resp = await fetch(`/api/rfqs/${rfqId}/thread`);
+    const resp = await fetch(`/api/rfqs/${rfqId}/thread`, { signal });
     if (!resp.ok) return;
     const { replies } = await resp.json();
     const container = document.getElementById('d-thread');
@@ -5478,7 +5499,7 @@ async function loadThread(rfqId) {
     }
     // Auto re-extract from the full thread — updates extracted fields + advances status if complete
     try {
-      const reExtractResp = await fetch(`/api/rfqs/${rfqId}/re-extract`, { method: 'POST' });
+      const reExtractResp = await fetch(`/api/rfqs/${rfqId}/re-extract`, { method: 'POST', signal });
       if (reExtractResp.ok) {
         const { rfq: updated } = await reExtractResp.json();
         // Patch the in-memory record so renderExtraction sees fresh data
@@ -5488,10 +5509,12 @@ async function loadThread(rfqId) {
           renderExtraction(rfqData[idx]);
         }
       }
-    } catch (e) { /* non-blocking */ }
+    } catch (e) {
+      if (e.name === 'AbortError') return; // new email selected — abandon this thread's work
+    }
 
     // Refresh inbox list so status badge reflects any advancement
-    const rfqResp = await fetch('/api/rfqs');
+    const rfqResp = await fetch('/api/rfqs', { signal });
     if (rfqResp.ok) {
       const fresh = await rfqResp.json();
       rfqData.length = 0;

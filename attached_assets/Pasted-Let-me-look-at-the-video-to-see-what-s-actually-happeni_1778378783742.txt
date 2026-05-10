@@ -1,0 +1,46 @@
+Let me look at the video to see what's actually happening when the bug occurs.Found it. The rates list disappeared — went from 137 rates to 0. Let me check the next frames to confirm what the user was doing when this happened.Now I see the pattern clearly. Frame 11 had CRM:18, Email:13, WhatsApp:5, Quotes:6, and 137 ocean rates. Frame 12 (one second later, on the email view) shows ALL counters dropped to 0 and the inbox is "Loading...". Frame 14 confirms the rates page also shows 0/0/0/0 with "No rates yet". The data didn't actually disappear — the API requests are being **cancelled** (matching the network panel screenshot), so the frontend renders empty states instead of the real data.
+
+Let me check a couple more frames to make sure I have the full picture before writing the report.Now I have the full picture. The data DOES eventually load (frame 18 shows the inbox populated again with CRM:18, Email:13, etc.), confirming the data exists in the backend — but the `re-extract` and `rfqs` requests get cancelled mid-flight when the user navigates between pages, leaving the UI in an empty/zeroed state for several seconds. The Network panel shows exactly this: every API call to `oneport-365-rfq-intake.re...` is `(cancelled)`.
+
+Here's a clear bug report you can paste straight into Replit:
+
+---
+
+**Bug: API requests are being cancelled when navigating between pages, causing UI to show empty/zero state**
+
+**What's happening**
+When clicking between tabs (CRM → Email → WhatsApp → Rates), in-flight API requests to the backend get cancelled instead of completing. This causes:
+- Tab counters all flip to `0` (CRM 18 → 0, Email 13 → 0, WhatsApp 5 → 0, Quotes 6 → 0)
+- Rates page shows "No rates yet" even though 137 rates exist
+- Email inbox shows "Loading inbox..." indefinitely until a request finally succeeds
+- The data IS still in the database — it eventually re-renders correctly (around 17 seconds in the recording, the inbox repopulates with all 13 emails)
+
+**Network panel evidence** (filter: Errors only)
+Every backend XHR shows status `(cancelled)`:
+- `POST /re-extract` → cancelled (after 2266ms)
+- `GET /rfqs` → cancelled (after 3ms)
+- `POST /re-extract` → cancelled (after 468ms)
+- `GET /rfqs` → cancelled (after 0ms)
+
+All targeting `oneport-365-rfq-intake.re...`
+
+**Root cause (likely)**
+This is a classic React data-fetching bug. One of these is happening:
+1. A `useEffect` cleanup function is calling `AbortController.abort()` on every re-render or route change, killing requests before they resolve.
+2. React Query / SWR / TanStack Query is being initialized with a too-aggressive `signal` abort, or the query keys are changing on every render causing refetch+cancel loops.
+3. The component fetching data unmounts (route change) before the fetch resolves, and there's no caching layer to retain the data.
+
+**What to check / fix**
+1. Look at the data-fetching hook(s) for the tab counts, rates list, and inbox. Check if `AbortController` is being aborted in a `useEffect` cleanup unconditionally.
+2. If using React Query / SWR, ensure `staleTime` and `cacheTime` are set so cached data renders instantly while a refetch happens in the background — empty state should never show when cached data exists.
+3. The empty-state UI (`No rates yet`, counter `0`) should only render when the query has **successfully returned an empty array**, not when it's in `loading` or `cancelled` state. Add an explicit check: `if (isLoading || isFetching) return <Spinner/>` before the empty state.
+4. Confirm fonts on `unpkg.com` (4 woff2 files showing CACHE_MISS) aren't a real problem — those are just cache misses, not failures, and probably unrelated.
+
+**Steps to reproduce**
+1. Open the app on the CRM tab (shows 18 RFQs).
+2. Quickly click Email → WhatsApp → Rates in succession.
+3. Watch tab counters all drop to 0 and content panes go empty, then slowly repopulate.
+
+---
+
+If you'd like, I can also draft this as a shorter version for Replit's AI agent prompt box, which tends to do better with terser, action-focused instructions.
