@@ -5164,9 +5164,9 @@ async function syncGmail() {
 
 function renderInboxList() {
   // For grouped RFQs, show one inbox item per unique email (emailId), using the first RFQ as the representative
-  const customers = rfqData.filter(r => r.emailType === 'customer-rfq' || r.emailType === 'internal-rfq');
-  const partners  = rfqData.filter(r => r.emailType === 'rate-reply');
-  const outbound  = rfqData.filter(r => r.emailType === 'outbound');
+  const customers = rfqData.filter(r => r.status !== 'archived' && r.emailType === 'customer-rfq');
+  const partners  = rfqData.filter(r => r.status !== 'archived' && r.emailType === 'rate-reply');
+  const outbound  = rfqData.filter(r => r.status !== 'archived' && r.emailType === 'outbound');
 
   // Update per-channel nav badge counts
   const emailBadge = document.getElementById('email-count');

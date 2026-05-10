@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { randomUUID } from "crypto";
 import { db, emailsTable, rfqsTable, emailAccounts } from "@workspace/db";
-import { eq, desc, or, inArray } from "drizzle-orm";
+import { eq, ne, desc, or, inArray } from "drizzle-orm";
 import { anthropic } from "@workspace/integrations-anthropic-ai";
 import nodemailer from "nodemailer";
 
@@ -31,6 +31,7 @@ router.get("/rfqs", async (req, res) => {
       .select()
       .from(rfqsTable)
       .leftJoin(emailsTable, eq(rfqsTable.emailId, emailsTable.id))
+      .where(ne(rfqsTable.status, "archived"))
       .orderBy(desc(emailsTable.receivedAt));
 
     const result = rows.map((r) => ({
