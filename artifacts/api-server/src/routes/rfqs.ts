@@ -943,7 +943,7 @@ Return ONLY a JSON object with this exact structure — even for a single shipme
         {"k": "Commodity", "v": "<cargo description or 'not specified'>", "ok": true/false},
         {"k": "HS Code", "v": "<if customer provided it: the code e.g. '8471.30'; if not provided but commodity is known: look up best match from HS CODE REFERENCE below and return the code appended with ' (suggested)' e.g. '8471.30 (suggested)'; if commodity also unknown: 'not specified'>", "ok": true/false},
         {"k": "Weight", "v": "<gross weight e.g. '5,000 kg' or 'not specified'>", "ok": true/false},
-        {"k": "Volume", "v": "<number of containers e.g. '2 × 40FT' or '3 containers'; for LCL/air use CBM or chargeable weight e.g. '12 CBM'; or 'not specified'>", "ok": true/false},
+        {"k": "Volume", "v": "<CONTAINER COUNT for ocean FCL e.g. '2', '3', '1'; for LCL write 'LCL'; for air write chargeable weight e.g. '500 kg'; or 'not specified'>", "ok": true/false},
         {"k": "Pick-up", "v": "<collection/pickup address or city, or 'not specified'>", "ok": true/false},
         {"k": "Container", "v": "<container type only e.g. '20FT', '40FT', '40HC', 'LCL'; or 'not specified'>", "ok": true/false},
         {"k": "Cargo class", "v": "<GC or DG Class X.X, or 'not specified'>", "ok": true/false},
@@ -965,7 +965,7 @@ Rules:
   * If commodity is known but no HS code given → find the closest match from the HS CODE REFERENCE below, return "<code> (suggested)" with ok=false. Do NOT add HS Code to missing[] in this case — the suggestion is sufficient.
   * If both commodity and HS code are unknown → "not specified", ok=false, add to missing[]
   * If customer provides an HS code that clearly mismatches the commodity → append " (verify — may not match commodity)" and set ok=false
-- missing[] must list a clear, specific question for EACH field that is 'not specified' among: Company, POL, POD, Commodity, HS Code (only when no suggestion is possible), Weight/Tonnage, Volume (number of containers or CBM for LCL/air), Pick-up address, Freight Mode. These are the minimum required fields to generate a quote.
+- missing[] must list a clear, specific question for EACH field that is 'not specified' among: Company, POL, POD, Commodity, HS Code (only when no suggestion is possible), Volume (for ocean FCL ask "How many containers do you need?" — NEVER ask for CBM; for LCL ask for cargo dimensions/CBM; for air ask for chargeable weight), Pick-up address, Freight Mode. These are the minimum required fields to generate a quote.
 - Do NOT list Contact/Email in missing[] — those are taken from the sender's email address automatically.
 
 HS CODE REFERENCE (80 common freight commodities — use to suggest codes when commodity is known):
