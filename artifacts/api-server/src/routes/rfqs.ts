@@ -609,6 +609,15 @@ router.post("/rfq/ingest", async (req, res) => {
     // If Claude classified this as a rate-reply or outbound, update the email row and skip RFQ creation
     if (resolvedEmailType !== "customer-rfq" && resolvedEmailType !== "internal-rfq" && emailType === "customer-rfq") {
       await db.update(emailsTable).set({ emailType: resolvedEmailType }).where(eq(emailsTable.id, email.id));
+      // Auto-parse rates from rate-reply emails — fire and forget
+      if (resolvedEmailType === "rate-reply") {
+        const port = process.env.PORT ?? 8080;
+        fetch(`http://localhost:${port}/api/rates/parse-email`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ emailId: email.id, body, subject, fromName, fromEmail }),
+        }).catch(() => {});
+      }
       res.setHeader("x-was-new", "true");
       res.json({ email, rfqs: [], detectedEmailType: resolvedEmailType });
       return;

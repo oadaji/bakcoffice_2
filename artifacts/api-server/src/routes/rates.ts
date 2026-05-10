@@ -1,8 +1,9 @@
 import { Router, type IRouter } from "express";
 import { db, ratesTable, partnersTable, rfqsTable, emailsTable,
   oceanFreightRates, haulageImportRates, haulageExportRates, otherCharges } from "@workspace/db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, ilike } from "drizzle-orm";
 import nodemailer from "nodemailer";
+import { anthropic } from "@workspace/integrations-anthropic-ai";
 
 const router: IRouter = Router();
 
@@ -616,6 +617,126 @@ router.post("/rfqs/:id/request-rates", async (req, res) => {
   } catch (err) {
     req.log.error({ err }, "Failed to send rate request");
     res.status(500).json({ error: "Failed to send rate request" });
+  }
+});
+
+// ── AUTO-PARSE RATES FROM EMAIL ────────────────────────────────────────────────
+// POST /api/rates/parse-email
+// Called automatically when a rate-reply email is ingested, or manually from the UI.
+// Body: { emailId?, body, subject, fromName, fromEmail }
+// Returns: { parsed: number, rates: OceanFreightRate[] }
+
+router.post("/rates/parse-email", async (req, res) => {
+  try {
+    const { emailId, body, subject, fromName, fromEmail } = req.body as {
+      emailId?: number;
+      body: string;
+      subject?: string;
+      fromName?: string;
+      fromEmail?: string;
+    };
+    if (!body) { res.status(400).json({ error: "body is required" }); return; }
+
+    // Try to match sender to a known partner by email domain
+    let partnerId: number | null = null;
+    if (fromEmail) {
+      const domain = fromEmail.split("@")[1]?.toLowerCase();
+      if (domain) {
+        const [partner] = await db
+          .select({ id: partnersTable.id })
+          .from(partnersTable)
+          .where(ilike(partnersTable.email, `%@${domain}`))
+          .limit(1);
+        if (partner) partnerId = partner.id;
+      }
+    }
+
+    const cleanBody = body.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+    const prompt = `You are a freight rate data entry specialist at OnePort 365.
+Extract all ocean freight rate entries from the email below and return them as a JSON array.
+
+Sender: ${fromName || ""} <${fromEmail || ""}>
+Subject: ${subject || ""}
+Body:
+${cleanBody}
+
+Return ONLY a JSON array (no other text). Each element must have:
+{
+  "carrier": "<shipping line or NVOCC name>",
+  "polCode": "<UNLOCODE e.g. CNCGU, NGAPP, TRIST>",
+  "podCode": "<UNLOCODE e.g. NGAPP, NLRTM, DEHAM>",
+  "originCountry": "<2-letter ISO country code or null>",
+  "destCountry": "<2-letter ISO country code or null>",
+  "equipmentType": "20ft" | "40ft" | "40hc" | "lcl",
+  "commodityType": "general" | "reefer" | "dg" | "other",
+  "rateType": "all_in" | "freight_only" | "spot",
+  "currency": "USD" | "EUR" | "GBP" | "NGN",
+  "amount20ft": <number or null>,
+  "amount40ft": <number or null>,
+  "amount40hc": <number or null>,
+  "transitTime": "<e.g. '21 days' or null>",
+  "freeTime": "<e.g. '14 days' or null>",
+  "expiryDate": "<YYYY-MM-DD — use validity date from email, or 30 days from today if not stated>"
+}
+
+Rules:
+- One entry per POL-POD-carrier-equipment combination.
+- If a single row lists rates for 20FT, 40FT, 40HC together, produce ONE entry with all three amounts.
+- If only one container size is mentioned, set the others to null.
+- polCode / podCode must be 5-character UNLOCODEs. Common ones: Lagos/Apapa=NGAPP, Apapa=NGAPP, Tincan=NGTIN, Shanghai=CNSHA, Guangzhou=CNCGU, Qingdao=CNTAO, Ningbo=CNNGB, Shenzhen=CNSZX, Rotterdam=NLRTM, Hamburg=DEHAM, Antwerp=BEANR, Istanbul=TRIST, Dubai/Jebel Ali=AEJEA, Tema=GHTEM, Abidjan=CIABJ, Mombasa=KEMBA, Durban=ZADUR, Cape Town=ZACPT.
+- If the email contains no ocean freight rates, return an empty array [].
+- Do NOT include surcharges as separate entries — fold BAF/CAF/PSS into the all-in amount if the sender does.`;
+
+    const response = await anthropic.messages.create({
+      model: "claude-sonnet-4-6",
+      max_tokens: 2000,
+      messages: [{ role: "user", content: prompt }],
+    });
+
+    const raw = response.content[0].type === "text" ? response.content[0].text : "[]";
+    const cleaned = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+    let entries: Record<string, unknown>[] = [];
+    try { entries = JSON.parse(cleaned); } catch { entries = []; }
+
+    if (!Array.isArray(entries) || entries.length === 0) {
+      res.json({ parsed: 0, rates: [] });
+      return;
+    }
+
+    // Derive a 30-day fallback expiry
+    const fallbackExpiry = new Date();
+    fallbackExpiry.setDate(fallbackExpiry.getDate() + 30);
+    const fallbackExpiryStr = fallbackExpiry.toISOString().slice(0, 10);
+
+    const values = entries
+      .filter((e) => e.carrier && e.polCode && e.podCode)
+      .map((e) => ({
+        carrier: String(e.carrier),
+        polCode: String(e.polCode).toUpperCase(),
+        podCode: String(e.podCode).toUpperCase(),
+        originCountry: (e.originCountry as string) ?? null,
+        destCountry: (e.destCountry as string) ?? null,
+        equipmentType: (e.equipmentType as string) ?? "40ft",
+        commodityType: (e.commodityType as string) ?? "general",
+        rateType: (e.rateType as string) ?? "all_in",
+        currency: (e.currency as string) ?? "USD",
+        amount20ft: e.amount20ft != null ? String(e.amount20ft) : null,
+        amount40ft: e.amount40ft != null ? String(e.amount40ft) : null,
+        amount40hc: e.amount40hc != null ? String(e.amount40hc) : null,
+        transitTime: (e.transitTime as string) ?? null,
+        freeTime: (e.freeTime as string) ?? null,
+        expiryDate: (e.expiryDate as string) ?? fallbackExpiryStr,
+        partnerId,
+      }));
+
+    if (!values.length) { res.json({ parsed: 0, rates: [] }); return; }
+
+    const inserted = await db.insert(oceanFreightRates).values(values).returning();
+    req.log.info({ emailId, parsed: inserted.length, partnerId }, "Auto-parsed rates from rate-reply email");
+    res.status(201).json({ parsed: inserted.length, rates: inserted });
+  } catch (err) {
+    req.log.error({ err }, "Failed to parse rates from email");
+    res.status(500).json({ error: "Failed to parse rates from email" });
   }
 });
 
