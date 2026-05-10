@@ -11,17 +11,8 @@
 body{font-family:Inter,sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column;overflow:hidden}
 button{font-family:Inter,sans-serif;cursor:pointer}
 
-/* GATE */
-#gate{position:fixed;inset:0;background:#1C3829;display:flex;align-items:center;justify-content:center;z-index:1000}
-.gate-wrap{display:flex;flex-direction:column;align-items:center;gap:28px}
-.gate-box{background:#fff;border-radius:16px;padding:36px 40px;width:360px;display:flex;flex-direction:column;align-items:center;gap:16px}
-.gate-title{font-size:18px;font-weight:700;color:#1a2e1a}
-.gate-sub{font-size:12px;color:#8a9e8a;text-align:center}
-.gate-input{width:100%;border:1.5px solid #e4e8e4;border-radius:8px;padding:11px 14px;font-size:14px;font-family:Inter,sans-serif;outline:none;transition:border-color .15s}
-.gate-input:focus{border-color:#7AB648}
-.gate-btn{width:100%;background:#7AB648;border:none;border-radius:8px;padding:11px;color:#fff;font-size:14px;font-weight:600}
-.gate-btn:hover{background:#6aa33e}
-.gate-err{font-size:12px;color:#dc2626;min-height:16px}
+/* GATE — redirect-only, no UI needed */
+#gate{display:none!important}
 
 /* TOPNAV */
 .topnav{background:#1C3829;height:52px;display:flex;align-items:center;padding:0 20px;gap:0;flex-shrink:0}
@@ -293,19 +284,7 @@ tr.row-expiring-soon td{background:#fffbeb}
 </head>
 <body>
 
-<!-- PASSWORD GATE -->
-<div id="gate" style="display:none">
-  <div class="gate-wrap">
-    <img src="/oneport365_logo.png" alt="OnePort 365" style="height:40px;width:auto;display:block">
-    <div class="gate-box">
-      <div class="gate-title">Demo Access</div>
-      <div class="gate-sub">Rates Database · Enter password to continue</div>
-      <input class="gate-input" type="password" id="gate-pwd" placeholder="••••••••••" onkeydown="if(event.key==='Enter')tryLogin()">
-      <div class="gate-err" id="gate-err"></div>
-      <button class="gate-btn" onclick="tryLogin()">Enter</button>
-    </div>
-  </div>
-</div>
+<!-- Auth handled by redirect in JS -->
 
 <!-- APP -->
 <div id="app" style="display:none;flex-direction:column;height:100vh">
@@ -883,13 +862,7 @@ const PAGE_SIZE = 15;
 const ENDPOINTS = { ocean: '/api/rates/ocean-freight', import: '/api/rates/haulage-import', export: '/api/rates/haulage-export', other: '/api/rates/other-charges' };
 
 // ── AUTH ──────────────────────────────────────────────────────────────────────
-function tryLogin() {
-  const v = document.getElementById('gate-pwd').value;
-  if (v === PASS) { sessionStorage.setItem(SKEY, '1'); showApp(); }
-  else { document.getElementById('gate-err').textContent = 'Incorrect password'; }
-}
 function showApp() {
-  document.getElementById('gate').style.display = 'none';
   const app = document.getElementById('app');
   app.style.display = 'flex';
   switchTab('ocean');
@@ -907,7 +880,7 @@ function showApp() {
   // Load market intelligence (Options A, B, C)
   loadMarketIntel();
 }
-window.onload = () => { if (sessionStorage.getItem(SKEY) === '1') showApp(); else document.getElementById('gate').style.display = 'flex'; };
+window.onload = () => { if (sessionStorage.getItem(SKEY) === '1') showApp(); else window.location.replace('/mvp1.html'); };
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 
 // ── TABS ──────────────────────────────────────────────────────────────────────
