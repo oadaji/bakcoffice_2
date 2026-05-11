@@ -24,3 +24,9 @@ id = "L3fH55_4ru9479d_-2rq8"
 uri = "file://artifacts/oneport365/public/outlook_setup.txt"
 type = "text"
 title = "Company Microsoft Email Setup — OnePort 365"
+
+[[outputs]]
+id = "xibDEqvIm9e00SgvU-qhb"
+uri = "file://email-monitoring-architecture.txt"
+type = "text"
+title = "Email Monitoring Architecture"

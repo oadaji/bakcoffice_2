@@ -1,0 +1,215 @@
+EMAIL MONITORING ARCHITECTURE — OnePort 365
+===========================================
+Generated: May 2026
+
+
+OVERVIEW
+--------
+The application monitors one or more email inboxes for inbound freight RFQs
+(Requests for Quotation). When a new email arrives it is fetched via IMAP,
+parsed, passed through an AI extraction pipeline (Claude), and stored in the
+database as a structured RFQ record. The process runs on a polling interval
+(every 30 minutes by default, or on-demand via the "Sync inbox" button in the UI).
+
+
+HOW IMAP-BASED EMAIL MONITORING WORKS
+--------------------------------------
+IMAP (Internet Message Access Protocol) is the standard protocol for reading
+email from a mail server. Unlike forwarding or webhooks, IMAP works by having
+the application log in to the mailbox directly and fetch messages — the same way
+an email client like Outlook or Apple Mail would.
+
+The application uses a Node.js library called `imapflow` to:
+
+  1. Open a TLS connection to the mail server on port 993
+  2. Authenticate with a username (email address) and password
+  3. Open the INBOX folder
+  4. Fetch messages received since the last sync
+  5. Parse each message (headers + body) using `mailparser`
+  6. POST each message to the internal `/api/rfq/ingest` endpoint, which runs
+     AI extraction and upserts the result into the database
+  7. Log out and close the connection
+
+Deduplication is handled by the email's Message-ID header. If the same email is
+delivered to two monitored inboxes, the second ingest call finds the Message-ID
+already exists in the database and skips it — so each email becomes exactly one
+RFQ record regardless of how many monitored addresses received it.
+
+The sync result (how many emails were new vs. skipped, any errors) is returned to
+the UI and the `lastSyncedAt` timestamp is updated in the `email_accounts` table.
+
+
+ACCOUNT TYPES
+-------------
+Two account types are supported:
+
+  1. ENV-VAR ACCOUNT (legacy/default)
+     Credentials stored as server environment variables:
+       GMAIL_ADDRESS       — the Gmail address to monitor
+       GMAIL_APP_PASSWORD  — the app password for that address
+     This account always syncs and cannot be removed from the UI.
+     It is shown in the "Email Monitoring" modal as "Default (env)".
+
+  2. DB-STORED ACCOUNTS
+     Additional accounts added through the UI are stored in the
+     `email_accounts` database table. Fields include:
+       email, password (app password), provider (gmail|outlook),
+       imapHost, imapPort, active, lastSyncedAt, lastError
+     These can be added, tested, and removed through the modal at any time.
+     Any number of accounts can be connected simultaneously.
+
+During each sync cycle, both account types are merged into a single list and
+processed in sequence.
+
+
+WHAT AN APP PASSWORD IS
+------------------------
+Modern email providers (Google, Microsoft) no longer allow applications to
+authenticate using an account's regular login password. Instead, they require
+a dedicated "App Password" — a 16-character code generated specifically for
+a single application.
+
+App passwords exist because:
+
+  - They bypass two-factor authentication (2FA) without disabling it globally.
+  - They can be revoked at any time without changing the main account password.
+  - They limit what the application can do (read mail only, in this context).
+
+HOW TO GENERATE ONE:
+
+  For Gmail:
+    1. Go to myaccount.google.com → Security
+    2. Enable 2-Step Verification if not already enabled (required)
+    3. Go to Security → App passwords
+    4. Select "Mail" and the device/app name, then click Generate
+    5. Google shows a 16-character code — use this as the App Password
+
+  For Microsoft 365 / Outlook:
+    1. Go to account.microsoft.com → Security
+    2. Go to Advanced security options → App passwords
+    3. Create a new app password
+    4. Copy the generated code — use this as the App Password
+
+  Note: App passwords are shown only once. They should be stored securely
+  (e.g. in the application's secrets manager) and never committed to source code.
+
+
+GMAIL IMAP SERVER:   imap.gmail.com        port 993 (TLS)
+OUTLOOK IMAP SERVER: outlook.office365.com port 993 (TLS)
+
+The server for outlook.office365.com is used (rather than imap.outlook.com)
+because it serves both personal @outlook.com/@hotmail.com accounts AND
+business Microsoft 365 accounts running on custom domains.
+
+
+WHY AN EMAIL ALIAS CANNOT BE MONITORED DIRECTLY
+------------------------------------------------
+An email alias is a forwarding address — it has no mailbox of its own.
+
+Example: commercial@oneport365.com might be an alias that forwards all
+incoming mail to, say, info@oneport365.com or a distribution list.
+
+When an application attempts to log in to an alias address via IMAP, the
+connection fails immediately because:
+
+  - There is no mailbox stored under that address
+  - There is no password associated with it
+  - The mail server has nothing to authenticate against
+
+IMAP authentication requires a real mailbox — a destination account where
+messages are physically stored on the server and can be retrieved.
+
+
+OPTIONS FOR MONITORING AN ALIAS ADDRESS
+-----------------------------------------
+The goal is to capture all emails sent to commercial@oneport365.com in the
+application. There are several ways to achieve this:
+
+  OPTION A — Monitor the destination mailbox directly
+    Connect the actual mailbox that the alias forwards to.
+    If commercial@oneport365.com forwards to info@oneport365.com,
+    connect info@oneport365.com instead.
+    Limitation: all mail in that inbox is synced, not just mail
+    originally addressed to the alias.
+
+  OPTION B — Create a dedicated mailbox for the alias
+    Replace the alias with a real mailbox (commercial@oneport365.com
+    becomes a full account). Generate an app password for it and
+    connect it directly. This is the cleanest approach for production.
+
+  OPTION C — Create a dedicated forwarding mailbox
+    Keep the alias but add a secondary forward to a dedicated
+    "capture" mailbox (e.g. rfq-capture@oneport365.com) that the
+    application monitors. This separates monitoring traffic from
+    other use of the destination mailbox.
+
+  OPTION D — Use a webhook/email parsing service (alternative architecture)
+    Services like SendGrid Inbound Parse, Mailgun Routes, or Postmark
+    Inbound can receive email at a domain and POST the parsed content
+    directly to a webhook URL. This eliminates IMAP entirely — no
+    password, no polling, near-real-time delivery. The application
+    already has an `/api/rfq/ingest` endpoint that accepts a parsed
+    email payload, so integrating an inbound parse webhook would
+    require adding one new route to validate and accept the webhook
+    POST rather than restructuring the pipeline.
+
+
+CURRENT PRODUCTION STATE
+-------------------------
+  Connected accounts (as of May 2026):
+
+    noj.adaji@gmail.com   — Gmail, IMAP, app password via env vars,
+                            synced every 30 min, currently active
+
+  The Outlook inbox connection form in the UI is fully functional for
+  any real Microsoft 365 mailbox. The "Email and app password are required"
+  message shown in the screenshot is a client-side validation error — the
+  app password field was left empty when the form was submitted. No
+  configuration issue exists on the backend.
+
+
+DATABASE SCHEMA REFERENCE
+--------------------------
+  Table: email_accounts
+    id            serial primary key
+    email         text unique not null
+    password      text not null          -- app password, stored in plaintext
+                                         -- (recommend encrypting at rest in prod)
+    label         text
+    provider      text                   -- 'gmail' | 'outlook'
+    imap_host     text
+    imap_port     integer
+    active        boolean default true
+    last_synced_at timestamp
+    last_error    text
+    created_at    timestamp
+
+  Table: emails
+    uid           text unique            -- Message-ID based, for deduplication
+    from_name     text
+    from_email    text
+    subject       text
+    body          text
+    received_at   timestamp
+    email_type    text                   -- 'customer-rfq' | 'internal-rfq' etc.
+
+  Table: rfqs
+    email_id      integer FK → emails
+    ref           text
+    status        text                   -- new | info_needed | ready | replied | archived
+    fields        jsonb                  -- AI-extracted structured fields
+    missing_fields jsonb
+    follow_up_draft text
+    notes         text
+
+
+API ENDPOINTS RELEVANT TO EMAIL MONITORING
+-------------------------------------------
+  GET    /api/email-accounts              List all connected accounts
+  POST   /api/email-accounts              Add a new account (email + app password + provider)
+  DELETE /api/email-accounts/:id          Remove an account
+  POST   /api/email-accounts/:id/test     Test IMAP connection for a saved account
+  POST   /api/email-accounts/test-credentials  Test credentials before saving
+  GET    /api/gmail/status                Live IMAP ping for all active accounts
+  POST   /api/gmail/sync                  Trigger a manual sync across all accounts
+  POST   /api/rfq/ingest                  Accept a parsed email and run AI extraction
