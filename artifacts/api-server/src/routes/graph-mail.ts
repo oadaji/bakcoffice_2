@@ -1,6 +1,8 @@
 import { Router, type IRouter } from "express";
+import { ImapFlow } from "imapflow";
 import { db, emailAccounts, emailsTable } from "@workspace/db";
 import { eq, sql } from "drizzle-orm";
+import { getValidAccessToken } from "./gmail";
 
 const router: IRouter = Router();
 
@@ -84,42 +86,75 @@ function stripHtml(html: string): string {
     .trim();
 }
 
-// ── POST /api/email-accounts/graph ───────────────────────────────────────────
-// Register a shared/team mailbox using app-only Graph access.
-// Azure requirement: Mail.Read Application permission + admin consent granted.
-router.post("/email-accounts/graph", async (req, res) => {
+// ── POST /api/email-accounts/shared ──────────────────────────────────────────
+// Add a shared mailbox by reusing an existing OAuth2 account's token.
+// The signed-in user (e.g. okpanachia) must have Full Access to the shared mailbox.
+// No new sign-in popup needed — we borrow the token from the existing oauth2 account.
+router.post("/email-accounts/shared", async (req, res) => {
   const { email, label } = req.body as { email?: string; label?: string };
   if (!email) { res.status(400).json({ error: "email is required" }); return; }
 
   const emailNorm = email.toLowerCase().trim();
 
   try {
-    const token = await getGraphAppToken();
+    // Find an existing active OAuth2 Outlook account to borrow tokens from
+    const allAccounts = await db.select().from(emailAccounts).where(eq(emailAccounts.active, true));
+    const donor = allAccounts.find(a => a.authType === "oauth2" && a.provider === "outlook" && a.refreshToken);
 
-    // Verify access by fetching 1 message (or empty list — either is fine)
-    const since = new Date(Date.now() - 24 * 60 * 60 * 1000); // last 24h
-    await fetchGraphMessages(token, emailNorm, since); // throws if no access
+    if (!donor) {
+      res.status(400).json({ error: "No signed-in Microsoft account found. Use 'Sign in with Microsoft' first to connect your personal mailbox, then add shared mailboxes." });
+      return;
+    }
 
-    // Upsert into email_accounts with provider='graph', authType='app'
+    // Get a valid access token from the donor account (refresh if needed)
+    const token = await getValidAccessToken({
+      email: donor.email,
+      authType: "oauth2",
+      accessToken: donor.accessToken,
+      refreshToken: donor.refreshToken,
+      tokenExpiresAt: donor.tokenExpiresAt,
+      imapHost: "outlook.office365.com",
+      imapPort: 993,
+      label: donor.label ?? donor.email,
+      dbId: donor.id,
+    });
+
+    // Test IMAP connection to the shared mailbox using the donor's token
+    const client = new ImapFlow({
+      host: "outlook.office365.com",
+      port: 993,
+      secure: true,
+      auth: { user: emailNorm, accessToken: token } as any,
+      logger: false,
+    });
+    client.on("error", () => {});
+
+    await client.connect();
+    const status = await client.status("INBOX", { messages: true, unseen: true });
+    await client.logout();
+
+    // Save the shared mailbox reusing the donor's tokens
     const [row] = await db.insert(emailAccounts).values({
       email: emailNorm,
-      label: label || emailNorm,
-      provider: "graph",
-      imapHost: null,
-      imapPort: null,
-      password: null,
-      authType: "app",
+      label: label || `${emailNorm} (shared via ${donor.email})`,
+      provider: "outlook",
+      imapHost: "outlook.office365.com",
+      imapPort: 993,
+      authType: "oauth2",
+      refreshToken: donor.refreshToken,
+      accessToken: donor.accessToken,
+      tokenExpiresAt: donor.tokenExpiresAt,
       active: true,
     }).onConflictDoUpdate({
       target: emailAccounts.email,
       set: {
-        provider: sql`'graph'`,
-        authType: sql`'app'`,
+        authType: sql`'oauth2'`,
+        provider: sql`'outlook'`,
+        refreshToken: donor.refreshToken,
+        accessToken: donor.accessToken,
+        tokenExpiresAt: donor.tokenExpiresAt,
         active: sql`true`,
         lastError: sql`null`,
-        password: sql`null`,
-        refreshToken: sql`null`,
-        accessToken: sql`null`,
       },
     }).returning({
       id: emailAccounts.id,
@@ -129,15 +164,15 @@ router.post("/email-accounts/graph", async (req, res) => {
       authType: emailAccounts.authType,
     });
 
-    res.status(201).json({ ...row, ok: true });
+    res.status(201).json({ ...row, ok: true, unread: status.unseen ?? 0, message: `Connected — ${status.unseen ?? 0} unread in INBOX` });
   } catch (err) {
-    req.log.warn({ err }, "Graph mailbox connect failed");
-    const msg = String((err as Error).message ?? err);
-    const isAccess = msg.toLowerCase().includes("access") || msg.toLowerCase().includes("permission") || msg.toLowerCase().includes("authorization");
+    req.log.warn({ err }, "Shared mailbox connect failed");
+    const e = err as Record<string, unknown>;
+    const isAuth = e.authenticationFailed === true || String(e.message ?? "").toLowerCase().includes("auth");
     res.status(400).json({
-      error: isAccess
-        ? `Access denied for ${emailNorm}. Make sure 'Mail.Read' Application permission is added in Azure and admin consent has been granted.`
-        : msg,
+      error: isAuth
+        ? `Access denied for ${emailNorm}. Make sure your account has Full Access delegation to this shared mailbox in Exchange admin.`
+        : String((err as Error).message ?? err),
     });
   }
 });

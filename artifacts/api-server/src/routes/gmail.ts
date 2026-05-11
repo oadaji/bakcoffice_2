@@ -114,7 +114,7 @@ async function refreshAccessToken(acct: AccountConfig): Promise<string> {
 }
 
 /** Get a valid access token, refreshing if expired */
-async function getValidAccessToken(acct: AccountConfig): Promise<string> {
+export async function getValidAccessToken(acct: AccountConfig): Promise<string> {
   const soon = new Date(Date.now() + 5 * 60 * 1000); // 5 min buffer
   if (acct.accessToken && acct.tokenExpiresAt && acct.tokenExpiresAt > soon) {
     return acct.accessToken;
