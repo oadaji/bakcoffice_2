@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { ImapFlow } from "imapflow";
 import { db, emailAccounts, emailsTable } from "@workspace/db";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, sql } from "drizzle-orm";
 
 const router: IRouter = Router();
 
@@ -81,15 +81,30 @@ router.post("/email-accounts", async (req, res) => {
 
     const imapHost = imapHostForProvider(provider);
 
+    const emailNorm = email.toLowerCase().trim();
+
+    // Upsert: if address already exists, update password + provider (user may be re-connecting)
     const [row] = await db.insert(emailAccounts).values({
-      email: email.toLowerCase().trim(),
+      email: emailNorm,
       password,
-      label: label || email,
+      label: label || emailNorm,
       provider,
       imapHost,
       imapPort: 993,
       active: true,
-    }).returning({
+    })
+    .onConflictDoUpdate({
+      target: emailAccounts.email,
+      set: {
+        password,
+        provider,
+        imapHost,
+        imapPort: sql`993`,
+        active: sql`true`,
+        lastError: sql`null`,
+      },
+    })
+    .returning({
       id: emailAccounts.id,
       email: emailAccounts.email,
       label: emailAccounts.label,
@@ -100,10 +115,6 @@ router.post("/email-accounts", async (req, res) => {
 
     res.status(201).json(row);
   } catch (err: unknown) {
-    const msg = String(err);
-    if (msg.includes("unique")) {
-      res.status(409).json({ error: "This email address is already connected" }); return;
-    }
     req.log.error({ err }, "Failed to add email account");
     res.status(500).json({ error: "Failed to add email account" });
   }
@@ -142,11 +153,15 @@ router.post("/email-accounts/:id/test", async (req, res) => {
     await client.logout();
     res.json({ ok: true, message: `Connected — ${status.unseen ?? 0} unread in INBOX` });
   } catch (err) {
-    const msg = String(err);
     req.log.warn({ err }, "Email account test failed");
-    res.json({ ok: false, message: msg.includes("auth") || msg.includes("Login") || msg.includes("credentials")
-      ? "Authentication failed — check your app password"
-      : "Connection failed: " + msg.split("\n")[0] });
+    const e = err as Record<string, unknown>;
+    const isAuthFail = e.authenticationFailed === true
+      || String(e.responseText ?? "").toLowerCase().includes("authenticate")
+      || String(e.message ?? "").toLowerCase().includes("auth")
+      || String(err).toLowerCase().includes("login");
+    res.json({ ok: false, message: isAuthFail
+      ? "Authentication failed. For Microsoft 365 accounts, ensure IMAP is enabled for the mailbox and Basic Auth is permitted in your M365 tenant (Exchange admin center → Authentication policies). Then use an app password from account.microsoft.com → Security."
+      : "Connection failed: " + String(e.message ?? err).split("\n")[0] });
   }
 });
 
@@ -178,10 +193,14 @@ router.post("/email-accounts/test-credentials", async (req, res) => {
     await client.logout();
     res.json({ ok: true, message: "Connection successful" });
   } catch (err) {
-    const msg = String(err);
-    res.json({ ok: false, message: msg.includes("auth") || msg.includes("Login")
-      ? "Authentication failed — use an app password, not your account password"
-      : "Connection failed: " + msg.split("\n")[0] });
+    const e = err as Record<string, unknown>;
+    const isAuthFail = e.authenticationFailed === true
+      || String(e.responseText ?? "").toLowerCase().includes("authenticate")
+      || String(e.message ?? "").toLowerCase().includes("auth")
+      || String(err).toLowerCase().includes("login");
+    res.json({ ok: false, message: isAuthFail
+      ? "Authentication failed. For Microsoft 365 accounts, ensure IMAP is enabled for the mailbox and Basic Auth is permitted in your M365 tenant (Exchange admin center → Authentication policies). Then use an app password from account.microsoft.com → Security."
+      : "Connection failed: " + String(e.message ?? err).split("\n")[0] });
   }
 });
 
