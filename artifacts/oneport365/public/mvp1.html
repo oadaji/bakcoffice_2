@@ -5506,7 +5506,19 @@ async function loadThread(rfqId) {
         const idx = rfqData.findIndex(x => x.id === rfqId);
         if (idx !== -1) {
           rfqData[idx] = { ...rfqData[idx], ...updated };
+          // Preserve rates panel if user already triggered a search
+          const _rw = document.getElementById('ep-rates-wrap');
+          const _rl = document.getElementById('ep-rates-list');
+          const _aw = document.getElementById('ep-actions-wrap');
+          const _ratesVisible = _rw && _rw.style.display !== 'none';
+          const _ratesHtml = _rl ? _rl.innerHTML : '';
+          const _actionsHtml = _aw ? _aw.innerHTML : '';
           renderExtraction(rfqData[idx]);
+          if (_ratesVisible && _rw) {
+            _rw.style.display = 'block';
+            if (_rl) _rl.innerHTML = _ratesHtml;
+            if (_aw) _aw.innerHTML = _actionsHtml;
+          }
         }
       }
     } catch (e) {
@@ -5520,9 +5532,22 @@ async function loadThread(rfqId) {
       rfqData.length = 0;
       fresh.forEach(item => rfqData.push(item));
       renderInboxList();
-      // Re-render extraction with fully fresh data for this RFQ
+      // Re-render extraction with fully fresh data for this RFQ — preserve rates panel
       const freshRfq = rfqData.find(x => x.id === rfqId);
-      if (freshRfq) renderExtraction(freshRfq);
+      if (freshRfq) {
+        const _rw = document.getElementById('ep-rates-wrap');
+        const _rl = document.getElementById('ep-rates-list');
+        const _aw = document.getElementById('ep-actions-wrap');
+        const _ratesVisible = _rw && _rw.style.display !== 'none';
+        const _ratesHtml = _rl ? _rl.innerHTML : '';
+        const _actionsHtml = _aw ? _aw.innerHTML : '';
+        renderExtraction(freshRfq);
+        if (_ratesVisible && _rw) {
+          _rw.style.display = 'block';
+          if (_rl) _rl.innerHTML = _ratesHtml;
+          if (_aw) _aw.innerHTML = _actionsHtml;
+        }
+      }
     }
   } catch (err) {
     console.error('loadThread error', err);
