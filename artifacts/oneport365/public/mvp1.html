@@ -7592,8 +7592,13 @@ function renderEaAccountsList() {
     const removeBtn = a.isEnvAccount
       ? `<span style="font-size:10px;color:#8a9e8a;padding:2px 8px">default</span>`
       : `<button onclick="removeEmailAccount(${a.id})" style="font-size:10px;color:#dc2626;background:none;border:1px solid #fca5a5;border-radius:8px;padding:2px 8px;cursor:pointer;font-family:Inter,sans-serif" onmouseover="this.style.background='#fee2e2'" onmouseout="this.style.background='none'">Remove</button>`;
+    // Determine real status: green only if synced at least once with no current error
+    const hasError = !!a.lastError;
+    const hasSynced = !!a.lastSyncedAt;
+    const dotColor = hasError ? '#dc2626' : hasSynced ? '#22c55e' : '#f59e0b'; // red / green / amber
     const lastSync = (() => {
-      if (!a.lastSyncedAt) return 'active';
+      if (hasError) return 'connection error';
+      if (!hasSynced) return 'not yet synced';
       const d = new Date(a.lastSyncedAt), now = new Date();
       const mins = Math.floor((now - d) / 60000);
       if (mins < 2) return 'synced just now';
@@ -7602,7 +7607,11 @@ function renderEaAccountsList() {
       if (hrs < 24) return `synced ${hrs}h ago`;
       return 'synced ' + d.toLocaleDateString([], {month:'short', day:'numeric'});
     })();
-    const errorBadge = a.lastError ? `<span style="font-size:9px;color:#dc2626;background:#fee2e2;padding:1px 6px;border-radius:8px;margin-left:4px" title="${a.lastError}">error</span>` : '';
+    const errorBadge = hasError
+      ? `<span style="font-size:9px;color:#dc2626;background:#fee2e2;padding:1px 6px;border-radius:8px;margin-left:4px;cursor:help" title="${a.lastError}">error</span>`
+      : !hasSynced
+        ? `<span style="font-size:9px;color:#92400e;background:#fef3c7;padding:1px 6px;border-radius:8px;margin-left:4px">pending</span>`
+        : '';
     return `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #f0f4f0">
       <div style="width:32px;height:32px;border-radius:8px;background:#f8faf8;border:1px solid #e4e8e4;display:flex;align-items:center;justify-content:center;flex-shrink:0">${providerIcon}</div>
       <div style="flex:1;min-width:0">
@@ -7610,7 +7619,7 @@ function renderEaAccountsList() {
         <div style="font-size:10px;color:#8a9e8a;margin-top:1px">${providerLabel} · ${lastSync}${errorBadge}</div>
       </div>
       <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
-        <div style="width:7px;height:7px;border-radius:50%;background:${a.lastError ? '#dc2626' : '#22c55e'}"></div>
+        <div style="width:7px;height:7px;border-radius:50%;background:${dotColor}"></div>
         ${removeBtn}
       </div>
     </div>`;
