@@ -13,6 +13,7 @@ import { settingsRouter } from "./settings";
 import { emailAccountsRouter } from "./email-accounts";
 import { watiRouter } from "./wati";
 import { crmRouter } from "./crm";
+import { graphMailRouter } from "./graph-mail";
 
 const router: IRouter = Router();
 
@@ -30,5 +31,6 @@ router.use(marketIntelRouter);
 router.use(settingsRouter);
 router.use(watiRouter);
 router.use(crmRouter);
+router.use(graphMailRouter);
 
 export default router;

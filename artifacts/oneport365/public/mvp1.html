@@ -7665,6 +7665,28 @@ function toggleEaManual() {
   }
 }
 
+async function connectGraphMailbox() {
+  const emailInput = document.getElementById('ea-graph-email');
+  const email = emailInput.value.trim();
+  if (!email) { showEaFeedback('Enter the shared mailbox email address', false); return; }
+  showEaFeedback('Connecting…', true);
+  try {
+    const res = await fetch('/api/email-accounts/graph', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, label: email }),
+    });
+    const data = await res.json();
+    if (!res.ok) { showEaFeedback('✗ ' + (data.error || 'Failed to connect'), false); return; }
+    showEaFeedback('✓ ' + email + ' connected via Microsoft Graph', true);
+    emailInput.value = '';
+    await loadEmailAccountsStatus();
+    renderEaAccountsList();
+  } catch (err) {
+    showEaFeedback('✗ Network error: ' + err, false);
+  }
+}
+
 function startMsOAuth() {
   const popup = window.open('/api/email-accounts/oauth/microsoft', 'ms-oauth', 'width=520,height=680,left=200,top=100');
   showEaFeedback('Opening Microsoft sign-in…', true);
@@ -8034,10 +8056,23 @@ async function sendWaTemplate() {
 
         <!-- Outlook OAuth section (shown when Outlook tab active) -->
         <div id="ea-oauth-section" style="display:none;margin-bottom:10px">
+          <!-- Personal/delegated sign-in -->
           <button onclick="startMsOAuth()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:10px;padding:10px;font-size:12px;font-weight:600;font-family:Inter,sans-serif;cursor:pointer;border-radius:8px;border:1px solid #d2d9e0;background:#fff;color:#1a2e1a;transition:background .15s" onmouseover="this.style.background='#f8faf8'" onmouseout="this.style.background='#fff'">
             <svg width="16" height="16" viewBox="0 0 23 23"><path d="M0 0h11v11H0z" fill="#f25022"/><path d="M12 0h11v11H12z" fill="#7fba00"/><path d="M0 12h11v11H0z" fill="#00a4ef"/><path d="M12 12h11v11H12z" fill="#ffb900"/></svg>
             Sign in with Microsoft
           </button>
+          <!-- Divider -->
+          <div style="display:flex;align-items:center;gap:8px;margin:10px 0">
+            <div style="flex:1;height:1px;background:#e4e8e4"></div>
+            <span style="font-size:10px;color:#8a9e8a">or connect a shared mailbox</span>
+            <div style="flex:1;height:1px;background:#e4e8e4"></div>
+          </div>
+          <!-- Shared mailbox via Graph (app-only, no sign-in) -->
+          <div style="display:flex;gap:6px">
+            <input id="ea-graph-email" type="email" placeholder="commercial@oneport365.com" style="flex:1;padding:8px 10px;font-size:11px;font-family:Inter,sans-serif;border:1px solid #d2d9e0;border-radius:8px;outline:none;box-sizing:border-box" onfocus="this.style.borderColor='#1a2e1a'" onblur="this.style.borderColor='#d2d9e0'">
+            <button onclick="connectGraphMailbox()" style="padding:8px 12px;font-size:11px;font-weight:600;font-family:Inter,sans-serif;cursor:pointer;border-radius:8px;border:none;background:#1a2e1a;color:#fff;white-space:nowrap" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">Connect</button>
+          </div>
+          <div style="margin-top:6px;font-size:10px;color:#8a9e8a;line-height:1.4">Uses Microsoft Graph app access — no sign-in required. Needs <code>Mail.Read</code> application permission + admin consent in Azure.</div>
           <div style="margin-top:8px;text-align:center">
             <span id="ea-manual-link" onclick="toggleEaManual()" style="font-size:10px;color:#8a9e8a;cursor:pointer;text-decoration:underline">Use app password instead ↓</span>
           </div>
