@@ -7633,15 +7633,55 @@ function setEaProvider(p) {
   if (p === 'gmail') {
     gmail.style.background = '#1a2e1a'; gmail.style.color = '#fff'; gmail.style.borderColor = '#1a2e1a';
     outlook.style.background = '#fff'; outlook.style.color = '#1a2e1a'; outlook.style.borderColor = '#d2d9e0';
+    document.getElementById('ea-hint').style.display = 'block';
     document.getElementById('ea-hint').textContent = 'Use a Gmail App Password (not your account password). Enable it at myaccount.google.com → Security → 2-Step Verification → App passwords.';
     document.getElementById('ea-password').placeholder = 'App password (16 chars, no spaces)';
+    document.getElementById('ea-oauth-section').style.display = 'none';
+    document.getElementById('ea-manual-section').style.display = 'block';
   } else {
     outlook.style.background = '#1a2e1a'; outlook.style.color = '#fff'; outlook.style.borderColor = '#1a2e1a';
     gmail.style.background = '#fff'; gmail.style.color = '#1a2e1a'; gmail.style.borderColor = '#d2d9e0';
-    document.getElementById('ea-hint').textContent = 'Use an Outlook App Password. Enable it at account.microsoft.com → Security → App passwords.';
+    document.getElementById('ea-hint').style.display = 'none';
     document.getElementById('ea-password').placeholder = 'App password';
+    // Show OAuth button, hide manual form
+    document.getElementById('ea-oauth-section').style.display = 'block';
+    document.getElementById('ea-manual-section').style.display = 'none';
   }
   clearEaFeedback();
+}
+
+function toggleEaManual() {
+  const ms = document.getElementById('ea-manual-section');
+  const lnk = document.getElementById('ea-manual-link');
+  if (ms.style.display === 'none') {
+    ms.style.display = 'block';
+    document.getElementById('ea-hint').style.display = 'block';
+    document.getElementById('ea-hint').textContent = 'Use an Outlook App Password if OAuth is not available. Enable at account.microsoft.com → Security → App passwords.';
+    lnk.textContent = 'Use app password instead ↑';
+  } else {
+    ms.style.display = 'none';
+    document.getElementById('ea-hint').style.display = 'none';
+    lnk.textContent = 'Use app password instead ↓';
+  }
+}
+
+function startMsOAuth() {
+  const popup = window.open('/api/email-accounts/oauth/microsoft', 'ms-oauth', 'width=520,height=680,left=200,top=100');
+  showEaFeedback('Opening Microsoft sign-in…', true);
+  const handler = async (e) => {
+    if (e.data?.type === 'ms-oauth-success') {
+      window.removeEventListener('message', handler);
+      showEaFeedback('✓ ' + e.data.email + ' connected via Microsoft OAuth', true);
+      await loadEmailAccountsStatus();
+      renderEaAccountsList();
+    } else if (e.data?.type === 'ms-oauth-error') {
+      window.removeEventListener('message', handler);
+      showEaFeedback('✗ ' + (e.data.error || 'Microsoft sign-in failed'), false);
+    }
+  };
+  window.addEventListener('message', handler);
+  // Clean up listener if popup closes without sending a message
+  const poll = setInterval(() => { if (popup?.closed) { clearInterval(poll); window.removeEventListener('message', handler); } }, 1000);
 }
 
 function clearEaForm() {
@@ -7989,17 +8029,28 @@ async function sendWaTemplate() {
           </button>
         </div>
 
-        <!-- Hint -->
+        <!-- Hint (Gmail only) -->
         <div id="ea-hint" style="font-size:10px;color:#8a9e8a;background:#f8faf8;border:1px solid #e4e8e4;border-radius:8px;padding:8px 10px;margin-bottom:10px;line-height:1.5">Use a Gmail App Password (not your account password). Enable it at myaccount.google.com → Security → 2-Step Verification → App passwords.</div>
 
-        <!-- Inputs -->
-        <input id="ea-email" type="email" placeholder="your@email.com" style="width:100%;padding:8px 10px;font-size:12px;font-family:Inter,sans-serif;border:1px solid #d2d9e0;border-radius:8px;outline:none;box-sizing:border-box;margin-bottom:8px" onfocus="this.style.borderColor='#1a2e1a'" onblur="this.style.borderColor='#d2d9e0'">
-        <input id="ea-password" type="password" placeholder="App password (16 chars, no spaces)" style="width:100%;padding:8px 10px;font-size:12px;font-family:Inter,sans-serif;border:1px solid #d2d9e0;border-radius:8px;outline:none;box-sizing:border-box;margin-bottom:10px" onfocus="this.style.borderColor='#1a2e1a'" onblur="this.style.borderColor='#d2d9e0'">
+        <!-- Outlook OAuth section (shown when Outlook tab active) -->
+        <div id="ea-oauth-section" style="display:none;margin-bottom:10px">
+          <button onclick="startMsOAuth()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:10px;padding:10px;font-size:12px;font-weight:600;font-family:Inter,sans-serif;cursor:pointer;border-radius:8px;border:1px solid #d2d9e0;background:#fff;color:#1a2e1a;transition:background .15s" onmouseover="this.style.background='#f8faf8'" onmouseout="this.style.background='#fff'">
+            <svg width="16" height="16" viewBox="0 0 23 23"><path d="M0 0h11v11H0z" fill="#f25022"/><path d="M12 0h11v11H12z" fill="#7fba00"/><path d="M0 12h11v11H0z" fill="#00a4ef"/><path d="M12 12h11v11H12z" fill="#ffb900"/></svg>
+            Sign in with Microsoft
+          </button>
+          <div style="margin-top:8px;text-align:center">
+            <span id="ea-manual-link" onclick="toggleEaManual()" style="font-size:10px;color:#8a9e8a;cursor:pointer;text-decoration:underline">Use app password instead ↓</span>
+          </div>
+        </div>
 
-        <!-- Action buttons -->
-        <div style="display:flex;gap:8px">
-          <button id="ea-test-btn" onclick="testEaCredentials()" style="flex:1;padding:8px;font-size:11px;font-weight:600;font-family:Inter,sans-serif;cursor:pointer;border-radius:8px;border:1px solid #d2d9e0;background:#fff;color:#1a2e1a;transition:background .15s" onmouseover="this.style.background='#f8faf8'" onmouseout="this.style.background='#fff'">Test connection</button>
-          <button id="ea-add-btn" onclick="addEmailAccount()" style="flex:2;padding:8px;font-size:11px;font-weight:600;font-family:Inter,sans-serif;cursor:pointer;border-radius:8px;border:none;background:#1a2e1a;color:#fff;transition:opacity .15s" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">Connect inbox</button>
+        <!-- Manual inputs (Gmail always shown; Outlook shows as fallback) -->
+        <div id="ea-manual-section">
+          <input id="ea-email" type="email" placeholder="your@email.com" style="width:100%;padding:8px 10px;font-size:12px;font-family:Inter,sans-serif;border:1px solid #d2d9e0;border-radius:8px;outline:none;box-sizing:border-box;margin-bottom:8px" onfocus="this.style.borderColor='#1a2e1a'" onblur="this.style.borderColor='#d2d9e0'">
+          <input id="ea-password" type="password" placeholder="App password (16 chars, no spaces)" style="width:100%;padding:8px 10px;font-size:12px;font-family:Inter,sans-serif;border:1px solid #d2d9e0;border-radius:8px;outline:none;box-sizing:border-box;margin-bottom:10px" onfocus="this.style.borderColor='#1a2e1a'" onblur="this.style.borderColor='#d2d9e0'">
+          <div style="display:flex;gap:8px">
+            <button id="ea-test-btn" onclick="testEaCredentials()" style="flex:1;padding:8px;font-size:11px;font-weight:600;font-family:Inter,sans-serif;cursor:pointer;border-radius:8px;border:1px solid #d2d9e0;background:#fff;color:#1a2e1a;transition:background .15s" onmouseover="this.style.background='#f8faf8'" onmouseout="this.style.background='#fff'">Test connection</button>
+            <button id="ea-add-btn" onclick="addEmailAccount()" style="flex:2;padding:8px;font-size:11px;font-weight:600;font-family:Inter,sans-serif;cursor:pointer;border-radius:8px;border:none;background:#1a2e1a;color:#fff;transition:opacity .15s" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">Connect inbox</button>
+          </div>
         </div>
 
         <!-- Feedback -->

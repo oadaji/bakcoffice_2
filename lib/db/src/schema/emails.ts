@@ -42,11 +42,16 @@ export const emailAccounts = pgTable("email_accounts", {
   provider: text("provider").notNull().default("gmail"), // 'gmail' | 'outlook' | 'imap'
   imapHost: text("imap_host"),
   imapPort: integer("imap_port"),
-  password: text("password").notNull(),
+  password: text("password"),                            // null for OAuth2 accounts
   active: boolean("active").notNull().default(true),
   lastSyncedAt: timestamp("last_synced_at"),
   lastError: text("last_error"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+  // OAuth2 fields (populated when authType = 'oauth2')
+  authType: text("auth_type").notNull().default("password"), // 'password' | 'oauth2'
+  refreshToken: text("refresh_token"),
+  accessToken: text("access_token"),
+  tokenExpiresAt: timestamp("token_expires_at"),
 });
 
 export type EmailAccount = typeof emailAccounts.$inferSelect;

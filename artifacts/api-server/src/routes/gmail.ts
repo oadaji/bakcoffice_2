@@ -62,25 +62,75 @@ function isAutomatedEmail(fromEmail: string, subject: string, hasListUnsubscribe
 
 interface AccountConfig {
   email: string;
-  password: string;
+  password?: string | null;
+  accessToken?: string | null;
+  authType: string;
   imapHost: string;
   imapPort: number;
   label: string;
+  dbId?: number;
+  refreshToken?: string | null;
+  tokenExpiresAt?: Date | null;
 }
 
-function imapHostForProvider(provider: string): string {
+export function imapHostForProvider(provider: string): string {
   // outlook.office365.com works for both personal (@outlook.com/@hotmail.com)
   // and business Microsoft 365 accounts (custom domains on Exchange Online)
   if (provider === "outlook") return "outlook.office365.com";
   return "imap.gmail.com";
 }
 
-function createImapClientForAccount(acct: AccountConfig): ImapFlow {
+/** Refresh an OAuth2 access token using the refresh token */
+async function refreshAccessToken(acct: AccountConfig): Promise<string> {
+  const clientId = process.env.MICROSOFT_CLIENT_ID;
+  const clientSecret = process.env.MICROSOFT_CLIENT_SECRET;
+  if (!clientId || !clientSecret) throw new Error("Microsoft OAuth not configured");
+
+  const res = await fetch("https://login.microsoftonline.com/common/oauth2/v2.0/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      grant_type: "refresh_token",
+      refresh_token: acct.refreshToken ?? "",
+      client_id: clientId,
+      client_secret: clientSecret,
+      scope: "https://outlook.office365.com/IMAP.AccessAsUser.All offline_access",
+    }),
+  });
+  const data = await res.json() as { access_token?: string; refresh_token?: string; expires_in?: number; error?: string };
+  if (!data.access_token) throw new Error(`Token refresh failed: ${data.error}`);
+
+  // Persist updated tokens
+  if (acct.dbId) {
+    await db.update(emailAccounts).set({
+      accessToken: data.access_token,
+      refreshToken: data.refresh_token ?? acct.refreshToken,
+      tokenExpiresAt: new Date(Date.now() + (data.expires_in ?? 3600) * 1000),
+      lastError: null,
+    }).where(eq(emailAccounts.id, acct.dbId));
+  }
+  return data.access_token;
+}
+
+/** Get a valid access token, refreshing if expired */
+async function getValidAccessToken(acct: AccountConfig): Promise<string> {
+  const soon = new Date(Date.now() + 5 * 60 * 1000); // 5 min buffer
+  if (acct.accessToken && acct.tokenExpiresAt && acct.tokenExpiresAt > soon) {
+    return acct.accessToken;
+  }
+  return refreshAccessToken(acct);
+}
+
+function createImapClientForAccount(acct: AccountConfig, accessToken?: string): ImapFlow {
+  const auth = acct.authType === "oauth2" && accessToken
+    ? { user: acct.email, accessToken }
+    : { user: acct.email, pass: acct.password ?? "" };
+
   const client = new ImapFlow({
     host: acct.imapHost,
     port: acct.imapPort,
     secure: true,
-    auth: { user: acct.email, pass: acct.password },
+    auth,
     logger: false,
   });
   // Prevent unhandled 'error' events (e.g. socket timeout after logout) from
@@ -100,6 +150,7 @@ async function getAccountsToSync(): Promise<AccountConfig[]> {
     accounts.push({
       email: envUser,
       password: envPass,
+      authType: "password",
       imapHost: "imap.gmail.com",
       imapPort: 993,
       label: envUser,
@@ -114,9 +165,14 @@ async function getAccountsToSync(): Promise<AccountConfig[]> {
     accounts.push({
       email: row.email,
       password: row.password,
+      authType: row.authType ?? "password",
+      accessToken: row.accessToken,
+      refreshToken: row.refreshToken,
+      tokenExpiresAt: row.tokenExpiresAt,
       imapHost: row.imapHost ?? imapHostForProvider(row.provider),
       imapPort: row.imapPort ?? 993,
       label: row.label ?? row.email,
+      dbId: row.id,
     });
   }
 
@@ -134,7 +190,8 @@ router.get("/gmail/status", async (req, res) => {
     }
 
     const statuses = await Promise.allSettled(accounts.map(async (acct) => {
-      const client = createImapClientForAccount(acct);
+      const token = acct.authType === "oauth2" ? await getValidAccessToken(acct) : undefined;
+      const client = createImapClientForAccount(acct, token);
       await client.connect();
       const status = await client.status("INBOX", { messages: true, unseen: true });
       await client.logout();
@@ -177,7 +234,8 @@ router.post("/gmail/sync", async (req, res) => {
     const allErrors: string[] = [];
 
     for (const acct of accounts) {
-      const client = createImapClientForAccount(acct);
+      const token = acct.authType === "oauth2" ? await getValidAccessToken(acct) : undefined;
+      const client = createImapClientForAccount(acct, token);
       try {
         await client.connect();
         await client.mailboxOpen("INBOX");
@@ -202,11 +260,11 @@ router.post("/gmail/sync", async (req, res) => {
 
         for await (const msg of client.fetch(range, { envelope: true, source: true, internalDate: true })) {
           try {
-            const msgDate = msg.internalDate ?? msg.envelope.date ?? new Date(0);
+            const msgDate = msg.internalDate ?? msg.envelope?.date ?? new Date(0);
             if (new Date(msgDate) < sinceDate) { skipped++; continue; }
 
-            const sourceBuffer = msg.source;
-            const readable = Readable.from(sourceBuffer);
+            if (!msg.source) { skipped++; continue; }
+            const readable = Readable.from(msg.source);
             const parsed = await simpleParser(readable);
 
             const subject = parsed.subject ?? "(no subject)";

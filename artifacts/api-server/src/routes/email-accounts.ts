@@ -2,15 +2,9 @@ import { Router, type IRouter } from "express";
 import { ImapFlow } from "imapflow";
 import { db, emailAccounts, emailsTable } from "@workspace/db";
 import { eq, desc, sql } from "drizzle-orm";
+import { imapHostForProvider } from "./gmail";
 
 const router: IRouter = Router();
-
-function imapHostForProvider(provider: string): string {
-  // outlook.office365.com works for both personal (@outlook.com/@hotmail.com)
-  // and business Microsoft 365 accounts (custom domains on Exchange Online)
-  if (provider === "outlook") return "outlook.office365.com";
-  return "imap.gmail.com";
-}
 
 // ── GET /api/email-accounts ───────────────────────────────────────────────────
 router.get("/email-accounts", async (req, res) => {
@@ -20,6 +14,7 @@ router.get("/email-accounts", async (req, res) => {
       label: emailAccounts.label,
       email: emailAccounts.email,
       provider: emailAccounts.provider,
+      authType: emailAccounts.authType,
       imapHost: emailAccounts.imapHost,
       imapPort: emailAccounts.imapPort,
       active: emailAccounts.active,
@@ -32,7 +27,6 @@ router.get("/email-accounts", async (req, res) => {
     const envEmail = process.env.GMAIL_ADDRESS;
     let envLastSynced: Date | null = null;
     if (envEmail) {
-      // Use the most recently ingested email as a proxy for last sync time
       const [latest] = await db
         .select({ createdAt: emailsTable.createdAt })
         .from(emailsTable)
@@ -45,6 +39,7 @@ router.get("/email-accounts", async (req, res) => {
       label: "Default (env)",
       email: envEmail,
       provider: "gmail",
+      authType: "password",
       imapHost: null,
       imapPort: null,
       active: true,
@@ -61,7 +56,7 @@ router.get("/email-accounts", async (req, res) => {
   }
 });
 
-// ── POST /api/email-accounts ──────────────────────────────────────────────────
+// ── POST /api/email-accounts (app-password flow) ──────────────────────────────
 router.post("/email-accounts", async (req, res) => {
   try {
     const { email, password, label, provider: rawProvider } = req.body as {
@@ -72,7 +67,6 @@ router.post("/email-accounts", async (req, res) => {
       res.status(400).json({ error: "email and password are required" }); return;
     }
 
-    // Auto-detect provider from domain
     const domain = email.split("@")[1]?.toLowerCase() ?? "";
     let provider = rawProvider ?? "gmail";
     if (!rawProvider) {
@@ -80,10 +74,8 @@ router.post("/email-accounts", async (req, res) => {
     }
 
     const imapHost = imapHostForProvider(provider);
-
     const emailNorm = email.toLowerCase().trim();
 
-    // Upsert: if address already exists, update password + provider (user may be re-connecting)
     const [row] = await db.insert(emailAccounts).values({
       email: emailNorm,
       password,
@@ -91,6 +83,7 @@ router.post("/email-accounts", async (req, res) => {
       provider,
       imapHost,
       imapPort: 993,
+      authType: "password",
       active: true,
     })
     .onConflictDoUpdate({
@@ -100,8 +93,12 @@ router.post("/email-accounts", async (req, res) => {
         provider,
         imapHost,
         imapPort: sql`993`,
+        authType: sql`'password'`,
         active: sql`true`,
         lastError: sql`null`,
+        refreshToken: sql`null`,
+        accessToken: sql`null`,
+        tokenExpiresAt: sql`null`,
       },
     })
     .returning({
@@ -139,11 +136,47 @@ router.post("/email-accounts/:id/test", async (req, res) => {
     const [acct] = await db.select().from(emailAccounts).where(eq(emailAccounts.id, id));
     if (!acct) { res.status(404).json({ ok: false, message: "Account not found" }); return; }
 
+    let authArg: { user: string; pass?: string | null; accessToken?: string } = { user: acct.email, pass: acct.password };
+
+    if (acct.authType === "oauth2" && acct.accessToken) {
+      // Refresh if close to expiry
+      let token = acct.accessToken;
+      const soon = new Date(Date.now() + 5 * 60 * 1000);
+      if (!acct.tokenExpiresAt || acct.tokenExpiresAt < soon) {
+        const clientId = process.env.MICROSOFT_CLIENT_ID;
+        const clientSecret = process.env.MICROSOFT_CLIENT_SECRET;
+        if (clientId && clientSecret && acct.refreshToken) {
+          const rr = await fetch("https://login.microsoftonline.com/common/oauth2/v2.0/token", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: new URLSearchParams({
+              grant_type: "refresh_token",
+              refresh_token: acct.refreshToken,
+              client_id: clientId,
+              client_secret: clientSecret,
+              scope: "https://outlook.office365.com/IMAP.AccessAsUser.All offline_access",
+            }),
+          });
+          const rd = await rr.json() as { access_token?: string; refresh_token?: string; expires_in?: number };
+          if (rd.access_token) {
+            token = rd.access_token;
+            await db.update(emailAccounts).set({
+              accessToken: token,
+              refreshToken: rd.refresh_token ?? acct.refreshToken,
+              tokenExpiresAt: new Date(Date.now() + (rd.expires_in ?? 3600) * 1000),
+            }).where(eq(emailAccounts.id, id));
+          }
+        }
+      }
+      authArg = { user: acct.email, accessToken: token };
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const client = new ImapFlow({
       host: acct.imapHost ?? imapHostForProvider(acct.provider),
       port: acct.imapPort ?? 993,
       secure: true,
-      auth: { user: acct.email, pass: acct.password },
+      auth: authArg as any,
       logger: false,
     });
     client.on("error", () => {});
@@ -160,13 +193,12 @@ router.post("/email-accounts/:id/test", async (req, res) => {
       || String(e.message ?? "").toLowerCase().includes("auth")
       || String(err).toLowerCase().includes("login");
     res.json({ ok: false, message: isAuthFail
-      ? "Authentication failed. For Microsoft 365 accounts, ensure IMAP is enabled for the mailbox and Basic Auth is permitted in your M365 tenant (Exchange admin center → Authentication policies). Then use an app password from account.microsoft.com → Security."
+      ? "Authentication failed — check your credentials or try reconnecting via OAuth."
       : "Connection failed: " + String(e.message ?? err).split("\n")[0] });
   }
 });
 
 // ── POST /api/email-accounts/test-credentials ─────────────────────────────────
-// Test before saving (no id needed)
 router.post("/email-accounts/test-credentials", async (req, res) => {
   try {
     const { email, password, provider: rawProvider } = req.body as {
@@ -199,8 +231,126 @@ router.post("/email-accounts/test-credentials", async (req, res) => {
       || String(e.message ?? "").toLowerCase().includes("auth")
       || String(err).toLowerCase().includes("login");
     res.json({ ok: false, message: isAuthFail
-      ? "Authentication failed. For Microsoft 365 accounts, ensure IMAP is enabled for the mailbox and Basic Auth is permitted in your M365 tenant (Exchange admin center → Authentication policies). Then use an app password from account.microsoft.com → Security."
+      ? "Authentication failed. Basic Auth may be blocked by your M365 tenant — use 'Sign in with Microsoft' (OAuth) instead."
       : "Connection failed: " + String(e.message ?? err).split("\n")[0] });
+  }
+});
+
+// ── GET /api/email-accounts/oauth/microsoft ───────────────────────────────────
+// Starts the Microsoft OAuth2 flow. Opens in a popup from the UI.
+router.get("/email-accounts/oauth/microsoft", (req, res) => {
+  const clientId = process.env.MICROSOFT_CLIENT_ID;
+  if (!clientId) {
+    res.status(503).send(`<html><body style="font-family:sans-serif;padding:32px;text-align:center">
+      <p style="color:#dc2626;font-size:14px">Microsoft OAuth is not configured.<br>
+      Add MICROSOFT_CLIENT_ID and MICROSOFT_CLIENT_SECRET to environment variables.</p>
+      <button onclick="window.close()">Close</button></body></html>`);
+    return;
+  }
+
+  const redirectUri = `${req.protocol}://${req.get("host")}/api/email-accounts/oauth/callback`;
+  const state = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+
+  const params = new URLSearchParams({
+    client_id: clientId,
+    response_type: "code",
+    redirect_uri: redirectUri,
+    scope: "https://outlook.office365.com/IMAP.AccessAsUser.All offline_access email profile openid",
+    state,
+    response_mode: "query",
+    prompt: "select_account",
+  });
+
+  res.redirect(`https://login.microsoftonline.com/common/oauth2/v2.0/authorize?${params}`);
+});
+
+// ── GET /api/email-accounts/oauth/callback ────────────────────────────────────
+// Microsoft redirects here after the user signs in.
+router.get("/email-accounts/oauth/callback", async (req, res) => {
+  const { code, error, error_description } = req.query as Record<string, string>;
+
+  const closeWithError = (msg: string) => res.send(`<html><body>
+    <script>window.opener?.postMessage({type:'ms-oauth-error',error:${JSON.stringify(msg)}},'*');window.close();</script>
+    <p style="font-family:sans-serif;padding:32px;color:#dc2626">${msg}</p></body></html>`);
+
+  if (error) { closeWithError(error_description ?? error); return; }
+  if (!code) { closeWithError("No auth code received"); return; }
+
+  const clientId = process.env.MICROSOFT_CLIENT_ID;
+  const clientSecret = process.env.MICROSOFT_CLIENT_SECRET;
+  if (!clientId || !clientSecret) { closeWithError("OAuth not configured on server"); return; }
+
+  try {
+    const redirectUri = `${req.protocol}://${req.get("host")}/api/email-accounts/oauth/callback`;
+
+    // Exchange code for tokens
+    const tokenRes = await fetch("https://login.microsoftonline.com/common/oauth2/v2.0/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        grant_type: "authorization_code",
+        code,
+        redirect_uri: redirectUri,
+        client_id: clientId,
+        client_secret: clientSecret,
+        scope: "https://outlook.office365.com/IMAP.AccessAsUser.All offline_access email profile openid",
+      }),
+    });
+    const tokens = await tokenRes.json() as {
+      access_token?: string;
+      refresh_token?: string;
+      expires_in?: number;
+      error?: string;
+      error_description?: string;
+    };
+
+    if (!tokens.access_token) {
+      closeWithError(tokens.error_description ?? tokens.error ?? "Token exchange failed");
+      return;
+    }
+
+    // Get user's email from Microsoft Graph
+    const userRes = await fetch("https://graph.microsoft.com/v1.0/me?$select=mail,userPrincipalName,displayName", {
+      headers: { Authorization: `Bearer ${tokens.access_token}` },
+    });
+    const user = await userRes.json() as { mail?: string; userPrincipalName?: string; displayName?: string };
+    const email = (user.mail ?? user.userPrincipalName ?? "").toLowerCase();
+
+    if (!email) { closeWithError("Could not retrieve email from Microsoft account"); return; }
+
+    // Upsert into email_accounts
+    await db.insert(emailAccounts).values({
+      email,
+      label: user.displayName ?? email,
+      provider: "outlook",
+      imapHost: "outlook.office365.com",
+      imapPort: 993,
+      authType: "oauth2",
+      refreshToken: tokens.refresh_token,
+      accessToken: tokens.access_token,
+      tokenExpiresAt: new Date(Date.now() + (tokens.expires_in ?? 3600) * 1000),
+      active: true,
+    }).onConflictDoUpdate({
+      target: emailAccounts.email,
+      set: {
+        authType: sql`'oauth2'`,
+        provider: sql`'outlook'`,
+        imapHost: sql`'outlook.office365.com'`,
+        refreshToken: tokens.refresh_token,
+        accessToken: tokens.access_token,
+        tokenExpiresAt: new Date(Date.now() + (tokens.expires_in ?? 3600) * 1000),
+        active: sql`true`,
+        lastError: sql`null`,
+        password: sql`null`,
+      },
+    });
+
+    res.send(`<html><body>
+      <script>window.opener?.postMessage({type:'ms-oauth-success',email:${JSON.stringify(email)}},'*');window.close();</script>
+      <p style="font-family:sans-serif;padding:32px;color:#166534">✓ Connected ${email} — you can close this window.</p>
+    </body></html>`);
+  } catch (err) {
+    closeWithError("Server error: " + String(err));
   }
 });
 
