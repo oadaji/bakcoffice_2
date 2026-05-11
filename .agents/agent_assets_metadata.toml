@@ -30,3 +30,9 @@ id = "xibDEqvIm9e00SgvU-qhb"
 uri = "file://email-monitoring-architecture.txt"
 type = "text"
 title = "Email Monitoring Architecture"
+
+[[outputs]]
+id = "lBkuIiwm3jWmrwAmo9Y3c"
+uri = "file://outlook-auth-issue.txt"
+type = "text"
+title = "Outlook Auth Issue"

@@ -1,0 +1,41 @@
+OUTLOOK / MICROSOFT 365 — CONNECTION ISSUE
+==========================================
+
+ROOT CAUSE
+----------
+Microsoft 365 is rejecting the IMAP login with:
+  "3 NO AUTHENTICATE failed."
+  authenticationFailed: true
+
+This means Basic Authentication for IMAP is blocked at the tenant level.
+The app password is not even being checked — the server refuses the login method itself.
+
+
+WHAT NEEDS TO BE DONE (by M365 admin)
+---------------------------------------
+1. Enable IMAP for the mailbox
+   Exchange Admin Center → Recipients → Mailboxes
+   → select okpanachia@oneport365.com → Manage email apps → toggle IMAP ON
+
+2. Allow Basic Auth for IMAP at tenant level
+   Exchange Admin Center → Settings → Authentication policies
+   → edit the policy applied to this mailbox → enable "Basic auth - IMAP"
+
+   OR via PowerShell (faster):
+     Connect-ExchangeOnline
+     Set-CASMailbox -Identity okpanachia@oneport365.com -ImapEnabled $true
+     Set-AuthenticationPolicy -Identity "Default Authentication Policy" -AllowBasicAuthImap $true
+
+3. Generate app password
+   account.microsoft.com → Security → Advanced security options → App passwords
+   → create new → copy the 16-character code
+
+4. Allow up to 60 minutes for the policy change to propagate, then test.
+
+
+KNOWN LIMITATION
+----------------
+Microsoft is phasing out Basic Auth for Exchange Online entirely.
+If the tenant admin cannot or will not re-enable it, the only
+alternative is OAuth2 (Modern Auth), which requires an Azure App Registration
+and a different authentication flow — a larger change to the integration.
