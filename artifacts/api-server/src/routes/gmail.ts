@@ -427,11 +427,13 @@ router.post("/gmail/sync", async (req, res) => {
               if (wasNew) synced++;
               else skipped++;
             } else {
-              const errText = await ingestResp.text();
-              errors.push(`${uid}: ${errText}`);
+              const shortErr = ingestResp.status === 413
+                ? `body too large (${uid})`
+                : `ingest ${ingestResp.status} (${uid})`;
+              errors.push(shortErr);
             }
           } catch (msgErr) {
-            errors.push(`msg ${msg.uid}: ${String(msgErr)}`);
+            errors.push(`msg ${msg.uid}: ${String(msgErr).slice(0, 200)}`);
           }
         }
 
