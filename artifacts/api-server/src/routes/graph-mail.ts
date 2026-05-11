@@ -134,6 +134,7 @@ router.post("/email-accounts/shared", async (req, res) => {
     await client.logout();
 
     // Save the shared mailbox reusing the donor's tokens
+    const now = new Date();
     const [row] = await db.insert(emailAccounts).values({
       email: emailNorm,
       label: label || `${emailNorm} (shared via ${donor.email})`,
@@ -144,6 +145,7 @@ router.post("/email-accounts/shared", async (req, res) => {
       refreshToken: donor.refreshToken,
       accessToken: donor.accessToken,
       tokenExpiresAt: donor.tokenExpiresAt,
+      lastSyncedAt: now,
       active: true,
     }).onConflictDoUpdate({
       target: emailAccounts.email,
@@ -153,6 +155,7 @@ router.post("/email-accounts/shared", async (req, res) => {
         refreshToken: donor.refreshToken,
         accessToken: donor.accessToken,
         tokenExpiresAt: donor.tokenExpiresAt,
+        lastSyncedAt: now,
         active: sql`true`,
         lastError: sql`null`,
       },

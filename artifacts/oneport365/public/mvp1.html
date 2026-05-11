@@ -7584,7 +7584,7 @@ function renderEaAccountsList() {
     return;
   }
   el.innerHTML = eaAccounts.map(a => {
-    const providerColor = a.provider === 'outlook' ? '#0078d4' : '#ea4335';
+    const isShared = a.label && a.label.includes('shared via');
     const providerLabel = a.provider === 'outlook' ? 'Outlook' : 'Gmail';
     const providerIcon = a.provider === 'outlook'
       ? `<svg width="13" height="13" viewBox="0 0 23 23"><path d="M0 0h11v11H0z" fill="#f25022"/><path d="M12 0h11v11H12z" fill="#7fba00"/><path d="M0 12h11v11H0z" fill="#00a4ef"/><path d="M12 12h11v11H12z" fill="#ffb900"/></svg>`
@@ -7592,21 +7592,26 @@ function renderEaAccountsList() {
     const removeBtn = a.isEnvAccount
       ? `<span style="font-size:10px;color:#8a9e8a;padding:2px 8px">default</span>`
       : `<button onclick="removeEmailAccount(${a.id})" style="font-size:10px;color:#dc2626;background:none;border:1px solid #fca5a5;border-radius:8px;padding:2px 8px;cursor:pointer;font-family:Inter,sans-serif" onmouseover="this.style.background='#fee2e2'" onmouseout="this.style.background='none'">Remove</button>`;
-    // Determine real status: green only if synced at least once with no current error
     const hasError = !!a.lastError;
     const hasSynced = !!a.lastSyncedAt;
-    const dotColor = hasError ? '#dc2626' : hasSynced ? '#22c55e' : '#f59e0b'; // red / green / amber
+    const dotColor = hasError ? '#dc2626' : hasSynced ? '#22c55e' : '#f59e0b';
     const lastSync = (() => {
       if (hasError) return 'connection error';
       if (!hasSynced) return 'not yet synced';
       const d = new Date(a.lastSyncedAt), now = new Date();
       const mins = Math.floor((now - d) / 60000);
-      if (mins < 2) return 'synced just now';
+      if (mins < 2) return 'connected just now';
       if (mins < 60) return `synced ${mins}m ago`;
       const hrs = Math.floor(mins / 60);
       if (hrs < 24) return `synced ${hrs}h ago`;
       return 'synced ' + d.toLocaleDateString([], {month:'short', day:'numeric'});
     })();
+    const sharedBadge = isShared
+      ? `<span style="font-size:9px;color:#0078d4;background:#e8f4fd;padding:1px 6px;border-radius:8px;margin-left:4px">shared</span>`
+      : '';
+    const authBadge = a.authType === 'oauth2'
+      ? `<span style="font-size:9px;color:#166534;background:#f0fdf4;padding:1px 6px;border-radius:8px;margin-left:4px">OAuth</span>`
+      : '';
     const errorBadge = hasError
       ? `<span style="font-size:9px;color:#dc2626;background:#fee2e2;padding:1px 6px;border-radius:8px;margin-left:4px;cursor:help" title="${a.lastError}">error</span>`
       : !hasSynced
@@ -7615,11 +7620,14 @@ function renderEaAccountsList() {
     return `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #f0f4f0">
       <div style="width:32px;height:32px;border-radius:8px;background:#f8faf8;border:1px solid #e4e8e4;display:flex;align-items:center;justify-content:center;flex-shrink:0">${providerIcon}</div>
       <div style="flex:1;min-width:0">
-        <div style="font-size:12px;font-weight:600;color:#1a2e1a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${a.email}</div>
+        <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap">
+          <span style="font-size:12px;font-weight:600;color:#1a2e1a">${a.email}</span>
+          ${sharedBadge}${authBadge}
+        </div>
         <div style="font-size:10px;color:#8a9e8a;margin-top:1px">${providerLabel} · ${lastSync}${errorBadge}</div>
       </div>
       <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
-        <div style="width:7px;height:7px;border-radius:50%;background:${dotColor}"></div>
+        <div style="width:7px;height:7px;border-radius:50%;background:${dotColor}" title="${dotColor === '#22c55e' ? 'Connected' : dotColor === '#dc2626' ? 'Error' : 'Pending'}"></div>
         ${removeBtn}
       </div>
     </div>`;
