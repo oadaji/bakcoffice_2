@@ -284,6 +284,8 @@ router.post("/gmail/sync", async (req, res) => {
             if (!body && parsed.html) {
               body = parsed.html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
             }
+            // Truncate to 15 000 chars — Claude only needs the relevant text
+            if (body.length > 15000) body = body.slice(0, 15000);
 
             if (!fromEmail || !body.trim()) { skipped++; continue; }
 

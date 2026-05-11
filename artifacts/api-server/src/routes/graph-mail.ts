@@ -230,6 +230,8 @@ router.post("/graph/sync", async (req, res) => {
           } else {
             body = msg.body?.content ?? "";
           }
+          // Truncate to 15 000 chars — Claude only needs the relevant text
+          if (body.length > 15000) body = body.slice(0, 15000);
 
           // Skip if already in DB
           const existing = await db
