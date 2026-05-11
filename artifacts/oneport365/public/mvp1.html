@@ -4722,16 +4722,18 @@ async function openGenerateQuoteModal() {
   const sel = document.getElementById('gqm-rfq-select');
   sel.innerHTML = '<option value="">Loading RFQs…</option>';
   try {
-    const r = await fetch('/api/rfqs');
-    const rfqs = await r.json();
-    const open = rfqs.filter(x => x.status !== 'replied' || rfqs.length < 5);
+    const [rfqResp, quoteResp] = await Promise.all([fetch('/api/rfqs'), fetch('/api/quotes')]);
+    const rfqs = await rfqResp.json();
+    const quotes = quoteResp.ok ? await quoteResp.json() : [];
+    const quotedRfqIds = new Set((Array.isArray(quotes) ? quotes : []).map(q => q.rfqId).filter(Boolean));
+    const open = rfqs.filter(x => x.status !== 'replied' && x.emailType === 'customer-rfq' && !quotedRfqIds.has(x.id));
     sel.innerHTML = '<option value="">Select an RFQ…</option>' + open.map(rfq => {
       const fields = Array.isArray(rfq.fields) ? rfq.fields : [];
       const pol = fields.find(f=>f.k?.toLowerCase().includes('pol'))?.v || '';
       const pod = fields.find(f=>f.k?.toLowerCase().includes('pod'))?.v || '';
       const route = pol && pod ? ` · ${pol}→${pod}` : '';
       return `<option value="${rfq.id}">${escHtml(rfq.ref)}${route}</option>`;
-    }).join('');
+    }).join('') || '<option value="" disabled>All open RFQs already have a quote</option>';
   } catch(e) { sel.innerHTML = '<option value="">Failed to load RFQs</option>'; }
   document.getElementById('gqm-error').style.display = 'none';
   document.getElementById('gqm-spinner').style.display = 'none';
