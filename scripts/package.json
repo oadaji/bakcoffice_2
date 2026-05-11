@@ -5,13 +5,18 @@
   "type": "module",
   "scripts": {
     "hello": "tsx ./src/hello.ts",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "backfill-crm": "tsx ./src/backfill-crm.ts"
   },
   "devDependencies": {
     "@types/node": "catalog:",
+    "@types/pg": "^8.18.0",
     "tsx": "catalog:"
   },
   "dependencies": {
+    "@workspace/db": "workspace:*",
+    "drizzle-orm": "catalog:",
+    "pg": "^8.20.0",
     "xlsx": "^0.18.5"
   }
 }

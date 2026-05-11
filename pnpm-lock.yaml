@@ -669,6 +669,15 @@ importers:
 
   scripts:
     dependencies:
+      '@workspace/db':
+        specifier: workspace:*
+        version: link:../lib/db
+      drizzle-orm:
+        specifier: 'catalog:'
+        version: 0.45.2(@types/pg@8.18.0)(pg@8.20.0)
+      pg:
+        specifier: ^8.20.0
+        version: 8.20.0
       xlsx:
         specifier: ^0.18.5
         version: 0.18.5
@@ -676,6 +685,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 25.3.5
+      '@types/pg':
+        specifier: ^8.18.0
+        version: 8.18.0
       tsx:
         specifier: 'catalog:'
         version: 4.21.0
