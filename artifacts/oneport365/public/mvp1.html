@@ -7665,26 +7665,28 @@ function toggleEaManual() {
   }
 }
 
-async function connectGraphMailbox() {
+function connectGraphMailbox() {
   const emailInput = document.getElementById('ea-graph-email');
-  const email = emailInput.value.trim();
-  if (!email) { showEaFeedback('Enter the shared mailbox email address', false); return; }
-  showEaFeedback('Connecting…', true);
-  try {
-    const res = await fetch('/api/email-accounts/graph', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, label: email }),
-    });
-    const data = await res.json();
-    if (!res.ok) { showEaFeedback('✗ ' + (data.error || 'Failed to connect'), false); return; }
-    showEaFeedback('✓ ' + email + ' connected via Microsoft Graph', true);
-    emailInput.value = '';
-    await loadEmailAccountsStatus();
-    renderEaAccountsList();
-  } catch (err) {
-    showEaFeedback('✗ Network error: ' + err, false);
-  }
+  const mailbox = emailInput.value.trim();
+  if (!mailbox) { showEaFeedback('Enter the shared mailbox email address first', false); return; }
+  // Open OAuth popup with the target mailbox encoded — sign in as the user
+  // who has Full Access to the shared mailbox in Exchange
+  const popup = window.open('/api/email-accounts/oauth/microsoft?mailbox=' + encodeURIComponent(mailbox), 'ms-oauth', 'width=520,height=680,left=200,top=100');
+  showEaFeedback('Opening Microsoft sign-in for ' + mailbox + '…', true);
+  const handler = async (e) => {
+    if (e.data?.type === 'ms-oauth-success') {
+      window.removeEventListener('message', handler);
+      showEaFeedback('✓ ' + (e.data.email || mailbox) + ' connected via IMAP OAuth', true);
+      emailInput.value = '';
+      await loadEmailAccountsStatus();
+      renderEaAccountsList();
+    } else if (e.data?.type === 'ms-oauth-error') {
+      window.removeEventListener('message', handler);
+      showEaFeedback('✗ ' + (e.data.error || 'Sign-in failed'), false);
+    }
+  };
+  window.addEventListener('message', handler);
+  const poll = setInterval(() => { if (popup?.closed) { clearInterval(poll); window.removeEventListener('message', handler); } }, 1000);
 }
 
 function startMsOAuth() {
@@ -8072,7 +8074,7 @@ async function sendWaTemplate() {
             <input id="ea-graph-email" type="email" placeholder="commercial@oneport365.com" style="flex:1;padding:8px 10px;font-size:11px;font-family:Inter,sans-serif;border:1px solid #d2d9e0;border-radius:8px;outline:none;box-sizing:border-box" onfocus="this.style.borderColor='#1a2e1a'" onblur="this.style.borderColor='#d2d9e0'">
             <button onclick="connectGraphMailbox()" style="padding:8px 12px;font-size:11px;font-weight:600;font-family:Inter,sans-serif;cursor:pointer;border-radius:8px;border:none;background:#1a2e1a;color:#fff;white-space:nowrap" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">Connect</button>
           </div>
-          <div style="margin-top:6px;font-size:10px;color:#8a9e8a;line-height:1.4">Uses Microsoft Graph app access — no sign-in required. Needs <code>Mail.Read</code> application permission + admin consent in Azure.</div>
+          <div style="margin-top:6px;font-size:10px;color:#8a9e8a;line-height:1.4">Enter the shared mailbox, then sign in as a user who has Full Access to it in Exchange. Uses IMAP OAuth — no extra Azure permissions needed.</div>
           <div style="margin-top:8px;text-align:center">
             <span id="ea-manual-link" onclick="toggleEaManual()" style="font-size:10px;color:#8a9e8a;cursor:pointer;text-decoration:underline">Use app password instead ↓</span>
           </div>

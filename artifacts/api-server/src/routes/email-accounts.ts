@@ -248,12 +248,15 @@ router.get("/email-accounts/oauth/microsoft", (req, res) => {
     return;
   }
 
-  // Use the first public domain from REPLIT_DOMAINS (proxy-correct URL)
   const publicDomain = (process.env.REPLIT_DOMAINS ?? "").split(",")[0].trim();
   const redirectUri = publicDomain
     ? `https://${publicDomain}/api/email-accounts/oauth/callback`
     : `${req.protocol}://${req.get("host")}/api/email-accounts/oauth/callback`;
-  const state = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+
+  // Encode csrf + optional target mailbox (for shared mailboxes) in state
+  const csrf = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+  const targetMailbox = (req.query.mailbox as string | undefined)?.toLowerCase().trim() ?? "";
+  const state = Buffer.from(JSON.stringify({ csrf, mailbox: targetMailbox })).toString("base64url");
 
   const tenantId = process.env.MICROSOFT_TENANT_ID ?? "common";
 
@@ -320,10 +323,19 @@ router.get("/email-accounts/oauth/callback", async (req, res) => {
       return;
     }
 
-    // Decode id_token (JWT) to get email — no Graph call needed.
-    // The access_token is scoped to outlook.office365.com so Graph would reject it.
+    // Decode state to get optional target mailbox (shared mailbox flow)
+    let targetMailbox = "";
+    try {
+      const stateStr = req.query.state as string | undefined;
+      if (stateStr) {
+        const decoded = JSON.parse(Buffer.from(stateStr, "base64url").toString("utf8")) as { mailbox?: string };
+        targetMailbox = decoded.mailbox ?? "";
+      }
+    } catch { /* ignore malformed state */ }
+
+    // Decode id_token (JWT) to get the signed-in user's email
     const idToken = tokens.id_token;
-    let email = "";
+    let signerEmail = "";
     let displayName = "";
     if (idToken) {
       try {
@@ -333,17 +345,24 @@ router.get("/email-accounts/oauth/callback", async (req, res) => {
           upn?: string;
           name?: string;
         };
-        email = (payload.email ?? payload.preferred_username ?? payload.upn ?? "").toLowerCase();
-        displayName = payload.name ?? email;
+        signerEmail = (payload.email ?? payload.preferred_username ?? payload.upn ?? "").toLowerCase();
+        displayName = payload.name ?? signerEmail;
       } catch { /* fall through */ }
     }
 
-    if (!email) { closeWithError("Could not retrieve email from Microsoft account — ensure the openid and email scopes are consented"); return; }
+    if (!signerEmail) { closeWithError("Could not retrieve email from Microsoft account — ensure the openid and email scopes are consented"); return; }
+
+    // If a shared mailbox was requested, use it as the inbox email but store
+    // the signed-in user's OAuth tokens (IMAP shared mailbox pattern).
+    const email = targetMailbox || signerEmail;
+    const label = targetMailbox
+      ? `${targetMailbox} (via ${signerEmail})`
+      : (displayName || signerEmail);
 
     // Upsert into email_accounts
     await db.insert(emailAccounts).values({
       email,
-      label: displayName || email,
+      label,
       provider: "outlook",
       imapHost: "outlook.office365.com",
       imapPort: 993,
