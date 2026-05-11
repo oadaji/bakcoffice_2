@@ -6,7 +6,9 @@ import { eq, desc } from "drizzle-orm";
 const router: IRouter = Router();
 
 function imapHostForProvider(provider: string): string {
-  if (provider === "outlook") return "imap.outlook.com";
+  // outlook.office365.com works for both personal (@outlook.com/@hotmail.com)
+  // and business Microsoft 365 accounts (custom domains on Exchange Online)
+  if (provider === "outlook") return "outlook.office365.com";
   return "imap.gmail.com";
 }
 
