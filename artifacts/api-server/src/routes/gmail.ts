@@ -86,7 +86,8 @@ async function refreshAccessToken(acct: AccountConfig): Promise<string> {
   const clientSecret = process.env.MICROSOFT_CLIENT_SECRET;
   if (!clientId || !clientSecret) throw new Error("Microsoft OAuth not configured");
 
-  const res = await fetch("https://login.microsoftonline.com/common/oauth2/v2.0/token", {
+  const tenantId = process.env.MICROSOFT_TENANT_ID ?? "common";
+  const res = await fetch(`https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({

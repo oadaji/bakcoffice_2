@@ -251,6 +251,8 @@ router.get("/email-accounts/oauth/microsoft", (req, res) => {
   const redirectUri = `${req.protocol}://${req.get("host")}/api/email-accounts/oauth/callback`;
   const state = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
 
+  const tenantId = process.env.MICROSOFT_TENANT_ID ?? "common";
+
   const params = new URLSearchParams({
     client_id: clientId,
     response_type: "code",
@@ -261,7 +263,7 @@ router.get("/email-accounts/oauth/microsoft", (req, res) => {
     prompt: "select_account",
   });
 
-  res.redirect(`https://login.microsoftonline.com/common/oauth2/v2.0/authorize?${params}`);
+  res.redirect(`https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/authorize?${params}`);
 });
 
 // ── GET /api/email-accounts/oauth/callback ────────────────────────────────────
@@ -282,9 +284,10 @@ router.get("/email-accounts/oauth/callback", async (req, res) => {
 
   try {
     const redirectUri = `${req.protocol}://${req.get("host")}/api/email-accounts/oauth/callback`;
+    const tenantId = process.env.MICROSOFT_TENANT_ID ?? "common";
 
     // Exchange code for tokens
-    const tokenRes = await fetch("https://login.microsoftonline.com/common/oauth2/v2.0/token", {
+    const tokenRes = await fetch(`https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
