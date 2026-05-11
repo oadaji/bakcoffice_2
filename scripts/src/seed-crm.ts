@@ -177,86 +177,67 @@ const companies = [
   },
 ];
 
+// Contacts use the DB schema: name, email, company, phone, source, notes
 const contacts: Array<{
-  companyDomain: string;
-  firstName: string;
-  lastName: string;
+  name: string;
   email: string;
+  company: string;
   phone?: string;
-  whatsappPhone?: string;
-  jobTitle: string;
-  role: string;
-  isPrimary: boolean;
   source: string;
-  tags: string[];
   notes?: string;
 }> = [
   // Royal Foam
-  { companyDomain: "royalfoamng.com", firstName: "Emeka", lastName: "Eze", email: "emeka.eze@royalfoamng.com", phone: "+234 803 400 1122", jobTitle: "Logistics Manager", role: "decision-maker", isPrimary: true, source: "email", tags: ["primary"], notes: "Main point of contact. Responsive on WhatsApp." },
-  { companyDomain: "royalfoamng.com", firstName: "Chidi", lastName: "Okeke", email: "chidi.okeke@royalfoamng.com", phone: "+234 706 211 0033", jobTitle: "Procurement Officer", role: "contact", isPrimary: false, source: "email", tags: [] },
-
-  // Dankuru Industries
-  { companyDomain: "dankuru.com.ng", firstName: "Tunde", lastName: "Fashola", email: "tunde.fashola@dankuru.com.ng", phone: "+234 802 553 7788", jobTitle: "Head of Supply Chain", role: "decision-maker", isPrimary: true, source: "email", tags: ["primary"] },
-  { companyDomain: "dankuru.com.ng", firstName: "Hauwa", lastName: "Musa", email: "hauwa.musa@dankuru.com.ng", phone: "+234 703 890 2211", jobTitle: "Clearing & Forwarding Coordinator", role: "contact", isPrimary: false, source: "email", tags: [] },
-
+  { name: "Emeka Eze", email: "emeka.eze@royalfoamng.com", company: "Royal Foam Nigeria Ltd", phone: "+234 803 400 1122", source: "email", notes: "Main point of contact. Decision-maker. Responsive on WhatsApp." },
+  { name: "Chidi Okeke", email: "chidi.okeke@royalfoamng.com", company: "Royal Foam Nigeria Ltd", phone: "+234 706 211 0033", source: "email", notes: "Procurement Officer" },
+  // Dankuru
+  { name: "Tunde Fashola", email: "tunde.fashola@dankuru.com.ng", company: "Dankuru Industries Ltd", phone: "+234 802 553 7788", source: "email", notes: "Head of Supply Chain" },
+  { name: "Hauwa Musa", email: "hauwa.musa@dankuru.com.ng", company: "Dankuru Industries Ltd", phone: "+234 703 890 2211", source: "email", notes: "Clearing & Forwarding Coordinator" },
   // Nwosu Agro
-  { companyDomain: "nwosuagro.com.ng", firstName: "Adaeze", lastName: "Nwosu", email: "adaeze.nwosu@nwosuagro.com.ng", phone: "+234 806 441 9900", whatsappPhone: "+2348064419900", jobTitle: "Managing Director", role: "decision-maker", isPrimary: true, source: "whatsapp", tags: ["primary", "owner"] },
-  { companyDomain: "nwosuagro.com.ng", firstName: "Chukwuemeka", lastName: "Okafor", email: "c.okafor@nwosuagro.com.ng", phone: "+234 812 200 3344", jobTitle: "Export Officer", role: "contact", isPrimary: false, source: "email", tags: [] },
-
+  { name: "Adaeze Nwosu", email: "adaeze.nwosu@nwosuagro.com.ng", company: "Nwosu Agro Commodities", phone: "+234 806 441 9900", source: "whatsapp", notes: "Managing Director. Owner." },
+  { name: "Chukwuemeka Okafor", email: "c.okafor@nwosuagro.com.ng", company: "Nwosu Agro Commodities", phone: "+234 812 200 3344", source: "email", notes: "Export Officer" },
   // Sarten
-  { companyDomain: "sarten.com.tr", firstName: "Demir", lastName: "Güzel", email: "demirguzel@sarten.com.tr", phone: "+90 533 210 8899", jobTitle: "International Logistics Coordinator", role: "decision-maker", isPrimary: true, source: "email", tags: ["primary", "turkey"] },
-  { companyDomain: "sarten.com.tr", firstName: "Aylin", lastName: "Çelik", email: "aylin.celik@sarten.com.tr", phone: "+90 542 100 2200", jobTitle: "Export Documentation Specialist", role: "contact", isPrimary: false, source: "email", tags: [] },
-
-  // Greenfield Shipping
-  { companyDomain: "greenfield-logistics.ng", firstName: "Biodun", lastName: "Adeyinka", email: "biodun@greenfield-logistics.ng", phone: "+234 801 335 5566", whatsappPhone: "+2348013355566", jobTitle: "Operations Director", role: "partner", isPrimary: true, source: "email", tags: ["partner", "primary"] },
-  { companyDomain: "greenfield-logistics.ng", firstName: "Ngozi", lastName: "Ibe", email: "ngozi.ibe@greenfield-logistics.ng", phone: "+234 708 221 4477", jobTitle: "Customer Service Lead", role: "contact", isPrimary: false, source: "whatsapp", tags: [] },
-
+  { name: "Demir Güzel", email: "demirguzel@sarten.com.tr", company: "Sarten Packaging A.Ş.", phone: "+90 533 210 8899", source: "email", notes: "International Logistics Coordinator" },
+  { name: "Aylin Çelik", email: "aylin.celik@sarten.com.tr", company: "Sarten Packaging A.Ş.", phone: "+90 542 100 2200", source: "email", notes: "Export Documentation Specialist" },
+  // Greenfield
+  { name: "Biodun Adeyinka", email: "biodun@greenfield-logistics.ng", company: "Greenfield Shipping & Logistics", phone: "+234 801 335 5566", source: "email", notes: "Operations Director. Partner contact." },
+  { name: "Ngozi Ibe", email: "ngozi.ibe@greenfield-logistics.ng", company: "Greenfield Shipping & Logistics", phone: "+234 708 221 4477", source: "whatsapp", notes: "Customer Service Lead" },
   // Meridian Foods
-  { companyDomain: "meridianfoods.com", firstName: "Lars", lastName: "van den Berg", email: "l.vandenberg@meridianfoods.com", phone: "+31 6 2233 4455", jobTitle: "Procurement & Logistics Manager", role: "decision-maker", isPrimary: true, source: "email", tags: ["primary", "europe"] },
-  { companyDomain: "meridianfoods.com", firstName: "Sophie", lastName: "Dekker", email: "s.dekker@meridianfoods.com", phone: "+31 6 8877 1122", jobTitle: "Trade Compliance Officer", role: "contact", isPrimary: false, source: "email", tags: [] },
-
-  // Kingsway Trading
-  { companyDomain: "kingstrade.com.ng", firstName: "Yusuf", lastName: "Bello", email: "yusuf.bello@kingstrade.com.ng", phone: "+234 805 667 2200", jobTitle: "General Manager", role: "decision-maker", isPrimary: true, source: "email", tags: ["primary"] },
-  { companyDomain: "kingstrade.com.ng", firstName: "Fatima", lastName: "Aliyu", email: "fatima.a@kingstrade.com.ng", phone: "+234 907 334 5511", jobTitle: "Shipping Coordinator", role: "contact", isPrimary: false, source: "email", tags: [] },
-
+  { name: "Lars van den Berg", email: "l.vandenberg@meridianfoods.com", company: "Meridian Foods International", phone: "+31 6 2233 4455", source: "email", notes: "Procurement & Logistics Manager" },
+  { name: "Sophie Dekker", email: "s.dekker@meridianfoods.com", company: "Meridian Foods International", phone: "+31 6 8877 1122", source: "email", notes: "Trade Compliance Officer" },
+  // Kingsway
+  { name: "Yusuf Bello", email: "yusuf.bello@kingstrade.com.ng", company: "Kingsway Trading Co.", phone: "+234 805 667 2200", source: "email", notes: "General Manager" },
+  { name: "Fatima Aliyu", email: "fatima.a@kingstrade.com.ng", company: "Kingsway Trading Co.", phone: "+234 907 334 5511", source: "email", notes: "Shipping Coordinator" },
   // PetroVast
-  { companyDomain: "petrovast.ng", firstName: "Chukwudi", lastName: "Obi", email: "c.obi@petrovast.ng", phone: "+234 803 199 7766", jobTitle: "Logistics & Procurement Manager", role: "decision-maker", isPrimary: true, source: "email", tags: ["primary", "ph"] },
-  { companyDomain: "petrovast.ng", firstName: "Remi", lastName: "Adeleke", email: "r.adeleke@petrovast.ng", phone: "+234 706 850 1122", jobTitle: "Project Cargo Coordinator", role: "contact", isPrimary: false, source: "email", tags: [] },
-
-  // Guangzhou Nexlink
-  { companyDomain: "nexlink.com.cn", firstName: "Wang", lastName: "Fang", email: "wangfang@nexlink.com.cn", phone: "+86 139 2288 4400", jobTitle: "Export Sales Manager", role: "decision-maker", isPrimary: true, source: "email", tags: ["primary", "china"] },
-  { companyDomain: "nexlink.com.cn", firstName: "Kevin", lastName: "Chen", email: "kevin.chen@nexlink.com.cn", phone: "+86 135 1100 6677", whatsappPhone: "+8613511006677", jobTitle: "Logistics Coordinator", role: "contact", isPrimary: false, source: "whatsapp", tags: [] },
-
+  { name: "Chukwudi Obi", email: "c.obi@petrovast.ng", company: "PetroVast Nigeria Ltd", phone: "+234 803 199 7766", source: "email", notes: "Logistics & Procurement Manager" },
+  { name: "Remi Adeleke", email: "r.adeleke@petrovast.ng", company: "PetroVast Nigeria Ltd", phone: "+234 706 850 1122", source: "email", notes: "Project Cargo Coordinator" },
+  // Nexlink
+  { name: "Wang Fang", email: "wangfang@nexlink.com.cn", company: "Guangzhou Nexlink Trading", phone: "+86 139 2288 4400", source: "email", notes: "Export Sales Manager" },
+  { name: "Kevin Chen", email: "kevin.chen@nexlink.com.cn", company: "Guangzhou Nexlink Trading", phone: "+86 135 1100 6677", source: "whatsapp", notes: "Logistics Coordinator" },
   // Afropharma
-  { companyDomain: "afropharma.ng", firstName: "Ifeoma", lastName: "Nwachukwu", email: "i.nwachukwu@afropharma.ng", phone: "+234 803 740 5500", jobTitle: "Supply Chain Director", role: "decision-maker", isPrimary: true, source: "email", tags: ["primary", "pharma"] },
-  { companyDomain: "afropharma.ng", firstName: "Segun", lastName: "Adebayo", email: "s.adebayo@afropharma.ng", phone: "+234 810 290 6633", jobTitle: "Regulatory & Logistics Officer", role: "contact", isPrimary: false, source: "email", tags: [] },
-
+  { name: "Ifeoma Nwachukwu", email: "i.nwachukwu@afropharma.ng", company: "Afropharma Distribution", phone: "+234 803 740 5500", source: "email", notes: "Supply Chain Director" },
+  { name: "Segun Adebayo", email: "s.adebayo@afropharma.ng", company: "Afropharma Distribution", phone: "+234 810 290 6633", source: "email", notes: "Regulatory & Logistics Officer" },
   // Delta Steel
-  { companyDomain: "deltasteelworks.ng", firstName: "Ovie", lastName: "Erhirhie", email: "ovie.e@deltasteelworks.ng", phone: "+234 805 430 8811", whatsappPhone: "+2348054308811", jobTitle: "Import Manager", role: "decision-maker", isPrimary: true, source: "whatsapp", tags: ["primary", "delta"] },
-  { companyDomain: "deltasteelworks.ng", firstName: "Grace", lastName: "Oghenero", email: "grace.o@deltasteelworks.ng", phone: "+234 703 510 2200", jobTitle: "Admin & Documentation", role: "contact", isPrimary: false, source: "email", tags: [] },
-
+  { name: "Ovie Erhirhie", email: "ovie.e@deltasteelworks.ng", company: "Delta Steel Works", phone: "+234 805 430 8811", source: "whatsapp", notes: "Import Manager" },
+  { name: "Grace Oghenero", email: "grace.o@deltasteelworks.ng", company: "Delta Steel Works", phone: "+234 703 510 2200", source: "email", notes: "Admin & Documentation" },
   // Harvest Moon
-  { companyDomain: "harvestmooncocoa.com", firstName: "Olabisi", lastName: "Akin-Peters", email: "olabisi@harvestmooncocoa.com", phone: "+234 806 300 7744", jobTitle: "Export Director", role: "decision-maker", isPrimary: true, source: "email", tags: ["primary", "exporter"] },
-  { companyDomain: "harvestmooncocoa.com", firstName: "Taiwo", lastName: "Adegoke", email: "taiwo.adegoke@harvestmooncocoa.com", phone: "+234 908 210 5566", jobTitle: "Quality & Shipping Officer", role: "contact", isPrimary: false, source: "email", tags: [] },
+  { name: "Olabisi Akin-Peters", email: "olabisi@harvestmooncocoa.com", company: "Harvest Moon Cocoa", phone: "+234 806 300 7744", source: "email", notes: "Export Director" },
+  { name: "Taiwo Adegoke", email: "taiwo.adegoke@harvestmooncocoa.com", company: "Harvest Moon Cocoa", phone: "+234 908 210 5566", source: "email", notes: "Quality & Shipping Officer" },
 ];
 
 async function main() {
   console.log("🌱  Seeding companies…");
-  const companyIdMap = new Map<string, number>();
 
   for (const co of companies) {
     const existing = await db
       .select({ id: companiesTable.id })
       .from(companiesTable)
-      .where(eq(companiesTable.domain, co.domain))
+      .where(eq(companiesTable.domain, co.domain!))
       .limit(1);
 
     if (existing.length > 0) {
       console.log(`  ↩  skip ${co.name} (already exists)`);
-      companyIdMap.set(co.domain, existing[0].id);
     } else {
-      const [row] = await db.insert(companiesTable).values(co).returning({ id: companiesTable.id });
-      companyIdMap.set(co.domain, row.id);
+      await db.insert(companiesTable).values(co);
       console.log(`  ✓  inserted ${co.name}`);
     }
   }
@@ -276,13 +257,11 @@ async function main() {
       continue;
     }
 
-    const companyId = companyIdMap.get(ct.companyDomain);
-    const { companyDomain: _, ...rest } = ct;
-    await db.insert(contactsTable).values({ ...rest, companyId, updatedAt: new Date() });
+    await db.insert(contactsTable).values({ ...ct, updatedAt: new Date() });
     inserted++;
   }
 
-  console.log(`\n✅  Done — ${companies.length} companies, ${inserted} contacts inserted, ${skipped} skipped`);
+  console.log(`\n✅  Done — ${companies.length} companies processed, ${inserted} contacts inserted, ${skipped} skipped`);
   process.exit(0);
 }
 
