@@ -309,6 +309,7 @@ router.get("/email-accounts/oauth/callback", async (req, res) => {
     const tokens = await tokenRes.json() as {
       access_token?: string;
       refresh_token?: string;
+      id_token?: string;
       expires_in?: number;
       error?: string;
       error_description?: string;
@@ -319,19 +320,30 @@ router.get("/email-accounts/oauth/callback", async (req, res) => {
       return;
     }
 
-    // Get user's email from Microsoft Graph
-    const userRes = await fetch("https://graph.microsoft.com/v1.0/me?$select=mail,userPrincipalName,displayName", {
-      headers: { Authorization: `Bearer ${tokens.access_token}` },
-    });
-    const user = await userRes.json() as { mail?: string; userPrincipalName?: string; displayName?: string };
-    const email = (user.mail ?? user.userPrincipalName ?? "").toLowerCase();
+    // Decode id_token (JWT) to get email — no Graph call needed.
+    // The access_token is scoped to outlook.office365.com so Graph would reject it.
+    const idToken = tokens.id_token;
+    let email = "";
+    let displayName = "";
+    if (idToken) {
+      try {
+        const payload = JSON.parse(Buffer.from(idToken.split(".")[1], "base64url").toString("utf8")) as {
+          email?: string;
+          preferred_username?: string;
+          upn?: string;
+          name?: string;
+        };
+        email = (payload.email ?? payload.preferred_username ?? payload.upn ?? "").toLowerCase();
+        displayName = payload.name ?? email;
+      } catch { /* fall through */ }
+    }
 
-    if (!email) { closeWithError("Could not retrieve email from Microsoft account"); return; }
+    if (!email) { closeWithError("Could not retrieve email from Microsoft account — ensure the openid and email scopes are consented"); return; }
 
     // Upsert into email_accounts
     await db.insert(emailAccounts).values({
       email,
-      label: user.displayName ?? email,
+      label: displayName || email,
       provider: "outlook",
       imapHost: "outlook.office365.com",
       imapPort: 993,
