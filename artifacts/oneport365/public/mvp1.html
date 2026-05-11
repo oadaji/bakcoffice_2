@@ -5129,7 +5129,7 @@ async function loadInbox() {
 // Always look back 24 h so emails that arrived before page-load are not missed.
 // UID deduplication on the server prevents double-ingesting anything already saved.
 function syncSince() {
-  return new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  return '2026-04-01T00:00:00.000Z';
 }
 
 async function syncGmail() {
@@ -5145,7 +5145,7 @@ async function syncGmail() {
     const res = await fetch('/api/gmail/sync', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ maxResults: 20, since: syncSince() }),
+      body: JSON.stringify({ maxResults: 500, since: syncSince() }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Sync failed');

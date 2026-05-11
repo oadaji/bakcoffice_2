@@ -55,21 +55,26 @@ interface GraphMessage {
 /** Fetch messages from a mailbox via Graph API. */
 async function fetchGraphMessages(token: string, mailbox: string, since: Date): Promise<GraphMessage[]> {
   const sinceStr = since.toISOString();
-  const url = `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(mailbox)}/messages`
+  let nextUrl: string = `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(mailbox)}/messages`
     + `?$top=50`
     + `&$select=id,subject,receivedDateTime,from,toRecipients,ccRecipients,body`
     + `&$filter=receivedDateTime ge ${sinceStr}`
     + `&$orderby=receivedDateTime desc`;
 
-  const res = await fetch(url, {
-    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-  });
-  if (!res.ok) {
-    const err = await res.json() as { error?: { code?: string; message?: string } };
-    throw new Error(err.error?.message ?? `Graph API error ${res.status}`);
+  const all: GraphMessage[] = [];
+  while (nextUrl && all.length < 500) {
+    const res = await fetch(nextUrl, {
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    });
+    if (!res.ok) {
+      const err = await res.json() as { error?: { code?: string; message?: string } };
+      throw new Error(err.error?.message ?? `Graph API error ${res.status}`);
+    }
+    const data = await res.json() as { value: GraphMessage[]; "@odata.nextLink"?: string };
+    all.push(...(data.value ?? []));
+    nextUrl = data["@odata.nextLink"] ?? "";
   }
-  const data = await res.json() as { value: GraphMessage[] };
-  return data.value ?? [];
+  return all;
 }
 
 /** Strip HTML tags from Graph body content. */

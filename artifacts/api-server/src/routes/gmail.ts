@@ -215,7 +215,7 @@ router.get("/gmail/status", async (req, res) => {
 // email delivered to multiple monitored addresses only becomes one RFQ.
 
 router.post("/gmail/sync", async (req, res) => {
-  const { maxResults = 20, since } = req.body as {
+  const { maxResults = 500, since } = req.body as {
     maxResults?: number;
     since?: string;
   };
@@ -241,17 +241,17 @@ router.post("/gmail/sync", async (req, res) => {
         await client.connect();
         await client.mailboxOpen("INBOX");
 
-        const status = await client.status("INBOX", { messages: true });
-        const total = status.messages ?? 0;
+        // Use IMAP server-side SEARCH to find UIDs since the cutoff date
+        const matchingUids = await client.search({ since: sinceDate }, { uid: true });
+        req.log.info({ account: acct.email, matchingUids: matchingUids.length, sinceDate: sinceDate.toISOString() }, "IMAP search");
 
-        if (total === 0) {
+        if (matchingUids.length === 0) {
           await client.logout();
           continue;
         }
 
-        const start = Math.max(1, total - maxResults + 1);
-        const range = `${start}:${total}`;
-        req.log.info({ account: acct.email, total, range, sinceDate: sinceDate.toISOString() }, "IMAP fetch");
+        // Cap at maxResults (take the most recent ones = end of the array)
+        const fetchUids = matchingUids.slice(-maxResults);
 
         let synced = 0;
         let skipped = 0;
@@ -259,10 +259,8 @@ router.post("/gmail/sync", async (req, res) => {
 
         const port = process.env.PORT ?? "8080";
 
-        for await (const msg of client.fetch(range, { envelope: true, source: true, internalDate: true })) {
+        for await (const msg of client.fetch(fetchUids, { envelope: true, source: true, internalDate: true }, { uid: true })) {
           try {
-            const msgDate = msg.internalDate ?? msg.envelope?.date ?? new Date(0);
-            if (new Date(msgDate) < sinceDate) { skipped++; continue; }
 
             if (!msg.source) { skipped++; continue; }
             const readable = Readable.from(msg.source);
