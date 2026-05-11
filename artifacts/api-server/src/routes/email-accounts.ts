@@ -248,7 +248,11 @@ router.get("/email-accounts/oauth/microsoft", (req, res) => {
     return;
   }
 
-  const redirectUri = `${req.protocol}://${req.get("host")}/api/email-accounts/oauth/callback`;
+  // Use the first public domain from REPLIT_DOMAINS (proxy-correct URL)
+  const publicDomain = (process.env.REPLIT_DOMAINS ?? "").split(",")[0].trim();
+  const redirectUri = publicDomain
+    ? `https://${publicDomain}/api/email-accounts/oauth/callback`
+    : `${req.protocol}://${req.get("host")}/api/email-accounts/oauth/callback`;
   const state = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
 
   const tenantId = process.env.MICROSOFT_TENANT_ID ?? "common";
@@ -283,7 +287,10 @@ router.get("/email-accounts/oauth/callback", async (req, res) => {
   if (!clientId || !clientSecret) { closeWithError("OAuth not configured on server"); return; }
 
   try {
-    const redirectUri = `${req.protocol}://${req.get("host")}/api/email-accounts/oauth/callback`;
+    const publicDomain = (process.env.REPLIT_DOMAINS ?? "").split(",")[0].trim();
+    const redirectUri = publicDomain
+      ? `https://${publicDomain}/api/email-accounts/oauth/callback`
+      : `${req.protocol}://${req.get("host")}/api/email-accounts/oauth/callback`;
     const tenantId = process.env.MICROSOFT_TENANT_ID ?? "common";
 
     // Exchange code for tokens
