@@ -880,7 +880,7 @@ function showApp() {
   // Load market intelligence (Options A, B, C)
   loadMarketIntel();
 }
-window.onload = () => { if (sessionStorage.getItem(SKEY) === '1') showApp(); else window.location.replace('/mvp1.html'); };
+window.onload = () => { if (localStorage.getItem(SKEY) === '1') showApp(); else window.location.replace('/mvp1.html'); };
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 
 // ── TABS ──────────────────────────────────────────────────────────────────────
