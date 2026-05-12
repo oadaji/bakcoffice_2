@@ -7654,6 +7654,7 @@ function setEaProvider(p) {
     // Show OAuth button, hide manual form
     document.getElementById('ea-oauth-section').style.display = 'block';
     document.getElementById('ea-manual-section').style.display = 'none';
+    loadRedirectUri();
   }
   clearEaFeedback();
 }
@@ -7693,6 +7694,16 @@ async function connectGraphMailbox() {
   } catch (err) {
     showEaFeedback('✗ ' + err, false);
   }
+}
+
+async function loadRedirectUri() {
+  try {
+    const res = await fetch('/api/email-accounts/oauth/redirect-uri');
+    const { redirectUri } = await res.json();
+    const box = document.getElementById('ea-redirect-uri-box');
+    const val = document.getElementById('ea-redirect-uri-val');
+    if (box && val && redirectUri) { val.textContent = redirectUri; box.style.display = 'block'; }
+  } catch {}
 }
 
 function startMsOAuth() {
@@ -8064,9 +8075,14 @@ async function sendWaTemplate() {
 
         <!-- Outlook OAuth section (shown when Outlook tab active) -->
         <div id="ea-oauth-section" style="display:none;margin-bottom:10px">
+          <!-- Azure redirect URI helper -->
+          <div id="ea-redirect-uri-box" style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:8px 10px;margin-bottom:10px;font-size:10px;color:#0369a1;line-height:1.5;display:none">
+            <div style="font-weight:600;margin-bottom:2px">Azure redirect URI (register this in your Azure app):</div>
+            <div id="ea-redirect-uri-val" style="font-family:monospace;word-break:break-all;user-select:all;cursor:text"></div>
+          </div>
           <!-- Personal/delegated sign-in -->
           <button onclick="startMsOAuth()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:10px;padding:10px;font-size:12px;font-weight:600;font-family:Inter,sans-serif;cursor:pointer;border-radius:8px;border:1px solid #d2d9e0;background:#fff;color:#1a2e1a;transition:background .15s" onmouseover="this.style.background='#f8faf8'" onmouseout="this.style.background='#fff'">
-            <svg width="16" height="16" viewBox="0 0 23 23"><path d="M0 0h11v11H0z" fill="#f25022"/><path d="M12 0h11v11H12z" fill="#7fba00"/><path d="M0 12h11v11H0z" fill="#00a4ef"/><path d="M12 12h11v11H12z" fill="#ffb900"/></svg>
+            <svg width="16" height="16" viewBox="0 0 23 23"><path d="M0 0h11v11H0z" fill="#f25022"/><path d="M12 0h11v11H12z" fill="#7fba00"/><path d="M0 12h11v11H12z" fill="#00a4ef"/><path d="M12 12h11v11H12z" fill="#ffb900"/></svg>
             Sign in with Microsoft
           </button>
           <!-- Divider -->

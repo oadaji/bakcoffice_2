@@ -236,6 +236,16 @@ router.post("/email-accounts/test-credentials", async (req, res) => {
   }
 });
 
+// ── GET /api/email-accounts/oauth/redirect-uri ────────────────────────────────
+// Returns the exact redirect URI that must be registered in Azure.
+router.get("/email-accounts/oauth/redirect-uri", (req, res) => {
+  const publicDomain = (process.env.REPLIT_DOMAINS ?? "").split(",")[0].trim();
+  const redirectUri = publicDomain
+    ? `https://${publicDomain}/api/email-accounts/oauth/callback`
+    : `${req.protocol}://${req.get("host")}/api/email-accounts/oauth/callback`;
+  res.json({ redirectUri });
+});
+
 // ── GET /api/email-accounts/oauth/microsoft ───────────────────────────────────
 // Starts the Microsoft OAuth2 flow. Opens in a popup from the UI.
 router.get("/email-accounts/oauth/microsoft", (req, res) => {
