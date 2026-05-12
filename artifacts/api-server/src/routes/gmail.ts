@@ -5,6 +5,7 @@ import { Readable } from "stream";
 import { db, emailsTable, rfqsTable, emailAccounts } from "@workspace/db";
 import { eq, sql, and, desc } from "drizzle-orm";
 import nodemailer from "nodemailer";
+import { logger as rootLogger } from "../lib/logger";
 
 // Strip angle brackets from Message-ID values for consistent storage
 function normaliseMessageId(raw: string | undefined): string | null {
@@ -71,6 +72,7 @@ interface AccountConfig {
   dbId?: number;
   refreshToken?: string | null;
   tokenExpiresAt?: Date | null;
+  lastSyncedAt?: Date | null;
 }
 
 export function imapHostForProvider(provider: string): string {
@@ -155,6 +157,7 @@ async function getAccountsToSync(): Promise<AccountConfig[]> {
       imapHost: "imap.gmail.com",
       imapPort: 993,
       label: envUser,
+      lastSyncedAt: null,
     });
   }
 
@@ -174,6 +177,7 @@ async function getAccountsToSync(): Promise<AccountConfig[]> {
       imapPort: row.imapPort ?? 993,
       label: row.label ?? row.email,
       dbId: row.id,
+      lastSyncedAt: row.lastSyncedAt,
     });
   }
 
@@ -210,59 +214,73 @@ router.get("/gmail/status", async (req, res) => {
   }
 });
 
-// ── POST /api/gmail/sync ──────────────────────────────────────────────────────
-// Syncs ALL active accounts (env-var + DB). Deduplicates by Message-ID so an
-// email delivered to multiple monitored addresses only becomes one RFQ.
+// ── Sync job store ────────────────────────────────────────────────────────────
 
-router.post("/gmail/sync", async (req, res) => {
-  const { maxResults = 500, since } = req.body as {
-    maxResults?: number;
-    since?: string;
-  };
+interface SyncJob {
+  status: "running" | "done" | "error";
+  processed: number;
+  total: number;
+  synced: number;
+  skipped: number;
+  errors: string[];
+  accounts: number;
+  startedAt: Date;
+  finishedAt?: Date;
+}
 
-  const sinceDate = since ? new Date(since) : new Date(Date.now() - 30 * 60 * 1000);
+const syncJobs = new Map<string, SyncJob>();
 
+function pruneSyncJobs() {
+  const cutoff = Date.now() - 10 * 60 * 1000;
+  for (const [id, job] of syncJobs) {
+    if (job.startedAt.getTime() < cutoff) syncJobs.delete(id);
+  }
+}
+
+async function runGmailSync(job: SyncJob): Promise<void> {
+  const FALLBACK_DAYS = 7;
+  const port = process.env.PORT ?? "8080";
   try {
     const accounts = await getAccountsToSync();
-
     if (accounts.length === 0) {
-      res.status(503).json({ error: "No email accounts configured. Add an account first." });
+      job.status = "error";
+      job.errors.push("No email accounts configured");
+      job.finishedAt = new Date();
       return;
     }
-
-    let totalSynced = 0;
-    let totalSkipped = 0;
-    const allErrors: string[] = [];
+    job.accounts = accounts.length;
 
     for (const acct of accounts) {
+      // Use lastSyncedAt for incremental sync; fall back to 7 days for first run
+      const sinceDate = acct.lastSyncedAt ?? new Date(Date.now() - FALLBACK_DAYS * 24 * 60 * 60 * 1000);
       const token = acct.authType === "oauth2" ? await getValidAccessToken(acct) : undefined;
       const client = createImapClientForAccount(acct, token);
       try {
         await client.connect();
         await client.mailboxOpen("INBOX");
 
-        // Use IMAP server-side SEARCH to find UIDs since the cutoff date
         const matchingUids = await client.search({ since: sinceDate }, { uid: true });
-        req.log.info({ account: acct.email, matchingUids: matchingUids.length, sinceDate: sinceDate.toISOString() }, "IMAP search");
+        rootLogger.info({ account: acct.email, matchingUids: matchingUids.length, sinceDate: sinceDate.toISOString() }, "IMAP search");
 
         if (matchingUids.length === 0) {
           await client.logout();
+          // Still update lastSyncedAt so next sync stays incremental
+          if (acct.dbId) {
+            await db.update(emailAccounts).set({ lastSyncedAt: new Date() }).where(eq(emailAccounts.id, acct.dbId));
+          }
           continue;
         }
 
-        // Cap at maxResults (take the most recent ones = end of the array)
-        const fetchUids = matchingUids.slice(-maxResults);
+        const fetchUids = matchingUids.slice(-500);
+        job.total += fetchUids.length;
 
         let synced = 0;
         let skipped = 0;
         const errors: string[] = [];
 
-        const port = process.env.PORT ?? "8080";
-
         for await (const msg of client.fetch(fetchUids, { envelope: true, source: true, internalDate: true }, { uid: true })) {
           try {
-
-            if (!msg.source) { skipped++; continue; }
+            if (!msg.source) { skipped++; job.processed++; continue; }
             const readable = Readable.from(msg.source);
             const parsed = await simpleParser(readable);
 
@@ -274,212 +292,157 @@ router.post("/gmail/sync", async (req, res) => {
             const messageId = normaliseMessageId(parsed.messageId);
             const inReplyTo = normaliseMessageId(parsed.inReplyTo);
             const cc = parsed.cc?.value?.map((a: { address?: string }) => a.address).filter(Boolean).join(", ") || null;
-
-            // ── Global UID: use Message-ID for cross-account dedup ──────────
-            // Same email delivered to multiple monitored inboxes → same uid →
-            // the ingest endpoint sees it already exists and skips it.
             const uid = messageId ? `mid:${messageId}` : `${acct.email.split("@")[0]}:${msg.uid}`;
 
             let body = parsed.text ?? "";
             if (!body && parsed.html) {
               body = parsed.html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
             }
-            // Truncate to 15 000 chars — Claude only needs the relevant text
             if (body.length > 15000) body = body.slice(0, 15000);
+            if (!fromEmail || !body.trim()) { skipped++; job.processed++; continue; }
 
-            if (!fromEmail || !body.trim()) { skipped++; continue; }
-
-            // ── Reply detection ──────────────────────────────────────────────
+            // Reply detection via In-Reply-To header
             if (inReplyTo) {
-              const parentRows = await db
-                .select({ emailId: emailsTable.id })
-                .from(emailsTable)
-                .where(eq(emailsTable.messageId, inReplyTo));
-
+              const parentRows = await db.select({ emailId: emailsTable.id }).from(emailsTable).where(eq(emailsTable.messageId, inReplyTo));
               if (parentRows.length) {
                 const parentEmailId = parentRows[0].emailId;
-                let rfqRows = await db
-                  .select({ rfqId: rfqsTable.id })
-                  .from(rfqsTable)
-                  .where(eq(rfqsTable.emailId, parentEmailId));
-
-                // If no direct RFQ match, the parent may be an outbound reply we sent.
-                // Walk up one level via parentEmailId to find the original RFQ email.
+                let rfqRows = await db.select({ rfqId: rfqsTable.id }).from(rfqsTable).where(eq(rfqsTable.emailId, parentEmailId));
                 if (!rfqRows.length) {
-                  const parentEmailRows = await db
-                    .select({ parentEmailId: emailsTable.parentEmailId })
-                    .from(emailsTable)
-                    .where(eq(emailsTable.id, parentEmailId));
+                  const parentEmailRows = await db.select({ parentEmailId: emailsTable.parentEmailId }).from(emailsTable).where(eq(emailsTable.id, parentEmailId));
                   if (parentEmailRows.length && parentEmailRows[0].parentEmailId) {
-                    rfqRows = await db
-                      .select({ rfqId: rfqsTable.id })
-                      .from(rfqsTable)
-                      .where(eq(rfqsTable.emailId, parentEmailRows[0].parentEmailId));
+                    rfqRows = await db.select({ rfqId: rfqsTable.id }).from(rfqsTable).where(eq(rfqsTable.emailId, parentEmailRows[0].parentEmailId));
                   }
                 }
-
                 if (rfqRows.length) {
                   const rfqId = rfqRows[0].rfqId;
                   const replyResp = await fetch(`http://localhost:${port}/api/rfqs/${rfqId}/ingest-reply`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                    method: "POST", headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ uid, fromName, fromEmail, body, receivedAt, messageId }),
                   });
                   if (replyResp.ok) {
                     const result = await replyResp.json() as { skipped?: boolean };
-                    if (!result.skipped) synced++;
-                    else skipped++;
+                    if (!result.skipped) synced++; else skipped++;
                   } else {
-                    const errText = await replyResp.text();
-                    errors.push(`reply ${uid}: ${errText}`);
+                    errors.push(`reply ${uid}: ${await replyResp.text()}`);
                   }
-                  continue;
+                  job.processed++; continue;
                 }
               }
             }
 
-            // ── Subject-based threading fallback ─────────────────────────────
-            // Some mail clients omit the In-Reply-To header entirely.
-            // If the subject starts with "Re:", try to match against existing
-            // emails from the same sender by stripping all leading "Re:" prefixes.
+            // Subject-based threading fallback (Re: emails without In-Reply-To)
             if (/^re:\s/i.test(subject)) {
               const baseSubject = subject.replace(/^(re:\s*)+/i, "").trim();
               const subjectMatchRows = await db
-                .select({ emailId: emailsTable.id })
-                .from(emailsTable)
-                .where(
-                  and(
-                    eq(emailsTable.fromEmail, fromEmail),
-                    sql`lower(${emailsTable.subject}) = lower(${baseSubject})`
-                  )
-                )
-                .orderBy(desc(emailsTable.id))
-                .limit(1);
-
+                .select({ emailId: emailsTable.id }).from(emailsTable)
+                .where(and(eq(emailsTable.fromEmail, fromEmail), sql`lower(${emailsTable.subject}) = lower(${baseSubject})`))
+                .orderBy(desc(emailsTable.id)).limit(1);
               if (subjectMatchRows.length) {
                 const matchedEmailId = subjectMatchRows[0].emailId;
-                let rfqRows = await db
-                  .select({ rfqId: rfqsTable.id })
-                  .from(rfqsTable)
-                  .where(eq(rfqsTable.emailId, matchedEmailId));
-
-                // Also try walking up if the matched email is an outbound
+                let rfqRows = await db.select({ rfqId: rfqsTable.id }).from(rfqsTable).where(eq(rfqsTable.emailId, matchedEmailId));
                 if (!rfqRows.length) {
-                  const parentEmailRows = await db
-                    .select({ parentEmailId: emailsTable.parentEmailId })
-                    .from(emailsTable)
-                    .where(eq(emailsTable.id, matchedEmailId));
+                  const parentEmailRows = await db.select({ parentEmailId: emailsTable.parentEmailId }).from(emailsTable).where(eq(emailsTable.id, matchedEmailId));
                   if (parentEmailRows.length && parentEmailRows[0].parentEmailId) {
-                    rfqRows = await db
-                      .select({ rfqId: rfqsTable.id })
-                      .from(rfqsTable)
-                      .where(eq(rfqsTable.emailId, parentEmailRows[0].parentEmailId));
+                    rfqRows = await db.select({ rfqId: rfqsTable.id }).from(rfqsTable).where(eq(rfqsTable.emailId, parentEmailRows[0].parentEmailId));
                   }
                 }
-
                 if (rfqRows.length) {
-                  req.log.info({ uid, fromEmail, subject, baseSubject, rfqId: rfqRows[0].rfqId }, "Subject-match threading: routing as reply");
                   const rfqId = rfqRows[0].rfqId;
                   const replyResp = await fetch(`http://localhost:${port}/api/rfqs/${rfqId}/ingest-reply`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                    method: "POST", headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ uid, fromName, fromEmail, body, receivedAt, messageId }),
                   });
                   if (replyResp.ok) {
                     const result = await replyResp.json() as { skipped?: boolean };
-                    if (!result.skipped) synced++;
-                    else skipped++;
+                    if (!result.skipped) synced++; else skipped++;
                   } else {
-                    const errText = await replyResp.text();
-                    errors.push(`reply (subject-match) ${uid}: ${errText}`);
+                    errors.push(`reply (subject-match) ${uid}: ${await replyResp.text()}`);
                   }
-                  continue;
+                  job.processed++; continue;
                 }
               }
             }
 
-            // ── New email (not a reply) ──────────────────────────────────────
+            // New email
             const hasListUnsubscribe = !!parsed.headers?.get("list-unsubscribe");
-            if (isAutomatedEmail(fromEmail, subject, hasListUnsubscribe)) { skipped++; continue; }
+            if (isAutomatedEmail(fromEmail, subject, hasListUnsubscribe)) { skipped++; job.processed++; continue; }
 
             const ingestResp = await fetch(`http://localhost:${port}/api/rfq/ingest`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                uid,
-                fromName,
-                fromEmail,
-                subject,
-                body,
-                receivedAt,
-                emailType: "customer-rfq",
-                requireFreightMatch: true,
-                messageId,
-                cc,
-                receivedInbox: acct.label,
-              }),
+              method: "POST", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ uid, fromName, fromEmail, subject, body, receivedAt, emailType: "customer-rfq", requireFreightMatch: true, messageId, cc, receivedInbox: acct.label }),
             });
-
             if (ingestResp.status === 422) {
               skipped++;
             } else if (ingestResp.ok) {
               const wasNew = ingestResp.headers.get("x-was-new") === "true";
-              if (wasNew) synced++;
-              else skipped++;
+              if (wasNew) synced++; else skipped++;
             } else {
-              const shortErr = ingestResp.status === 413
-                ? `body too large (${uid})`
-                : `ingest ${ingestResp.status} (${uid})`;
-              errors.push(shortErr);
+              errors.push(ingestResp.status === 413 ? `body too large (${uid})` : `ingest ${ingestResp.status} (${uid})`);
             }
+            job.processed++;
           } catch (msgErr) {
             errors.push(`msg ${msg.uid}: ${String(msgErr).slice(0, 200)}`);
+            job.processed++;
           }
         }
 
         await client.logout();
 
-        // Mark last synced timestamp in DB (for DB accounts only)
-        const dbRow = await db.select({ id: emailAccounts.id })
-          .from(emailAccounts)
-          .where(eq(emailAccounts.email, acct.email));
-        if (dbRow.length) {
+        if (acct.dbId) {
           await db.update(emailAccounts)
             .set({ lastSyncedAt: new Date(), lastError: errors.length ? errors[0] : null })
-            .where(eq(emailAccounts.id, dbRow[0].id));
+            .where(eq(emailAccounts.id, acct.dbId));
         }
 
-        totalSynced += synced;
-        totalSkipped += skipped;
-        allErrors.push(...errors);
+        job.synced += synced;
+        job.skipped += skipped;
+        job.errors.push(...errors);
       } catch (acctErr) {
-        req.log.error({ err: acctErr, account: acct.email }, "IMAP sync failed for account");
-        allErrors.push(`${acct.email}: ${String(acctErr)}`);
-
-        // Record error in DB
-        const dbRow = await db.select({ id: emailAccounts.id })
-          .from(emailAccounts)
-          .where(eq(emailAccounts.email, acct.email));
-        if (dbRow.length) {
-          await db.update(emailAccounts)
-            .set({ lastError: String(acctErr) })
-            .where(eq(emailAccounts.id, dbRow[0].id));
+        rootLogger.error({ err: acctErr, account: acct.email }, "IMAP sync failed for account");
+        job.errors.push(`${acct.email}: ${String(acctErr)}`);
+        if (acct.dbId) {
+          await db.update(emailAccounts).set({ lastError: String(acctErr) }).where(eq(emailAccounts.id, acct.dbId));
         }
-
         try { await client.logout(); } catch {}
       }
     }
 
-    res.json({
-      synced: totalSynced,
-      skipped: totalSkipped,
-      accountsChecked: accounts.length,
-      errors: allErrors.length ? allErrors : undefined,
-    });
+    job.status = "done";
+    job.finishedAt = new Date();
   } catch (err) {
-    req.log.error({ err }, "Gmail sync failed");
-    res.status(500).json({ error: String(err) });
+    job.status = "error";
+    job.errors.push(String(err));
+    job.finishedAt = new Date();
   }
+}
+
+// ── POST /api/gmail/sync ──────────────────────────────────────────────────────
+// Starts a background sync job and returns {jobId} immediately.
+// Poll GET /api/gmail/sync/status/:jobId for live progress.
+
+router.post("/gmail/sync", async (req, res) => {
+  pruneSyncJobs();
+  const jobId = Math.random().toString(36).slice(2, 10);
+  const job: SyncJob = {
+    status: "running", processed: 0, total: 0,
+    synced: 0, skipped: 0, errors: [], accounts: 0, startedAt: new Date(),
+  };
+  syncJobs.set(jobId, job);
+  res.json({ jobId });
+  runGmailSync(job).catch((err) => {
+    job.status = "error";
+    job.errors.push(String(err));
+    job.finishedAt = new Date();
+    rootLogger.error({ err }, "runGmailSync unhandled error");
+  });
+});
+
+// ── GET /api/gmail/sync/status/:jobId ─────────────────────────────────────────
+
+router.get("/gmail/sync/status/:jobId", (req, res) => {
+  const job = syncJobs.get(req.params.jobId);
+  if (!job) { res.status(404).json({ error: "Job not found or expired" }); return; }
+  res.json(job);
 });
 
 // ── POST /api/gmail/send-outreach ─────────────────────────────────────────────

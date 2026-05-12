@@ -5137,24 +5137,37 @@ async function syncGmail() {
   if (!btn) return;
   btn.disabled = true;
   btn.style.opacity = '0.6';
-  btn.title = 'Syncing…';
-  // Spin the icon while syncing
   const svg = btn.querySelector('svg');
   if (svg) svg.style.animation = 'spin 1s linear infinite';
+  btn.title = 'Starting sync…';
   try {
-    const res = await fetch('/api/gmail/sync', {
+    // Start background job — returns immediately with a jobId
+    const startRes = await fetch('/api/gmail/sync', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ maxResults: 500, since: syncSince() }),
+      body: JSON.stringify({}),
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Sync failed');
-    const { synced } = data;
-    btn.title = synced > 0 ? `+${synced} new emails` : 'Up to date';
+    const startData = await startRes.json();
+    if (!startRes.ok || !startData.jobId) throw new Error(startData.error || 'Failed to start sync');
+    const { jobId } = startData;
+    // Poll for live progress every 1.5 s
+    const job = await new Promise((resolve) => {
+      const poll = setInterval(async () => {
+        try {
+          const statusRes = await fetch(`/api/gmail/sync/status/${jobId}`);
+          if (!statusRes.ok) { clearInterval(poll); resolve(null); return; }
+          const j = await statusRes.json();
+          const pct = j.total > 0 ? ` ${j.processed}/${j.total}` : '';
+          btn.title = j.status === 'running' ? `Syncing…${pct}` : (j.synced > 0 ? `+${j.synced} new` : 'Up to date');
+          if (j.status !== 'running') { clearInterval(poll); resolve(j); }
+        } catch { clearInterval(poll); resolve(null); }
+      }, 1500);
+    });
+    if (job && job.synced > 0) btn.title = `+${job.synced} new emails`;
+    else if (job) btn.title = 'Up to date';
   } catch(e) {
     btn.title = 'Sync failed';
   } finally {
-    // Always refresh inbox — sync may have ingested emails even if the response was cut short
     await loadInbox();
     setTimeout(() => {
       if (svg) svg.style.animation = '';
